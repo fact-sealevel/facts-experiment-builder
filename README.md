@@ -43,6 +43,7 @@ Next steps:
 Now, fill in the newly created `v2-experiment-metadata.yml` file. Some defaults will be pre-populated; these are taken from defaults specified in a `defaults.yml` file that is within the core submodule for each FACTS module. (eg. `./src/facts_experiment_builder/core/modules/fair/defaults.yml`).
 
 A completed experiment metadata file looks like:
+(note: this has hardcoded file paths from my computer, need to be changed)
 ```shell
 experiment_name:
     my_facts_experiment
