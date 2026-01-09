@@ -8,6 +8,15 @@ Warning: it is very rough and incomplete! It currently has 2 modules implemented
 
 ![image](imgs/diagram.png)
 
+### User interface
+The user specifies the experiment here. You could do it totally by hand but `setup_new_environment.py` is a helper. Pass an experiment name and the modules the experiment will include to this script and it will create a skeleton `experiment-metadata.yml`. Any default values that are specified in that file are set in the `defaults.yml` file of a specific module (in `src/core/modules`). 
+
+### Adapter
+Parses the metadata file and translates into domain objects.
+
+### Domain layer 
+Tries to conceptualize the building blocks of a FACTS experiment and how they work together. Each FACTS module has its on sub-module here that contains 3 files: `module.py`, `parser.py` and `defaults.yml`. `module.py` tries to represent the module and its inputs. `defaults.py` should be the only place that default values are specified so that its the single source of truth.
+
 ## Usage example:
 
 Clone repo
