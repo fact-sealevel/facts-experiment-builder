@@ -1,0 +1,60 @@
+experiment_name:
+    my_facts_experiment
+pipeline-id:
+    "AAAA"
+scenario:
+    "ssp585"
+baseyear:
+    2005
+pyear_start:
+    2020
+pyear_end:
+    2150
+pyear_step:
+    10
+nsamps:
+    500
+seed:
+    1234
+temp_module:
+    fair
+sealevel_modules:
+    bamber19-icesheets
+common-inputs-path:
+    "$HOME/Desktop/facts_work/facts_v2/common_inputs_across_modules"
+location-file:
+    "location.lst"
+v2-output-path:
+    "./v2_experiments/my_facts_experiment/data/output"
+fair:
+  inputs:
+    input_dir: $HOME/Desktop/facts_work/facts_v2/fair/data/input
+    cyear_start: 1850
+    cyear_end: 1900
+    smooth_win: 19
+    rcmip_fname: rcmip
+    param_fname: parameters
+  options:
+    # Options are inherited from top-level metadata (pipeline-id, nsamps, seed, scenario)
+    # Module-specific options are in inputs
+  image: ghcr.io/fact-sealevel/fair-temperature:0.2.1
+  outputs:
+  - fair/climate.nc
+  - fair/ohc.nc
+  - fair/gsat.nc
+  - fair/oceantemp.nc
+bamber19-icesheets:
+  inputs:
+    input_dir: $HOME/Desktop/facts_work/facts_v2/bamber19-icesheets/data/input
+    replace: true
+    slr_proj_mat_file: SLRProjections190726core_SEJ_full.mat
+    climate_data_file: fair/climate.nc
+  options:
+    # Options inherited from top-level metadata: pipeline-id, nsamps, seed, scenario, pyear_start, pyear_end, pyear_step, baseyear
+    replace: true
+  image: ghcr.io/fact-sealevel/bamber19-icesheets:0.1.0
+  outputs:
+  - bamber19-icesheets/ais_gslr.nc
+  - bamber19-icesheets/eais_gslr.nc
+  - bamber19-icesheets/wais_gslr.nc
+  - bamber19-icesheets/gis_gslr.nc

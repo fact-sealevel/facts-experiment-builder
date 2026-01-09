@@ -1,0 +1,19 @@
+# Default values for the FAIR temperature module
+# These values are used when creating new experiments and can be overridden in experiment metadata
+
+# Module-specific options
+options:
+  cyear_start: 1850
+  cyear_end: 1900
+  smooth_win: 19
+
+# Input paths
+inputs:
+  rcmip_fname: "rcmip"
+  param_fname: "parameters"
+
+# Container image
+image:
+  image_url: "ghcr.io/fact-sealevel/fair-temperature:0.2.1"
+  image_tag: "0.2.1"
+

@@ -1,0 +1,16 @@
+# Default values for the Bamber19 Icesheets module
+# These values are used when creating new experiments and can be overridden in experiment metadata
+
+# Module-specific options
+options:
+  replace: true
+
+# Input paths
+inputs:
+  bamber19_slr_proj_mat_file: "SLRProjections190726core_SEJ_full.mat"
+
+# Container image
+image:
+  image_url: "ghcr.io/fact-sealevel/bamber19-icesheets:0.1.0"
+  image_tag: "0.1.0"
+

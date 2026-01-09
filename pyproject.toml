@@ -1,0 +1,33 @@
+[project]
+name = "facts-experiment-builder"
+version = "0.1.0"
+description = "FACTS experiment builder for creating and managing FACTS v2 experiments"
+readme = "README.md"
+authors = [
+    { name = "Emma Marshall", email = "emarshall@rhg.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "matplotlib>=3.10.8",
+    "netcdf4>=1.7.3",
+    "pyyaml>=6.0.3",
+    "xarray>=2025.12.0",
+]
+
+[project.scripts]
+facts-experiment-builder = "facts_experiment_builder:main"
+setup-new-experiment = "facts_experiment_builder.utils.setup_new_experiment:main"
+generate-compose = "facts_experiment_builder.application.generate_compose:main"
+
+[build-system]
+requires = ["uv_build>=0.8.11,<0.9.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+    "ruff>=0.14.5",
+]
+
+[tool.uv.sources]
+facts_experiment_builder = { path = "$HOME/Desktop/facts_work/facts_v2/FACTS-experiment-builder" }   
