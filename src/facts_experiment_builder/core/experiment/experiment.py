@@ -70,10 +70,10 @@ class Experiment:
             create_experiment_directory(self.experiment_name)
         self.experiment_dir = Path(cwd).parent / "v2_experiments" / self.experiment_name
     
-    def add_temperature_module(self, module: str) -> None:
+    def add_temperature_module(self, module: str) -> None: #TODO don't think thi should take a string?
         """Add a temperature module to the experiment."""
         self.temperature_module = module
-    def add_sealevel_module(self, module: Bamber19IcesheetsModule) -> None:
+    def add_sealevel_module(self, module: Bamber19IcesheetsModule) -> None: #TODO don't want this to be specific to bamber
         """Add a sealevel module to the experiment."""
         self.sealevel_module = module
     
