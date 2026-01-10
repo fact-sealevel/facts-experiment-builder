@@ -8,6 +8,8 @@ Warning: it is very rough and incomplete! It currently has 2 modules implemented
 
 ![image](imgs/diagram.png)
 
+This only has a few modules. To add a new module, create a new sub-module in `src/facts_experiment_builder/` with the module name. Specify any default values in `defaults.yml`. Add module components and logic in `module.py` and write parser in `parser.py`.
+
 ### User interface
 The user specifies the experiment here. You could do it totally by hand but `setup_new_environment.py` is a helper. Pass an experiment name and the modules the experiment will include to this script and it will create a skeleton `experiment-metadata.yml`. Any default values that are specified in that file are set in the `defaults.yml` file of a specific module (in `src/core/modules`). 
 
