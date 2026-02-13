@@ -9,8 +9,8 @@ options:
 
 # Input paths
 inputs:
-  rcmip_fname: "rcmip"
-  param_fname: "parameters"
+  rcmip_fname: "rcmip/rcmip-emissions-annual-means-v5-1-0.csv"
+  param_fname: "parameters/fair_ar6_climate_params_v4.0.nc"
 
 # Container image
 image:

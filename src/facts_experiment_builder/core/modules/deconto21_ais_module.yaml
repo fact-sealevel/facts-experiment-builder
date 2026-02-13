@@ -1,0 +1,167 @@
+# DECONTO21 AIS MODULE CONFIGURATION
+# This YAML file describes the arguments and configuration needed to run the module.
+# It is used by the generic module system to generate Docker Compose services.
+
+module_name: "deconto21-ais"
+container_image: "ghcr.io/fact-sealevel/deconto21-ais:0.1.2"
+climate_file_required: false
+
+# Argument specifications
+arguments:
+  # Top-level metadata arguments (inherited from experiment metadata)
+  top_level:
+    - name: "pipeline-id"
+      type: "str"
+      source: "metadata.pipeline-id"
+    - name: "scenario"
+      type: "str"
+      source: "metadata.scenario"
+      transform: "scenario_name"
+      optional: true
+    - name: "nsamps"
+      type: "int"
+      source: "metadata.nsamps"
+      optional: true
+    - name: "rngseed"
+      type: "int"
+      source: "metadata.seed"
+      optional: true
+    - name: "baseyear"
+      type: "int"
+      source: "metadata.baseyear"
+      optional: true
+    - name: "pyear-start"
+      type: "int"
+      source: "metadata.pyear_start"
+      optional: true
+    - name: "pyear-end"
+      type: "int"
+      source: "metadata.pyear_end"
+      optional: true
+    - name: "pyear-step"
+      type: "int"
+      source: "metadata.pyear_step"
+      optional: true
+
+  # Module-specific options
+  options:
+    - name: "replace"
+      type: "bool"
+      source: "module_inputs.options.replace"
+      optional: true
+    - name: "chunksize"
+      type: "int"
+      source: "module_inputs.options.chunksize"
+      optional: true
+
+  # Input file arguments
+  inputs:
+    - name: "input-eais-rcp26-file"
+      type: "file"
+      source: "module_inputs.inputs.input_eais_rcp26_file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+    - name: "input-eais-rcp45-file"
+      type: "file"
+      source: "module_inputs.inputs.input_eais_rcp45_file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+    - name: "input-eais-rcp85-file"
+      type: "file"
+      source: "module_inputs.inputs.input_eais_rcp85_file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+    - name: "input-wais-rcp26-file"
+      type: "file"
+      source: "module_inputs.inputs.input_wais_rcp26_file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+    - name: "input-wais-rcp45-file"
+      type: "file"
+      source: "module_inputs.inputs.input_wais_rcp45_file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+    - name: "input-wais-rcp85-file"
+      type: "file"
+      source: "module_inputs.inputs.input_wais_rcp85_file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+    - name: "location-file"
+      type: "file"
+      source: "module_inputs.inputs.location-file"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+      optional: true
+    - name: "fpdir"
+      type: "str"
+      source: "module_inputs.inputs.fpdir"
+      mount:
+        volume: "input"
+        container_path: "/mnt/deconto_data_in"
+      optional: true
+
+  # Output file arguments
+  outputs:
+    - name: "output-ais-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_ais_gslr_file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/deconto_data_out"
+        transform: "filename"
+    - name: "output-eais-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_eais_gslr_file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/deconto_data_out"
+        transform: "filename"
+    - name: "output-wais-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_wais_gslr_file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/deconto_data_out"
+        transform: "filename"
+    - name: "output-ais-lslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_ais_lslr_file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/deconto_data_out"
+        transform: "filename"
+      optional: true
+    - name: "output-eais-lslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_eais_lslr_file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/deconto_data_out"
+        transform: "filename"
+      optional: true
+    - name: "output-wais-lslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_wais_lslr_file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/deconto_data_out"
+        transform: "filename"
+      optional: true
+
+# Volume specifications (derived from input/output paths)
+volumes:
+  input:
+    host_path: "module_inputs.input_paths.input_dir"
+    container_path: "/mnt/deconto_data_in"
+  output:
+    host_path: "module_inputs.output_paths.output_dir"
+    container_path: "/mnt/deconto_data_out"
+
+# No service dependencies (standalone module)

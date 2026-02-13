@@ -3,11 +3,13 @@
 
 # Module-specific options
 options:
-  replace: true
+  replace: 1
 
 # Input paths
 inputs:
-  bamber19_slr_proj_mat_file: "SLRProjections190726core_SEJ_full.mat"
+  slr_proj_mat_file: "SLRProjections190726core_SEJ_full.mat"
+  fingerprint_dir: "FPRINT"
+  location_file: "location.lst"
 
 # Container image
 image:

@@ -2,7 +2,7 @@
 """Generate Docker Compose file from experiment metadata.
 
 This script follows a domain-driven design pattern:
-- v2-experiment-metadata.yml is the "user interface" (UI layer)
+- experiment-metadata.yml is the "user interface" (UI layer)
 - Module parsers adapt user inputs into domain terms (Adapter layer)
 - Docker compose files are the "engine" (Infrastructure layer)
 
@@ -55,17 +55,24 @@ def format_compose_yaml(content: str) -> str:
     """Post-process YAML content to match desired indentation style.
     
     Converts:
-    - Service level: 3 spaces
-    - Properties: 6 spaces  
-    - Nested properties (e.g., depends_on.fair): 9 spaces
-    - Nested property values (e.g., depends_on.fair.condition): 12 spaces
-    - List items: 9 spaces
+    - Root level (services:): 0 spaces
+    - Step level (temperature module, sealevel modules): 3 spaces
+    - Service level (bamber19-icesheets:, deconto21-ais:): 6 spaces
+    - Service properties (image:, command:, volumes:): 9 spaces
+    - List items (command args, volumes): 12 spaces
+    - Nested properties (depends_on.fair): 12 spaces
+    - Nested property values (depends_on.fair.condition): 15 spaces
+    - Command arguments: Adds double quotes around values
     """
     lines = content.split('\n')
     formatted_lines = []
     prev_line_was_list_property = False
     in_depends_on = False
     in_depends_on_service = False
+    in_command = False  # Track if we're in a command section
+    in_service = False  # Track if we're inside a service (under a service name)
+    prev_line_was_service_name = False  # Track if previous line was a service name
+    prev_line_was_depends_on_service = False  # Track if previous line was a service name under depends_on
     
     for i, line in enumerate(lines):
         if not line.strip():  # Empty line
@@ -73,6 +80,9 @@ def format_compose_yaml(content: str) -> str:
             prev_line_was_list_property = False
             in_depends_on = False
             in_depends_on_service = False
+            in_command = False
+            prev_line_was_service_name = False
+            prev_line_was_depends_on_service = False
             continue
             
         stripped = line.lstrip()
@@ -81,64 +91,173 @@ def format_compose_yaml(content: str) -> str:
         # Check if this is a list item (starts with '-')
         is_list_item = stripped.startswith('-')
         
+        # Detect service names (lines ending with ':' that are at 6 spaces, not list items, and not known properties)
+        is_service_name = (leading_spaces == 6 and 
+                          stripped.endswith(':') and 
+                          not is_list_item and
+                          stripped not in ['image:', 'command:', 'volumes:', 'depends_on:', 'restart:', 'condition:'])
+        
+        # Track command section
+        if stripped == 'command:':
+            in_command = True
+        elif leading_spaces <= 9 and stripped.endswith(':') and stripped != 'command:' and not is_list_item:
+            # We've left the command section (new property at same or higher level)
+            in_command = False
+        
         # Track depends_on nesting
         if stripped == 'depends_on:':
             in_depends_on = True
             in_depends_on_service = False
-        elif in_depends_on and stripped.endswith(':') and not is_list_item and not stripped.startswith('condition') and stripped != 'depends_on:' and leading_spaces == 9:
-            # This is a service name under depends_on (e.g., 'fair:')
-            in_depends_on_service = True
-        elif in_depends_on_service and (stripped.startswith('condition') or leading_spaces >= 12):
+        elif in_depends_on and stripped.endswith(':') and not is_list_item and not stripped.startswith('condition') and stripped != 'depends_on:':
+            # This could be a service name under depends_on (e.g., 'fair:')
+            # Check if it's at the right indentation level (should be 9-12 spaces when in_service)
+            if in_service and (leading_spaces >= 9 and leading_spaces <= 12):
+                in_depends_on_service = True
+            elif not in_service and leading_spaces == 12:
+                in_depends_on_service = True
+        elif in_depends_on_service and stripped.startswith('condition'):
             # This is a property under depends_on.service (e.g., 'condition: ...')
             # Keep in_depends_on_service = True for proper indentation
             pass
-        elif leading_spaces == 6 and stripped.endswith(':') and stripped not in ['depends_on:', 'fair:', 'condition:']:
+        elif in_service and leading_spaces == 9 and stripped.endswith(':') and stripped not in ['depends_on:', 'fair:', 'condition:', 'command:', 'volumes:', 'restart:']:
             # We've left the depends_on section (new property at same level as depends_on)
             in_depends_on = False
             in_depends_on_service = False
+        elif not in_service and leading_spaces <= 6 and stripped.endswith(':') and stripped not in ['depends_on:', 'fair:', 'condition:']:
+            # We've left the depends_on section (new property at same or higher level)
+            in_depends_on = False
+            in_depends_on_service = False
+        
+        # Track if we're inside a service
+        if is_service_name:
+            in_service = True
+            prev_line_was_service_name = True
+        elif leading_spaces <= 6 and stripped.endswith(':') and not is_list_item:
+            # We've left the service (new step-level key)
+            in_service = False
+            prev_line_was_service_name = False
         
         # Check if previous line was a list property (command:, volumes:, etc.)
         if i > 0 and prev_line_was_list_property and is_list_item:
-            # List item under a list property - 9 spaces
-            formatted_lines.append('         ' + stripped)
-        elif stripped.startswith('services:'):
+            # List item under a list property
+            # If we're in a service, use 12 spaces; otherwise 9 spaces
+            indent = '            ' if in_service else '         '
+            formatted_item = indent + stripped
+            # If this is a command argument, add double quotes around the value
+            if in_command and stripped.startswith('-'):
+                # Extract everything after the dash and space
+                if len(stripped) > 2 and stripped[1] == ' ':
+                    value = stripped[2:]  # Everything after '- '
+                    # Check if value is already quoted
+                    if not (value.startswith('"') and value.endswith('"')):
+                        # Add quotes around the value
+                        formatted_item = indent + '- "' + value + '"'
+                    else:
+                        formatted_item = indent + stripped
+                else:
+                    formatted_item = indent + stripped
+            formatted_lines.append(formatted_item)
+        elif stripped.startswith('services:') or stripped.startswith('steps:'):
             # Root level - no change
             formatted_lines.append(line)
             in_depends_on = False
             in_depends_on_service = False
+            in_command = False
+            in_service = False
+            prev_line_was_service_name = False
+            prev_line_was_depends_on_service = False
         elif leading_spaces == 0:
             # Root level
             formatted_lines.append(line)
             in_depends_on = False
             in_depends_on_service = False
+            in_command = False
+            in_service = False
+            prev_line_was_service_name = False
+            prev_line_was_depends_on_service = False
         elif leading_spaces <= 3:
-            # Service level - ensure 3 spaces
+            # Step level (temperature module, sealevel modules) - ensure 3 spaces
             formatted_lines.append('   ' + stripped)
             in_depends_on = False
             in_depends_on_service = False
-        elif in_depends_on_service and (stripped.startswith('condition') or leading_spaces >= 12):
+            in_command = False
+            in_service = False
+            prev_line_was_service_name = False
+            prev_line_was_depends_on_service = False
+        elif is_service_name:
+            # Service name level (bamber19-icesheets:, deconto21-ais:) - ensure 6 spaces
+            formatted_lines.append('      ' + stripped)
+            in_depends_on = False
+            in_depends_on_service = False
+            in_command = False
+            prev_line_was_service_name = True
+        elif prev_line_was_depends_on_service and stripped.startswith('condition'):
+            # Condition property immediately after a service name under depends_on - should be nested under that service
+            # Use 12 spaces when in_service (nested under fair: which is at 9 spaces)
+            if in_service:
+                formatted_lines.append('            ' + stripped)
+            else:
+                formatted_lines.append('               ' + stripped)
+            prev_line_was_depends_on_service = False
+            in_depends_on_service = True  # Keep tracking for potential future properties
+        elif in_depends_on_service and stripped.startswith('condition'):
             # Property under depends_on.service - 12 spaces (e.g., 'condition: service_completed_successfully')
+            # This should be nested under the service name (fair:)
             formatted_lines.append('            ' + stripped)
         elif in_depends_on and stripped.endswith(':') and not is_list_item and stripped != 'depends_on:':
-            # Service name under depends_on - 9 spaces (e.g., 'fair:')
-            formatted_lines.append('         ' + stripped)
+            # Service name under depends_on - 9 spaces when in_service, 12 spaces otherwise (e.g., 'fair:')
+            if in_service:
+                formatted_lines.append('         ' + stripped)
+                prev_line_was_depends_on_service = True
+            else:
+                formatted_lines.append('            ' + stripped)
+                prev_line_was_depends_on_service = True
         elif is_list_item:
-            # List item at property level - should be 9 spaces
-            formatted_lines.append('         ' + stripped)
+            # List item - indent based on context
+            if in_service:
+                # List item inside a service - 12 spaces
+                indent = '            '
+            else:
+                # List item at step level - 9 spaces
+                indent = '         '
+            formatted_item = indent + stripped
+            # If this is a command argument, add double quotes around the value
+            if in_command and stripped.startswith('-'):
+                # Extract everything after the dash and space
+                if len(stripped) > 2 and stripped[1] == ' ':
+                    value = stripped[2:]  # Everything after '- '
+                    # Check if value is already quoted
+                    if not (value.startswith('"') and value.endswith('"')):
+                        # Add quotes around the value
+                        formatted_item = indent + '- "' + value + '"'
+                    else:
+                        formatted_item = indent + stripped
+                else:
+                    formatted_item = indent + stripped
+            formatted_lines.append(formatted_item)
             prev_line_was_list_property = False
             # Check if we're leaving depends_on section
-            if leading_spaces <= 6:
+            if leading_spaces <= 9:
                 in_depends_on = False
                 in_depends_on_service = False
         else:
-            # Property level - ensure 6 spaces
-            formatted_lines.append('      ' + stripped)
+            # Property level
+            if in_service:
+                # Property inside a service (image:, command:, volumes:, etc.) - 9 spaces
+                formatted_lines.append('         ' + stripped)
+            else:
+                # Property at step level - 6 spaces
+                formatted_lines.append('      ' + stripped)
             # Check if this property is a list property
             prev_line_was_list_property = stripped.endswith(':') and stripped in ['command:', 'volumes:', 'depends_on:']
             # Only reset depends_on tracking if we're not in depends_on section
             if stripped != 'depends_on:' and not in_depends_on:
                 in_depends_on = False
                 in_depends_on_service = False
+            prev_line_was_service_name = False
+            # Reset depends_on service tracking if we've moved to a different property
+            if stripped.endswith(':') and stripped not in ['depends_on:', 'fair:', 'condition:'] and leading_spaces == 9:
+                prev_line_was_depends_on_service = False
     
     return '\n'.join(formatted_lines)
 
@@ -146,24 +265,11 @@ from facts_experiment_builder.adapters.module_adapter import (
     ModuleParserFactory,
     load_metadata,
 )
+from facts_experiment_builder.adapters.adapter_utils import (
+    parse_manifest_from_metadata,
+)
 
 
-def module_name_to_dir_name(module_name: str) -> str:
-    """Convert module name (with hyphens) to directory name.
-    
-    Module names in metadata use hyphens (e.g., 'bamber19-icesheets'),
-    and directory names also use hyphens (not underscores).
-    
-    Args:
-        module_name: Module name from metadata (e.g., 'bamber19-icesheets')
-        
-    Returns:
-        Directory name (e.g., 'bamber19-icesheets')
-    """
-    # Module names and directory names both use hyphens
-    # This function exists to make the mapping explicit and allow for
-    # future changes if needed
-    return module_name
 
 
 def normalize_module_paths_in_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
@@ -196,45 +302,121 @@ def normalize_module_paths_in_metadata(metadata: Dict[str, Any]) -> Dict[str, An
             module_section = normalized_metadata[module_name]
             if isinstance(module_section, dict) and "inputs" in module_section:
                 inputs = module_section["inputs"]
-                if isinstance(inputs, dict) and "input_dir" in inputs:
-                    input_dir = inputs["input_dir"]
-                    if isinstance(input_dir, str):
-                        # Replace underscore pattern with hyphen pattern in the path
-                        normalized_path = input_dir.replace(underscore_pattern, hyphen_pattern)
-                        if normalized_path != input_dir:
-                            inputs = inputs.copy()
-                            inputs["input_dir"] = normalized_path
-                            module_section = module_section.copy()
-                            module_section["inputs"] = inputs
-                            normalized_metadata[module_name] = module_section
+                #if isinstance(inputs, dict) and "input_dir" in inputs:
+                    #input_dir = inputs["input_dir"]
+                    #if isinstance(input_dir, str):
+                    #    # Replace underscore pattern with hyphen pattern in the path
+                    #    normalized_path = input_dir.replace(underscore_pattern, hyphen_pattern)
+                    #    if normalized_path != input_dir:
+                    #        inputs = inputs.copy()
+                    #        inputs["input_dir"] = normalized_path
+                    #        module_section = module_section.copy()
+                    #        module_section["inputs"] = inputs
+                    #        normalized_metadata[module_name] = module_section
     
     return normalized_metadata
 
 
-def parse_manifest_from_metadata(metadata: Dict[str, Any]) -> Dict[str, Any]:
+
+
+def _module_requires_climate_file(module_name: str, experiment_dir: Path) -> bool:
     """
-    Parse the experiment manifest from metadata.
-    
-    This extracts which modules are specified in the experiment.
+    Check if a module requires a climate file by loading its module YAML configuration.
     
     Args:
-        metadata: Loaded metadata dictionary
+        module_name: Name of the module (e.g., 'bamber19-icesheets')
+        experiment_dir: Path to experiment directory (used to find project root)
         
     Returns:
-        Dictionary with module specifications
+        True if climate_file_required is True in module YAML, False otherwise
     """
-    manifest = {
-        "temp_module": metadata.get("temp_module"),
-        "sealevel_modules": metadata.get("sealevel_modules", []),
-        "framework_modules": metadata.get("framework_modules", []),
-        "esl_modules": metadata.get("esl_modules", []),
-    }
+    try:
+        # Find project root
+        project_root = find_project_root(experiment_dir)
+        modules_dir = project_root / "src" / "facts_experiment_builder" / "core" / "modules"
+        
+        # Convert module name to filename format
+        # e.g., "bamber19-icesheets" -> "bamber19_icesheets_module.yaml"
+        module_dir_name = module_name.replace('-', '_')
+        
+        possible_paths = [
+            modules_dir / f"{module_dir_name}_module.yaml",
+            modules_dir / f"{module_name}_module.yaml",
+        ]
+        
+        # Special cases for naming conventions (only for specific modules)
+        if module_name == "fair" or module_name.startswith("fair"):
+            possible_paths.extend([
+                modules_dir / "fair_temperature_module.yaml",  # Fair uses temperature in name
+                modules_dir / "fair_module.yaml",  # Fallback for fair
+            ])
+        
+        module_yaml_path = None
+        for path in possible_paths:
+            if path.exists():
+                module_yaml_path = path
+                break
+        
+        if module_yaml_path is None:
+            # If module YAML not found, default to True for backward compatibility
+            return True
+        
+        # Load module YAML configuration
+        with open(module_yaml_path, 'r') as f:
+            module_config = yaml.safe_load(f) or {}
+        
+        # Check climate_file_required flag (defaults to True if not specified)
+        return module_config.get("climate_file_required", True)
+        
+    except Exception:
+        # If there's any error loading the module config, default to True for safety
+        return True
+
+
+def _validate_climate_file_inputs(metadata: Dict[str, Any], sealevel_modules: List[str], experiment_dir: Path) -> None:
+    """
+    Validate that sealevel modules have climate file inputs when no temperature module is specified.
+    Only validates modules that have climate_file_required=True in their module YAML.
     
-    # Normalize sealevel_modules to list
-    if isinstance(manifest["sealevel_modules"], str):
-        manifest["sealevel_modules"] = [manifest["sealevel_modules"]]
+    Args:
+        metadata: Experiment metadata dictionary
+        sealevel_modules: List of sealevel module names
+        experiment_dir: Path to experiment directory (used to find module YAML files)
+        
+    Raises:
+        ValueError: If any sealevel module that requires climate files is missing climate file input
+    """
+    missing_climate_files = []
     
-    return manifest
+    for module_name in sealevel_modules:
+        # Check if this module requires a climate file
+        if not _module_requires_climate_file(module_name, experiment_dir):
+            continue
+        
+        module_metadata = metadata.get(module_name, {})
+        module_inputs = module_metadata.get("inputs", {})
+        
+        # Check for various possible field names for climate file
+        # Common variations: climate_data_file, climate-data-file, climate_file, climate-file, climate_data, climate-data
+        climate_file = (
+            module_inputs.get("climate_data_file") or 
+            module_inputs.get("climate-data-file") or
+            module_inputs.get("climate_file") or
+            module_inputs.get("climate-file") or
+            module_inputs.get("climate_data") or
+            module_inputs.get("climate-data")
+        )
+        
+        if not climate_file or (isinstance(climate_file, str) and climate_file.strip() == ""):
+            missing_climate_files.append(module_name)
+    
+    if missing_climate_files:
+        raise ValueError(
+            f"No temperature module specified, but the following sealevel modules are missing "
+            f"climate file inputs: {', '.join(missing_climate_files)}. "
+            f"Please provide 'climate_data_file' (or 'climate-data-file', 'climate_file', etc.) "
+            f"in the inputs section for each sealevel module."
+        )
 
 
 def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
@@ -248,7 +430,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     4. Generates docker compose services (Engine/Infrastructure layer)
     
     Args:
-        metadata_path: Path to v2-experiment-metadata.yml
+        metadata_path: Path to experiment-metadata.yml
         
     Returns:
         Complete Docker Compose file dictionary
@@ -268,30 +450,47 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     manifest = parse_manifest_from_metadata(metadata)
     
     # Step 3: Create modules using parsers (Adapter layer -> Domain layer)
-    modules = []
+    #modules = []
+    modules = {
+        'temperature_module': None,
+        'sealevel_modules': {},
+        'framework_modules': {},
+        'esl_modules': {},
+    }
     
-    # Create temperature module if specified
-    if manifest["temp_module"]:
+    # Create temperature module if specified (and not "NONE")
+    temperature_module_name = manifest["temperature_module"]
+    #print('gen_compose, line 401: manifest temp module: ', manifest['temperature_module'])
+    if temperature_module_name and temperature_module_name.upper() != "NONE":
         try:
             module = ModuleParserFactory.create_module_from_metadata(
                 metadata_path,
-                module_type=manifest["temp_module"],
+                module_type="temperature_module",
+                module_name=temperature_module_name,
                 metadata=metadata
             )
-            modules.append(module)
-            print(f"✓ Created {manifest['temp_module']} module")
-        except Exception as e:
-            print(f"⚠ Warning: Failed to create temp module '{manifest['temp_module']}': {e}")
+            #modules.append(module)
+            modules['temperature_module'] = module
+            print(f"✓ Created {temperature_module_name} module")
+        except Exception as e: ### TODO What type of error to use for these?
+            print(f"⚠ Warning: Failed to create temp module '{temperature_module_name}': {e}")
+    elif temperature_module_name and temperature_module_name.upper() == "NONE":
+        # No temperature module - validate that sealevel modules have climate file inputs
+        # Only validate modules that have climate_file_required=True
+        print("ℹ No temperature module specified (NONE)")
+        _validate_climate_file_inputs(metadata, manifest["sealevel_modules"], experiment_dir)
     
     # Create sea level modules if specified
     for module_name in manifest["sealevel_modules"]:
         try:
             module = ModuleParserFactory.create_module_from_metadata(
                 metadata_path,
-                module_type=module_name,
+                module_type="sealevel_module",
+                module_name=module_name,
                 metadata=metadata
             )
-            modules.append(module)
+            #modules.append(module)
+            modules['sealevel_modules'][module_name] = module
             print(f"✓ Created {module_name} module")
         except Exception as e:
             print(f"⚠ Warning: Failed to create sealevel module '{module_name}': {e}")
@@ -301,10 +500,12 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         try:
             module = ModuleParserFactory.create_module_from_metadata(
                 metadata_path,
-                module_type=module_name,
+                module_type="framework_module",
+                module_name=module_name,
                 metadata=metadata
             )
-            modules.append(module)
+            #modules.append(module)
+            modules['framework_modules'][module_name] = module
             print(f"✓ Created {module_name} module")
         except Exception as e:
             print(f"⚠ Warning: Failed to create framework module '{module_name}': {e}")
@@ -314,15 +515,20 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         try:
             module = ModuleParserFactory.create_module_from_metadata(
                 metadata_path,
-                module_type=module_name,
+                module_type="extreme_sealevel_module",
+                module_name=module_name,
                 metadata=metadata
             )
-            modules.append(module)
+            #modules.append(module)
+            modules['esl_modules'][module_name] = module
             print(f"✓ Created {module_name} module")
         except Exception as e:
             print(f"⚠ Warning: Failed to create ESL module '{module_name}': {e}")
     
-    if not modules:
+    if (not modules['temperature_module'] and 
+        not modules['sealevel_modules'] and 
+        not modules['framework_modules'] and 
+        not modules['esl_modules']):
         raise ValueError(
             "No modules could be created from metadata. "
             "Please ensure at least one module is specified and has valid configuration."
@@ -330,37 +536,19 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     
     # Step 4: Generate Docker Compose services (Engine/Infrastructure layer)
     services = {}
-    
-    # Find fair module to get its output directory for sealevel modules
-    fair_module = None
-    fair_output_dir = None
-    for module in modules:
-        if hasattr(module, 'module_name') and module.module_name == 'fair':
-            fair_module = module
-            fair_output_dir = module.output_paths.fair_out_dir
-            break
-    
-    for module in modules:
-        # Use simple module name as service name (e.g., "fair", "bamber19-icesheets")
+
+    # Add temperature module service if present
+    temperature_module = modules['temperature_module']
+    temperature_module_name = temperature_module.module_name if temperature_module else None
+    if temperature_module:
+        services[temperature_module_name] = temperature_module.generate_compose_service()
+
+    # Add sealevel modules directly to services (flat structure for Docker Compose)
+    for module_name, module in modules['sealevel_modules'].items():
         service_name = module.module_name
-        
-        # Generate compose service from domain object
-        # For sealevel modules, pass fair output directory if available
-        if fair_module and fair_module != module:
-            # Check if this is a sealevel module that needs fair output
-            from facts_experiment_builder.core.modules.abcs.sealevel_module_abcs import SealevelModuleABC
-            if isinstance(module, SealevelModuleABC):
-                # Try calling with fair_output_dir parameter
-                try:
-                    compose_service = module.generate_compose_service(fair_output_dir=fair_output_dir)
-                except TypeError:
-                    # Fallback if method doesn't accept the parameter
-                    compose_service = module.generate_compose_service()
-            else:
-                compose_service = module.generate_compose_service()
-        else:
-            compose_service = module.generate_compose_service()
-        
+        compose_service = module.generate_compose_service(
+            temperature_service_name=temperature_module_name
+        )
         services[service_name] = compose_service
     
     # Step 5: Build complete Docker Compose file
@@ -369,105 +557,3 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     }
     
     return compose_file
-
-
-def main():
-    """Main entry point for generating Docker Compose from metadata."""
-    parser = argparse.ArgumentParser(
-        description="Generate Docker Compose file from experiment metadata",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-This script follows a domain-driven design pattern:
-- v2-experiment-metadata.yml is the "user interface" (UI layer)
-- Module parsers adapt user inputs into domain terms (Adapter layer)
-- Docker compose files are the "engine" (Infrastructure layer)
-
-Example:
-    python -m facts_experiment_builder.application.generate_compose v2_experiments/my_experiment
-        """
-    )
-    parser.add_argument(
-        "experiment_dir",
-        type=Path,
-        help="Path to experiment directory containing v2-experiment-metadata.yml"
-    )
-    parser.add_argument(
-        "--output",
-        type=Path,
-        default=None,
-        help="Output path for compose file (defaults to experiment_dir/v2-compose.yaml)"
-    )
-    
-    args = parser.parse_args()
-    
-    # Handle experiment path: if it's just a name, look in v2_experiments/
-    experiment_path = Path(args.experiment_dir)
-    
-    # First, try to resolve it as-is (in case it's a relative or absolute path)
-    if experiment_path.exists():
-        experiment_dir = experiment_path.resolve()
-    else:
-        # If it doesn't exist, check if it's just an experiment name
-        # Look in v2_experiments/ subdirectory
-        project_root = find_project_root()
-        v2_experiments_dir = project_root / "v2_experiments"
-        potential_experiment_dir = v2_experiments_dir / str(experiment_path)
-        
-        if potential_experiment_dir.exists():
-            experiment_dir = potential_experiment_dir
-        else:
-            # Try resolving as a relative path from current directory
-            try:
-                experiment_dir = experiment_path.resolve()
-            except:
-                # If all else fails, assume it's an experiment name in v2_experiments/
-                experiment_dir = potential_experiment_dir
-    
-    metadata_path = experiment_dir / "v2-experiment-metadata.yml"
-    
-    print(f"Generating Docker Compose from: {metadata_path}")
-    print("=" * 70)
-    
-    try:
-        # Generate compose file
-        compose_file = generate_compose_from_metadata(metadata_path)
-        
-        # Determine output path
-        if args.output is None:
-            output_path = experiment_dir / "v2-compose.yaml"
-        else:
-            output_path = args.output.resolve()
-        
-        # Write to file with custom indentation
-        # First dump to string
-        yaml_content = yaml.dump(
-            compose_file,
-            default_flow_style=False,
-            sort_keys=False,
-            indent=3,  # 3 spaces for each level
-            width=1000,  # Wide width to avoid line wrapping
-            allow_unicode=True
-        )
-        
-        # Post-process to fix indentation
-        formatted_content = format_compose_yaml(yaml_content)
-        
-        # Write to file
-        with open(output_path, "w") as f:
-            f.write(formatted_content)
-        
-        print("=" * 70)
-        print(f"✓ Generated Docker Compose file: {output_path}")
-        print(f"  Services: {', '.join(compose_file['services'].keys())}")
-        print(f"\nTo run the experiment:")
-        print(f"  cd {experiment_dir}")
-        print(f"  docker compose -f {output_path.name} up")
-        
-    except Exception as e:
-        print(f"✗ Error: {e}", file=sys.stderr)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()
-

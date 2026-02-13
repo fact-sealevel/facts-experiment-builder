@@ -1,0 +1,95 @@
+# KOPP14 VERTICALLANDMOTION MODULE CONFIGURATION
+# This YAML file describes the arguments and configuration needed to run the module.
+# It is used by the generic module system to generate Docker Compose services.
+
+module_name: "kopp14-verticallandmotion"
+container_image: "ghcr.io/fact-sealevel/kopp14-verticallandmotion:v0.1.0"
+uses_climate_file: false
+climate_file_required: false
+
+# Argument specifications
+arguments:
+  # Top-level metadata arguments (inherited from experiment metadata)
+  top_level:
+    - name: "pipeline-id"
+      type: "str"
+      source: "metadata.pipeline-id"
+      help: "Pipeline ID"
+    - name: "nsamps"
+      type: "int"
+      source: "metadata.nsamps"
+      optional: true
+      help: "Number of samples"
+    - name: "rng-seed"
+      type: "int"
+      source: "metadata.seed"
+      optional: true
+      help: "Random seed to use for sampling"
+    - name: "baseyear"
+      type: "int"
+      source: "metadata.baseyear"
+      optional: true
+      help: "Base year"
+    - name: "pyear-start"
+      type: "int"
+      source: "metadata.pyear_start"
+      optional: true
+      help: "Projection year start"
+    - name: "pyear-end"
+      type: "int"
+      source: "metadata.pyear_end"
+      optional: true
+      help: "Projection year end"
+    - name: "pyear-step"
+      type: "int"
+      source: "metadata.pyear_step"
+      optional: true
+      help: "Projection year step"
+
+  # Module-specific options
+  options:
+    - name: "chunk-size"
+      type: "int"
+      source: "module_inputs.options.chunk_size"
+      optional: true
+      help: "TO DO ADD HELP TEXT"
+
+  # Input file arguments
+  inputs:
+    - name: "rate-file"
+      type: "file"
+      source: "module_inputs.inputs.rate_file"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "input"
+        container_path: "/mnt/kopp14verticallandmotion_data_in"
+    - name: "location-file"
+      type: "file"
+      source: "module_inputs.inputs.location_file"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "input"
+        container_path: "/mnt/kopp14verticallandmotion_data_in"
+
+  # Output file arguments
+  outputs:
+    - name: "output-lslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_lslr_file"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "output"
+        container_path: "/mnt/kopp14verticallandmotion_data_out"
+        transform: "filename"
+
+# Volume specifications (derived from input/output paths)
+volumes:
+  input:
+    host_path: "module_inputs.input_paths.input_dir"
+    container_path: "/mnt/kopp14verticallandmotion_data_in"
+  output:
+    host_path: "module_inputs.output_paths.output_dir"
+    help: "TO DO ADD HELP TEXT"
+    container_path: "/mnt/kopp14verticallandmotion_data_out"
+
+# No service dependencies (standalone module)
