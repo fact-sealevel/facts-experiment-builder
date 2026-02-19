@@ -1,0 +1,142 @@
+# BAMBER19 ICESHEETS MODULE CONFIGURATION
+# This YAML file describes the arguments and configuration needed to run the module.
+# It is used by the generic module system to generate Docker Compose services.
+
+module_name: "bamber19-icesheets"
+container_image: "ghcr.io/fact-sealevel/bamber19-icesheets:0.1.0"
+uses_climate_file: true
+climate_file_required: false
+
+# Argument specifications
+arguments:
+  # Top-level metadata arguments (inherited from experiment metadata)
+  top_level:
+    - name: "pipeline-id"
+      type: "str"
+      source: "metadata.pipeline-id"
+    - name: "nsamps"
+      type: "int"
+      source: "metadata.nsamps"
+    - name: "rngseed"
+      type: "int"
+      source: "metadata.seed"
+    - name: "scenario"
+      type: "str"
+      source: "metadata.scenario"
+      transform: "scenario_name"  # Extract from ScenarioConfig object
+    - name: "pyear-start"
+      type: "int"
+      source: "metadata.pyear_start"
+    - name: "pyear-end"
+      type: "int"
+      source: "metadata.pyear_end"
+    - name: "pyear-step"
+      type: "int"
+      source: "metadata.pyear_step"
+    - name: "baseyear"
+      type: "int"
+      source: "metadata.baseyear"
+
+  # Module-specific options
+  options:
+    - name: "replace"
+      type: "int"
+      source: "module_inputs.options.replace"
+    - name: "chunksize"
+      type: "int"
+      source: "module_inputs.options.chunksize"
+      optional: true
+
+  fingerprint_params:
+    - name: "fingerprint-dir"
+      type: "str"
+      source: "module_inputs.fingerprint_params.fingerprint_dir"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "input"
+        container_path: "/mnt/general_in"
+    - name: "location-file"
+      type: "str"
+      source: "module_inputs.fingerprint_params.location_file"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "input"
+        container_path: "/mnt/general_in"
+
+  # Input file arguments (with path transformations)
+  inputs:
+    - name: "climate-data-file"
+      type: "file"
+      source: "module_inputs.inputs.climate_data_file"
+      mount:
+        volume: "output"  # Implicit dependency: needs fair output
+        container_path: "/mnt/out"
+        transform: "filename"  # Extract just filename
+      external_volume: true  # Indicates this comes from an external module
+    - name: "slr-proj-mat-file"
+      type: "file"
+      source: "module_inputs.inputs.slr_proj_mat_file"
+      mount:
+        volume: "module_specific_input"
+        container_path: "/mnt/module_specific_in"
+    - name: "fingerprint-dir"
+      type: "str"
+      source: "module_inputs.inputs.fingerprint_dir"
+      mount:
+        volume: "general_input"
+        container_path: "/mnt/general_in"
+    - name: "location-file"
+      type: "file"
+      source: "module_inputs.inputs.location_file"
+      mount:
+        volume: "general_input"
+        container_path: "/mnt/general_in"
+  
+  # Output file arguments
+  # Note: outputs can be a dictionary with keys matching the output names
+  outputs:
+    - name: "output-AIS-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output-AIS-gslr-file"
+      filename: "AIS-gslr.nc"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+    - name: "output-EAIS-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output-EAIS-gslr-file"
+      filename: "EAIS-gslr.nc"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+    - name: "output-WAIS-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output-WAIS-gslr-file"
+      filename: "WAIS-gslr.nc"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+    - name: "output-GIS-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output-GIS-gslr-file"
+      filename: "GIS-gslr.nc"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+
+# Volume specifications (derived from input/output paths)
+volumes:
+  module_specific_input:
+    host_path: "module_inputs.input_paths.module_specific_input_dir"
+    container_path: "/mnt/module_specific_in"
+  general_input:
+    host_path: "module_inputs.input_paths.general_input_dir"
+    container_path: "/mnt/general_in"
+  output:
+    host_path: "module_inputs.output_paths.output_dir"
+    container_path: "/mnt/out"
+  

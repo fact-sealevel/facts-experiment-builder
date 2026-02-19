@@ -1,23 +1,20 @@
-"""Alternate CLI for setting up new experiments using Jinja2 templating.
+"""CLI for setting up new experiments using Jinja2 templating.
 
-This is an alternative to setup_new_experiment_cli.py that explicitly uses
-the Jinja2-based YAML generation from setup_new_experiment_jinja2.py.
+This script uses Jinja2-based YAML generation from setup_new_experiment.py.
 
-The main difference is that this CLI directly calls write_metadata_yaml_jinja2()
-and shows the Jinja2 workflow more explicitly.
 """
 
 import click
 import logging
 from pathlib import Path
-from facts_experiment_builder.utils.setup_new_experiment import (
-    write_metadata_yaml_jinja2,
-    generate_metadata_template,
-    populate_metadata_with_defaults,
-    create_experiment_directory,
-    create_experiment_directory_files,
+from facts_experiment_builder.application.setup_new_experiment import (
+    setup_new_experiment_fs,
+    init_new_experiment,
+    populate_experiment_defaults,
 )
-
+from facts_experiment_builder.infra.write_experiment_metadata import (
+    write_metadata_yaml_jinja2,
+) #TODO move this eventually
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -37,6 +34,18 @@ logger = logging.getLogger(__name__)
     type=str,
     required=True,
     help="Names of the sea level modules, separated by commas"
+)
+@click.option("--framework-modules",
+    type=str,
+    required=False,
+    default= None,
+    help="Names of the framework modules, separated by commas"
+)
+@click.option("--extremesealevel-module",
+    type=str,
+    required=False,
+    default= None,
+    help="Name of the extreme sea level module (use 'NONE' if no extreme sea level module)"
 )
 @click.option("--pipeline-id",
     type=str,
@@ -78,10 +87,23 @@ logger = logging.getLogger(__name__)
     required=False,
     help="Random seed to use for sampling"
 )
+@click.option("--location-file",
+    type=str,
+    required=False,
+    default="location.lst",
+    help="Location file name"
+)
+@click.option("--fingerprint-dir",
+    type=str,
+    required=False,
+    help="Name of directory holding GRD fingerprint data"
+)
 def main(
     experiment_name, 
     temperature_module, 
     sealevel_modules,
+    framework_modules,
+    extremesealevel_module,
     pipeline_id,
     scenario,
     baseyear,
@@ -90,35 +112,47 @@ def main(
     pyear_step,
     nsamps,
     seed,
+    location_file,
+    fingerprint_dir,
 ):
     """Create a new experiment directory with template files using Jinja2 templating.
-    
-    This command uses the Jinja2-based YAML generation system, which provides
-    more declarative template-based metadata file generation.
     """
+
     # Parse comma-separated sealevel modules into a list
     sealevel_modules_list = [m.strip() for m in sealevel_modules.split(',') if m.strip()]
     
-    logger.info(f"Setting up new experiment (Jinja2): {experiment_name}")
-    logger.info(f"  Temperature module: {temperature_module}")
-    logger.info(f"  Sea level modules: {sealevel_modules_list}")
+    # Step 1: Create experiment directory and sub-directories
+    click.echo("Step 1: Creating experiment directory and sub-directories...")
+    module_names = [temperature_module] + sealevel_modules_list
+
+    experiment_path =setup_new_experiment_fs(experiment_name=experiment_name, module_names=module_names)
+    
+    # Print some setup info
+    exp_setup_message = f"Setting up new experiment: {experiment_name}"
+    click.echo(exp_setup_message)
+    temp_module_message = f"  Temperature module: {temperature_module}"
+    click.echo(temp_module_message)
+    sealevel_modules_message = f"  Sea level modules: {sealevel_modules_list}"
+    click.echo(sealevel_modules_message)
+    framework_modules_message = f"  Framework modules: {framework_modules}"
+    click.echo(framework_modules_message)
+    extremesealevel_module_message = f"  Extreme sea level module: {extremesealevel_module}"
+    click.echo(extremesealevel_module_message)
+
+    # Print some CLI info
     if any([pipeline_id, scenario, baseyear, pyear_start, pyear_end, pyear_step, nsamps, seed]):
-        logger.info("  CLI arguments provided - will be included in metadata")
+        click.echo("  CLI arguments provided - will be included in metadata")
+    click.echo("\n" + "="*70)
     
-    # Step 1: Create experiment directory
-    logger.info("Step 1: Creating experiment directory...")
-    experiment_path = create_experiment_directory(experiment_name=experiment_name)
-    
-    # Step 2: Setup data directory structure and README file
-    logger.info("Step 2: Creating data directories and README...")
-    create_experiment_directory_files(experiment_path=experiment_path)
-    
-    # Step 3: Generate metadata template
-    logger.info("Step 3: Generating metadata template...")
-    metadata = generate_metadata_template(
+   
+    # Step 2: Create FactsExperiment from template (FactsExperiment-centric flow)
+    click.echo("Step 2: Generating metadata template...")
+    experiment = init_new_experiment(
         experiment_name=experiment_name,
         temperature_module=temperature_module,
         sealevel_modules=sealevel_modules_list,
+        framework_modules=framework_modules,
+        extremesealevel_module=extremesealevel_module,
         experiment_path=experiment_path,
         pipeline_id=pipeline_id,
         scenario=scenario,
@@ -128,30 +162,40 @@ def main(
         pyear_step=pyear_step,
         nsamps=nsamps,
         seed=seed,
+        location_file=location_file,
+        fingerprint_dir=fingerprint_dir,
     )
     
-    # Step 4: Populate metadata with defaults from defaults.yml files
-    logger.info("Step 4: Populating metadata with defaults from defaults.yml files...")
+    # Step 3: Populate experiment with defaults from defaults.yml files
+    # Revert: for module_name in ...: metadata = populate_metadata_with_defaults(metadata, module_name)
+    click.echo("Step 3: Populating metadata with defaults from defaults.yml files...")
     for module_name in [temperature_module] + sealevel_modules_list:
         if module_name and module_name.upper() != "NONE":
-            logger.info(f"  Populating defaults for module: {module_name}")
-            metadata = populate_metadata_with_defaults(metadata, module_name)
+            modules_message = f"  Populating defaults for module: {module_name}"
+            click.echo(modules_message)
+            populate_experiment_defaults(experiment, module_name)
     
-    # Step 5: Write metadata using Jinja2 templating
-    logger.info("Step 5: Writing metadata file using Jinja2 templating...")
+    # Step 5: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
+    click.echo("Step 4: Writing metadata file using Jinja2 templating...")
     metadata_path = experiment_path / "experiment-metadata.yml"
-    write_metadata_yaml_jinja2(metadata, metadata_path)
-    logger.info(f"✓ Created experiment-metadata.yml at {metadata_path}")
+    write_metadata_yaml_jinja2(experiment, metadata_path)
+    click.echo(f"✓ Created experiment-metadata.yml at {metadata_path}")
     
     # Summary
-    logger.info("\n" + "="*70)
-    logger.info("✨ Experiment directory setup complete!")
-    logger.info("\nNext steps:")
-    logger.info(f"  1. Edit {metadata_path}")
-    logger.info("     - Fill in all placeholder values (pipeline-id, scenario, paths, etc.)")
-    logger.info(f"  2. Generate Docker Compose:")
-    logger.info(f"     uv run generate-compose {experiment_path}")
-
+    format_message = "\n" + "="*70
+    click.echo(format_message)
+    dir_setup_complete_message = "✨ Experiment directory setup complete!"
+    click.echo(dir_setup_complete_message)
+    next_steps_message = "\nNext steps:"
+    click.echo(next_steps_message)
+    edit_metadata_message = f"  1. Edit {metadata_path}"
+    click.echo(edit_metadata_message)
+    fill_in_placeholders_message = "     - Fill in all placeholder values (pipeline-id, scenario, paths, etc.)"
+    click.echo(fill_in_placeholders_message)
+    generate_compose_message = f"  2. Generate Docker Compose:"
+    click.echo(generate_compose_message)
+    run_compose_message = f"     uv run generate-compose {experiment_path}"
+    click.echo(run_compose_message)
 
 if __name__ == "__main__":
     main()

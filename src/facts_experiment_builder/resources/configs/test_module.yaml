@@ -1,0 +1,53 @@
+# Blank module template – keys expected by ModuleServiceSpec / FactsModule.
+# Fill in values for your module. Experiment metadata (experiment-metadata.yml)
+# supplies runtime values (e.g. image, inputs, outputs); this file defines structure.
+
+module_name: ""
+container_image: ""
+command: ""
+uses_climate_file: false
+climate_file_required: false
+
+# Argument specs: each list item is one CLI argument. source resolves at runtime
+# (e.g. metadata.pipeline-id, module_inputs.inputs.<key>, module_inputs.outputs.<key>).
+# Per-item keys: name, type, source, help; optional: optional, alternatives, transform, mount, multiple.
+# mount: { volume: "<volume_name>", container_path: "/mnt/..." }; transform: "filename" | "scenario_name" | null
+arguments:
+  top_level: []
+  options: []
+  fingerprint_params:
+    - name: "fingerprint-dir"
+      type: "str"
+      source: "module_inputs.fingerprint_params.fingerprint_dir"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "input"
+        container_path: "/mnt/general_in"
+    - name: "location-file"
+      type: "str"
+      source: "module_inputs.fingerprint_params.location_file"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "input"
+        container_path: "/mnt/general_in"
+  inputs: []
+  outputs: []
+
+# Volume specs: host_path is a dot path resolved at runtime (e.g. module_inputs.input_paths.*).
+# Use module_specific_input_dir / general_input_dir for inputs, output_dir for outputs.
+volumes:
+  module_specific_input:
+    host_path: "module_inputs.input_paths.module_specific_input_dir"
+    container_path: ""
+    help: ""
+  general_input:
+    host_path: "module_inputs.input_paths.general_input_dir"
+    container_path: ""
+    help: ""
+  output:
+    host_path: "module_inputs.output_paths.output_dir"
+    container_path: ""
+    help: ""
+
+# Optional: service dependencies (e.g. temperature module for sealevel modules).
+depends_on: []

@@ -1,0 +1,8 @@
+options:
+  refyear_start: 1850
+  refyear_end: 1900
+  year_start: 1900
+  year_end: 2300
+  scaling_coefficients_dir: "/mnt/module_specific_in/ScalingCoefficients"
+  r_functions_dir: "/mnt/module_specific_in/RFunctions"
+  baseyear: 2005
