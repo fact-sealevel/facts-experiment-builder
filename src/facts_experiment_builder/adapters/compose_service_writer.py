@@ -21,6 +21,9 @@ def build_compose_service_dict(
     Returns:
         Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
     """
+    #TODO: better fix for this but should work for now
+    if command[0] == "main":
+        command = command[1:]
     service = {
         "image": image_str,
         "command": command,
