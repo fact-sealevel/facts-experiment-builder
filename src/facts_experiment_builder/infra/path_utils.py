@@ -53,6 +53,9 @@ def _resolve_module_input_dir(module_specific_input_dir: str, module_name: str) 
         ) from e
     if base_path.name == module_name:
         return module_specific_input_dir
+    # Multi-command module: path already points at shared dir (e.g. .../ipccar5); do not append module_name.
+    if base_path.name and module_name.startswith(base_path.name + "-"):
+        return module_specific_input_dir
     if base_path.name:
         return str(base_path.parent / module_name)
     return os.path.join(module_specific_input_dir, module_name)
@@ -264,6 +267,10 @@ def resolve_input_path(
                 f"module_specific_input_data={module_specific_input_data}, type={type(module_specific_input_data)}{context_msg}"
             ) from e
         if module_specific_path.name == module_name:
+            base_path = module_specific_input_data
+        elif module_specific_path.name and module_name.startswith(module_specific_path.name + "-"):
+            # Multi-command module sharing one dir (e.g. ipccar5 for ipccar5-glaciers/ipccar5-icesheets).
+            # Files sit directly under module_specific_input_data; do not append module_name.
             base_path = module_specific_input_data
         else:
             if module_specific_path.name in ["fair-temperature", "fair-climate", "bamber19-icesheets",
