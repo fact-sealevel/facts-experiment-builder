@@ -9,8 +9,8 @@ options:
   start_year: 2005
   end_year: 2301
   tlm_flag: 1
-  ntsamps: 450
-  nmsamps: 1000
+  #ntsamps: 450
+  #nmsamps: 1000
   use_gmip: 2
   chunksize: 20
 
