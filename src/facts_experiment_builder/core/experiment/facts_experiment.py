@@ -1,7 +1,4 @@
 """In-memory representation of an experiment (analogous to experiment-metadata.yml)."""
-
-import shutil
-import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
 
@@ -18,17 +15,17 @@ MANIFEST_KEYS = [
 ]
 PATH_KEYS_PRIMARY = [
     "general-input-data", "module-specific-input-data",
-    "output-data-location", "location-file-name",
+    "output-data-location", "location-file",
 ]
 PATH_KEYS_ALTERNATIVES = {
     "general-input-data": ["general_input_data"],
     "module-specific-input-data": ["module_specific_input_data"],
     "output-data-location": ["output_data_location", "output-path", "output_path"],
-    "location-file-name": ["location_file_name"],
+    "location-file": ["location_file"],
 }
 FINGERPRINT_PARAM_KEYS = [
     "fingerprint-dir",
-    "location-file-name"
+    "location-file"
 ]
 
 class FactsExperiment:
@@ -84,7 +81,7 @@ class FactsExperiment:
     @property
     def paths(self) -> Dict[str, Any]:
         """Paths to the input and output data for this experiment. 
-        This includes (general-input-data, module-specific-input-data, output-data-location, location-file-name).
+        This includes (general-input-data, module-specific-input-data, output-data-location, location-file).
         ^^ TODO double check this list is accurate
         """
         return self._paths
@@ -92,7 +89,7 @@ class FactsExperiment:
     @property
     def fingerprint_params(self) -> Dict[str, Any]:
         """Fingerprint parameters that are shared across modules, though this can optionally be overridden.
-        These include (fingerprint-dir, location-file-name).
+        These include (fingerprint-dir, location-file).
         """
         return self._fingerprint_params
 
@@ -198,7 +195,6 @@ class FactsExperiment:
         Create a new experiment from template/CLI inputs.
         Dependencies are injected to avoid circular imports (call from application layer).
         """
-        
         #First, create dict and fill with top level param keys 
         #and their clues/values from top_level_param_clues 
         # TODO top_level_param_clues currently hardcoded in setup_new_experiment
@@ -220,14 +216,13 @@ class FactsExperiment:
             "esl_modules": extremesealevel_module ,
             "module-specific-input-data": create_metadata_bundle("Module-specific input data"),
             "general-input-data": create_metadata_bundle("General input data"),
-            "location-file-name": create_metadata_bundle("Location file name", location_file),
+            "location-file": create_metadata_bundle("Location file", location_file),
             "fingerprint-dir": create_metadata_bundle("Fingerprint directory", fingerprint_dir),
             "output-data-location": create_metadata_bundle(
                 top_level_param_clues.get("output-data-location", "Output path"),
                 f"./experiments/{experiment_name}/data/output",
             ),
         }
-
         #Find project root (dir w/ pyproject.toml)
         project_root = find_project_root()
         #Load the module definition files for the specified temperature module, if any
@@ -388,16 +383,6 @@ class FactsExperiment:
                 if image_url:
                     section[section_key] = image_url
 
-    def to_metadata_dict(self) -> Dict[str, Any]:
-        out = {"experiment_name": self._experiment_name}
-        out.update(self._top_level_params)
-        out.update(self._fingerprint_params)
-        out.update(self._manifest)
-        for k, v in self._paths.items():
-            out[k] = v
-        out.update(self._module_sections)
-        out.update(self._extra)
-        return out
 
 
 

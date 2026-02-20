@@ -42,7 +42,7 @@ TOP_LEVEL_PARAM_CLUES = {
 
 FINGERPRINT_PARAM_CLUES = {
     "fingerprint-dir": "Name of directory holding GRD fingerprint data",
-    "location-file-name": "Location file name",
+    "location-file": "Location file name",
 }
 
 

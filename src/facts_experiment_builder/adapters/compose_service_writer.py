@@ -3,14 +3,14 @@
 from typing import Dict, Any, List, Optional
 
 
-def build_service_dict(
+def build_compose_service_dict(
     image_str: str,
     command: List[str],
     volumes: List[str],
     depends_on: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    ) -> Dict[str, Any]:
     """
-    Build a Docker Compose service dictionary from resolved pieces.
+    Build a Docker Compose service dictionary from a ModuleServiceSpec.
 
     Args:
         image_str: Full image string (e.g. "repo/image:tag")

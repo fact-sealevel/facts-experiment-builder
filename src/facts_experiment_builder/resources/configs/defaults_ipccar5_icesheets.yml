@@ -14,7 +14,6 @@ options:
   use_gmip: 2
   chunksize: 20
 
-
 inputs:
   icesheet_fraction_file: icesheet_fraction.txt
   

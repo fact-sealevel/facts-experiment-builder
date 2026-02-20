@@ -1,4 +1,3 @@
-from facts_experiment_builder.core.experiment import FactsExperiment
 from pathlib import Path
 from typing import Optional, List
 from facts_experiment_builder.infra.path_manager import find_project_root

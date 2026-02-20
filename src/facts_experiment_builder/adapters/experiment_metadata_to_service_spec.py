@@ -16,14 +16,14 @@ from facts_experiment_builder.infra.path_utils import (
     find_project_root,
 )
 
-from facts_experiment_builder.adapters.module_implementation import (
+from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
-    ModuleServiceSpecComponents,
     ScenarioConfig,
+    ModuleServiceSpecComponents,
     ModuleContainerImage,
 )
 from facts_experiment_builder.infra.module_loader import (
-    load_facts_module,
+    load_facts_module_from_yaml,
     find_module_yaml_path,
 )
 ALLOWED_MODULE_TYPES = {
@@ -69,7 +69,7 @@ def build_module_service_spec(
         project_root = find_project_root(experiment_dir)
         resolved_yaml_path = find_module_yaml_path(module_name, project_root)
 
-    module_definition = load_facts_module(resolved_yaml_path)
+    module_definition = load_facts_module_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
     scenario_name = get_required_field(metadata, "scenario", module_context)
@@ -211,7 +211,6 @@ def build_module_service_spec(
         raise ValueError(
             f"{module_name}.outputs must be a list or dictionary in {module_context}"
         )
-
     image_data = get_required_field(module_metadata, "image", module_context)
     if isinstance(image_data, str):
         if ":" in image_data:
@@ -236,11 +235,16 @@ def build_module_service_spec(
         output_data_location, module_name=module_name
     )
 
+    fingerprint_params = {
+        "fingerprint_dir": metadata.get("fingerprint-dir", "FPRINT"),
+        "location_file": metadata.get("location-file", "location.lst"),
+    }
     impl_inputs = ModuleServiceSpecComponents(
         module_name=module_name,
         options=options_dict,
         input_paths=input_paths,
         output_paths=output_paths,
+        fingerprint_params=fingerprint_params,
         inputs=inputs_dict,
         outputs=outputs_dict,
         image=image,

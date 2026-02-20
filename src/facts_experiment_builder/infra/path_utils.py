@@ -298,6 +298,7 @@ def resolve_output_path(
     Raises:
         ValueError: If field_value is invalid or path cannot be resolved
     """
+
     if output_data_location is None:
         context_msg = f" in {context}" if context else ""
         raise ValueError(
@@ -329,4 +330,6 @@ def resolve_output_path(
     if os.path.isabs(actual_value):
         return actual_value
     resolved_path = os.path.join(output_data_location, actual_value)
-    return os.path.normpath(resolved_path)
+
+    returned_resolved_path = os.path.normpath(resolved_path)
+    return returned_resolved_path

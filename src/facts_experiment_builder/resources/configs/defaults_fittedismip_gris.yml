@@ -4,7 +4,7 @@
 # internal note: Image information andLocation file defaults DO NOT belong here.
 
 options:
-  tlm_flag: 0
+  tlm_flag: 1
   pyear_start: 2020
   pyear_end: 2100
   cyear_start: None

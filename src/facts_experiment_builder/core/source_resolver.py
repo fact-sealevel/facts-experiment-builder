@@ -12,7 +12,7 @@ def resolve_value(source: str, context: Dict[str, Any]) -> Any:
     reference e.g. metadata.pipeline-id or module_inputs.outputs.foo.
 
     Args:
-        source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location_file")
+        source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location-file")
         context: Dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
 
     Returns:

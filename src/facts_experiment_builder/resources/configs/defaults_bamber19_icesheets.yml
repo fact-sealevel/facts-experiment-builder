@@ -8,7 +8,6 @@ options:
   replace: 1
   chunksize: 50
 
-# Input paths
 inputs:
   slr_proj_mat_file: "SLRProjections190726core_SEJ_full.mat"
 

@@ -248,7 +248,7 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
         "pyear_step", "nsamps", "seed"
     ]
     fingerprint_params = [
-        "fingerprint-dir", "location-file-name"
+        "fingerprint-dir", "location-file"
     ]
     # Included modules (temperature_module and sealevel_modules)
     # These are the keys that appear in the "Modules included in experiment" section

@@ -96,7 +96,8 @@ logger = logging.getLogger(__name__)
 @click.option("--fingerprint-dir",
     type=str,
     required=False,
-    help="Name of directory holding GRD fingerprint data"
+    help="Name of directory holding GRD fingerprint data",
+    default="FPRINT"
 )
 def main(
     experiment_name, 

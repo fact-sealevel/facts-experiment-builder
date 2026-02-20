@@ -4,7 +4,7 @@ from typing import Dict, Any
 from facts_experiment_builder.core.module.facts_module import FactsModule
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 
-def load_facts_module(yaml_path: Path) -> FactsModule:
+def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
     """
     Load a FactsModule from a module YAML file.
 
@@ -56,9 +56,5 @@ def load_facts_module_by_name(module_name: str, project_root: Path) -> FactsModu
         FactsModule for the module.
     """
     yaml_path = find_module_yaml_path(module_name, project_root)
-    return load_facts_module(yaml_path)
+    return load_facts_module_from_yaml(yaml_path)
 
-def load_experiment_metadata(metadata_path: Path) -> Dict[str, Any]:
-    """Load experiment metadata from YAML file."""
-    with open(metadata_path) as f:
-        return yaml.safe_load(f)

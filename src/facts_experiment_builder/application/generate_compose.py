@@ -3,7 +3,7 @@
 
 This script follows a domain-driven design pattern:
 - experiment-metadata.yml is the "user interface" (UI layer)
-- Module parsers adapt user inputs into domain terms (Adapter layer)
+- Module service specs are created from experiment metadata (Adapter layer)
 - Docker compose files are the "engine" (Infrastructure layer)
 
 Usage:
@@ -11,20 +11,19 @@ Usage:
     
 """
 
-import sys
-import argparse
+
 import yaml
 from pathlib import Path
 from typing import Dict, Any, List
 
 from facts_experiment_builder.adapters.module_adapter import (
-    create_module_from_metadata,
+    create_module_service_spec_from_metadata,
 )
 
 from facts_experiment_builder.core.experiment import FactsExperiment
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.path_utils import find_project_root
-from facts_experiment_builder.infra.module_loader import load_experiment_metadata
+from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
 
 
 
@@ -115,9 +114,6 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Step 1: Load metadata (UI layer)
     metadata = load_experiment_metadata(metadata_path)
 
-    # Normalize module paths (convert underscores to hyphens in directory names)
-    #metadata = normalize_module_paths_in_metadata(metadata)
-
     experiment_dir = metadata_path.parent
 
     # Step 2: Build FactsExperiment and get manifest
@@ -137,7 +133,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     temperature_module_name = manifest["temperature_module"]
     if temperature_module_name and temperature_module_name.upper() != "NONE":
         try:
-            module = create_module_from_metadata(
+            module = create_module_service_spec_from_metadata(
                 metadata_path,
                 module_name=temperature_module_name,
                 module_type="temperature_module",
@@ -157,7 +153,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Create sea level modules if specified
     for module_name in manifest["sealevel_modules"]:
         try:
-            module = create_module_from_metadata(
+            module = create_module_service_spec_from_metadata(
                 metadata_path,
                 module_name=module_name,
                 module_type="sealevel_module",
@@ -172,7 +168,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Create framework modules if specified
     for module_name in manifest.get("framework_modules", []):
         try:
-            module = create_module_from_metadata(
+            module = create_module_service_spec_from_metadata(
                 metadata_path,
                 module_name=module_name,
                 module_type="framework_module",
@@ -186,7 +182,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Create ESL modules if specified
     for module_name in manifest.get("esl_modules", []):
         try:
-            module = create_module_from_metadata(
+            module = create_module_service_spec_from_metadata(
                 metadata_path,
                 module_name=module_name,
                 module_type="extreme_sealevel_module",

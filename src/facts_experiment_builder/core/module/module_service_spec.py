@@ -1,18 +1,22 @@
-"""Module implementation: has all information needed to run a module and slot into an experiment implementation (e.g. compose service)."""
-
+"""Module in service: has all information needed to run a module and slot into an experiment implementation (e.g. one compose service)."""
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-# Path types from path_utils only (do not import from adapters/experiment_metadata_to_service_spec to avoid circular import)
 from facts_experiment_builder.infra.path_utils import (
     ModuleInputPaths,
     ModuleOutputPaths,
 )
+from facts_experiment_builder.adapters.compose_service_writer import build_compose_service_dict
 from facts_experiment_builder.core.module.facts_module import FactsModule
-from facts_experiment_builder.adapters.source_resolver import resolve_value as resolve_source_value
-from facts_experiment_builder.adapters.compose_service_writer import build_service_dict
-from facts_experiment_builder.infra.module_loader import load_facts_module
+from facts_experiment_builder.core.source_resolver import resolve_value as resolve_source_value
+
+@dataclass(frozen=True)
+class ScenarioConfig:
+    """Scenario configuration details."""
+    scenario_name: str
+    description: str
+
 
 @dataclass(frozen=True)
 class ModuleContainerImage:
@@ -22,26 +26,19 @@ class ModuleContainerImage:
 
 
 @dataclass(frozen=True)
-class ScenarioConfig:
-    """Scenario configuration details."""
-    scenario_name: str
-    description: str
-
-
-
-
-@dataclass(frozen=True)
 class ModuleServiceSpecComponents:
-    """Dataclass holding all inputs required for a ModuleServiceSpec (experiment-specific paths, values, image, metadata)."""
+    """Dataclass holding all inputs required for a ModuleServiceSpec (experiment-specific paths, values, image, metadata).
+    """
     module_name: str
     options: Dict[str, Any]
     input_paths: ModuleInputPaths
     output_paths: ModuleOutputPaths
+    fingerprint_params: Dict[str, Any]
     inputs: Dict[str, Any]
     outputs: Dict[str, Any]
     image: ModuleContainerImage
     metadata: Dict[str, Any]
-
+    
 class ModuleServiceSpec:
     """Has all information needed to run a module and slot into an experiment implementation (e.g. one compose service).
 
@@ -62,26 +59,7 @@ class ModuleServiceSpec:
         """
         self.components = components
         self.module_definition = module_definition
-
-    @classmethod
-    def from_yaml(
-        cls,
-        components: ModuleServiceSpecComponents,
-        yaml_path: Path,
-        ) -> "ModuleServiceSpec":
-        """
-        Create a ModuleServiceSpec from a module YAML file path.
-
-        Args:
-            components: Inputs for the module
-            yaml_path: Path to the module YAML configuration file
-
-        Returns:
-            ModuleServiceSpec instance
-        """
-        module_definition = load_facts_module(yaml_path)
-        return cls(components=components, module_definition=module_definition)
-    
+    #old classmethod from_yaml (was cls)
     @property
     def module_name(self) -> str:
         """Return the module name."""
@@ -156,7 +134,7 @@ class ModuleServiceSpec:
         
         # Process outputs
         for arg_spec in arguments_config.get('outputs', []):
-            value = self._process_argument(arg_spec)
+            value = self._process_output_argument(arg_spec)
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
         
@@ -203,17 +181,11 @@ class ModuleServiceSpec:
         elif transform == 'filename':
             if isinstance(value, (str, Path)):
                 value = Path(value).name
-        
-        # Handle mount transformations for file paths
+
+        # Handle mount transformations for file paths (inputs and options only; outputs use _process_output_argument).
         mount = arg_spec.get('mount', {})
         if mount and isinstance(value, (str, Path)):
             container_path = mount.get('container_path', '')
-            volume = mount.get('volume', '')
-            # For output volume, only this module's outputs go under /mnt/out/<module_name>/
-            # (inputs that read other modules' outputs keep /mnt/out so paths like /mnt/out/fair-temperature/... work)
-            source = arg_spec.get('source', '')
-            if volume == 'output' and container_path and 'module_inputs.outputs' in source and hasattr(self, 'module_inputs'):
-                container_path = f"{container_path.rstrip('/')}/{self.components.module_name}"
             if container_path:
                 # Transform to container path
                 if transform == 'filename':
@@ -222,7 +194,7 @@ class ModuleServiceSpec:
                     # Preserve relative path structure from input_dir
                     # Compute relative path from module input directory to preserve subdirectory structure
                     value_path = Path(value)
-                    if value_path.is_absolute() and hasattr(self, 'module_inputs') and hasattr(self.components, 'input_paths'):
+                    if value_path.is_absolute() and hasattr(self.components, 'input_paths'): 
                         input_dir = Path(self.components.input_paths.input_dir)
                         try:
                             # Compute relative path from input_dir to the file
@@ -235,13 +207,49 @@ class ModuleServiceSpec:
                         # Relative: preserve path (e.g. rcmip/file.csv -> container/rcmip/file.csv).
                         # Absolute: Path(container_path)/value_path would return value_path (absolute wins), leaking host path; use filename only.
                         value = str(
-                            Path(container_path) / value_path
+                            Path(container_path) / value_path.parent / value_path.name
                             if not value_path.is_absolute()
                             else Path(container_path) / value_path.name
                         )
+                        
         
         return value
-    
+
+    def _process_output_argument(self, arg_spec: Dict[str, Any]) -> Any:
+        """
+        Process a single output argument: resolve value from module_inputs.outputs.*
+        and build container path as <container_path>/<module_name>/<filename>.
+
+        Returns:
+            Container path string (e.g. /mnt/out/fair-temperature/gsat.nc) or None.
+        """
+        source = arg_spec.get('source', '')
+        if not source:
+            return None
+
+        value = self._resolve_value(source)
+        if value is None and arg_spec.get('optional', False):
+            return None
+        if value is None:
+            for alt_source in arg_spec.get('alternatives', []):
+                value = self._resolve_value(alt_source)
+                if value is not None:
+                    break
+        if value is None:
+            return None
+
+        mount = arg_spec.get('mount', {})
+        if not mount or not isinstance(value, (str, Path)):
+            return value
+
+        container_path = (mount.get('container_path') or '').rstrip('/')
+        volume = mount.get('volume', '')
+        if volume == 'output' and container_path:
+            base = f"{container_path}/{self.components.module_name}"
+            filename = Path(value).name
+            return f"{base}/{filename}"
+        return value
+
     def _build_volumes(self) -> List[str]:
         """
         Build volumes list from YAML configuration.
@@ -321,14 +329,7 @@ class ModuleServiceSpec:
         
         return depends_on
     
-    def check_attrs(self):
-        """Check that all required attributes are present."""
-        # Basic validation - can be extended
-        if not self.components.module_name:
-            raise ValueError("module_name is required")
-        if not self.components.image.image_url:
-            raise ValueError("image.image_url is required")
-    
+
     def generate_compose_service(self, temperature_service_name: Optional[str] = None) -> Dict[str, Any]:
         """
         Generate Docker Compose service configuration.
@@ -343,7 +344,7 @@ class ModuleServiceSpec:
         command = self._build_command_args()
         volumes = self._build_volumes()
         depends_on = self._build_depends_on(temperature_service_name=temperature_service_name)
-        return build_service_dict(
+        return build_compose_service_dict(
             image_str=image_str,
             command=command,
             volumes=volumes,
