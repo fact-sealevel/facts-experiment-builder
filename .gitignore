@@ -184,5 +184,7 @@ data/
 
 .history
 
-old_scripts/
-old_stuff/
+
+docs/
+v2_experiments/
+old_code/

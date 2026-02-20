@@ -1,7 +1,25 @@
-"""Utility functions for parsers to extract required fields from metadata."""
+"""Manifest and metadata parsing helpers for adapters. Path resolution lives in utils.path_utils."""
 
 from typing import Dict, Any, List, Optional
+from pathlib import Path
 
+__all__ = [
+    "get_required_field",
+    "get_required_field_with_alternatives",
+    "get_experiment_paths",
+]
+
+def is_metadata_value(obj: Any) -> bool:
+    """
+    Check if an object is a metadata value dict (has 'clue' key, 'value' is optional).
+    
+    Args:
+        obj: Object to check
+        
+    Returns:
+        True if obj is a metadata value dict, False otherwise
+    """
+    return isinstance(obj, dict) and "clue" in obj
 
 def get_required_field(metadata: Dict[str, Any], field_name: str, context: str = "") -> Any:
     """
@@ -21,17 +39,16 @@ def get_required_field(metadata: Dict[str, Any], field_name: str, context: str =
     if field_name not in metadata:
         context_msg = f" in {context}" if context else ""
         raise KeyError(
-            f"Required field '{field_name}' is missing from metadata{context_msg}"
+            f"Required field '{field_name}' is missing from metadata{context_msg}. Instead, saw {metadata.keys()}"
         )
     return metadata[field_name]
-
 
 def get_required_field_with_alternatives(
     metadata: Dict[str, Any],
     primary_field: str,
     alternative_fields: List[str],
     context: str = ""
-) -> Any:
+    ) -> Any:
     """
     Get a required field, trying primary first, then alternatives.
     
@@ -64,110 +81,72 @@ def get_required_field_with_alternatives(
         f"is missing from metadata{context_msg}"
     )
 
-
-def get_required_nested_field(
-    metadata: Dict[str, Any],
-    field_path: List[str],
-    context: str = ""
-) -> Any:
+def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[str, str]:
     """
-    Get a required field from nested dictionary structure.
+    Extract experiment-level paths from metadata.
     
     Args:
-        metadata: Metadata dictionary
-        field_path: List of keys to traverse (e.g., ["v2-output-files", "fair"])
-        context: Optional context for error message
-    
+        metadata: Experiment metadata dictionary
+        context: Optional context for error messages
+        
     Returns:
-        Field value
-    
+        Dictionary with keys:
+        - 'general_input_data': Path to general input data
+        - 'module_specific_input_data': Path to module-specific input data
+        - 'output_data_location': Path to output data location
+        
     Raises:
-        KeyError: If any part of the path is missing
+        KeyError: If required paths are missing from metadata
+        ValueError: If path values are None or invalid
     """
-    current = metadata
-    path_str = " -> ".join(field_path)
-    
-    for key in field_path:
-        if not isinstance(current, dict):
-            context_msg = f" in {context}" if context else ""
-            raise KeyError(
-                f"Path '{path_str}' is invalid: '{key}' is not a dictionary{context_msg}"
-            )
-        if key not in current:
-            context_msg = f" in {context}" if context else ""
-            raise KeyError(
-                f"Required field '{key}' missing in path '{path_str}'{context_msg}"
-            )
-        current = current[key]
-    
-    return current
-
-
-def get_required_list_item(
-    value: List[Any],
-    index: int,
-    field_name: str,
-    context: str = ""
-) -> Any:
-    """
-    Get a required item from a list, raising error if index is out of range.
-    
-    Args:
-        value: List to index into
-        index: Index to access
-        field_name: Name of the field (for error message)
-        context: Optional context for error message
-    
-    Returns:
-        List item at index
-    
-    Raises:
-        IndexError: If index is out of range
-    """
-    if index >= len(value):
-        context_msg = f" in {context}" if context else ""
-        raise IndexError(
-            f"Required item at index {index} missing from '{field_name}' list "
-            f"(list has {len(value)} items){context_msg}"
-        )
-    return value[index]
-
-
-def get_required_field_nested_or_top(
-    metadata: Dict[str, Any],
-    field_name: str,
-    nested_key: str,
-    context: str = ""
-) -> Any:
-    """
-    Get a required field, checking nested location first, then top level.
-    
-    Args:
-        metadata: Metadata dictionary
-        field_name: Name of the field to extract
-        nested_key: Key of the nested dict to check first (e.g., "fair-inputs")
-        context: Optional context for error message
-    
-    Returns:
-        Field value from nested location if found, otherwise from top level
-    
-    Raises:
-        KeyError: If field is missing from both locations
-    """
-    # Check nested location first
-    if nested_key in metadata and isinstance(metadata[nested_key], dict):
-        nested_dict = metadata[nested_key]
-        if field_name in nested_dict:
-            return nested_dict[field_name]
-    
-    # Fall back to top level
-    if field_name in metadata:
-        return metadata[field_name]
-    
-    # Not found in either location
-    context_msg = f" in {context}" if context else ""
-    raise KeyError(
-        f"Required field '{field_name}' is missing from metadata "
-        f"(checked in '{nested_key}' and at top level){context_msg}"
+    general_input_data = get_required_field_with_alternatives(
+        metadata, "general-input-data", ["general_input_data"], context
     )
+    if general_input_data is None:
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required path field 'general-input-data' (or 'general_input_data') is None{context_msg}. "
+            f"Please provide a valid path string."
+        )
+    if not isinstance(general_input_data, str):
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required path field 'general-input-data' has invalid type: expected str, got {type(general_input_data)}{context_msg}"
+        )
+    
+    module_specific_input_data = get_required_field_with_alternatives(
+        metadata, "module-specific-input-data", ["module_specific_input_data"], context
+    )
+    if module_specific_input_data is None:
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required path field 'module-specific-input-data' (or 'module_specific_input_data') is None{context_msg}. "
+            f"Please provide a valid path string."
+        )
+    if not isinstance(module_specific_input_data, str):
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required path field 'module-specific-input-data' has invalid type: expected str, got {type(module_specific_input_data)}{context_msg}"
+        )
+    
+    output_data_location = get_required_field_with_alternatives(
+        metadata, "output-data-location", ["output_data_location", "output-path", "output_path"], context
+    )
+    if output_data_location is None:
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required path field 'output-data-location' (or alternatives: 'output_data_location', 'output-path', 'output_path') is None{context_msg}. "
+            f"Please provide a valid path string."
+        )
+    if not isinstance(output_data_location, str):
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Required path field 'output-data-location' has invalid type: expected str, got {type(output_data_location)}{context_msg}"
+        )
+    
+    return {
+        "general_input_data": general_input_data,
+        "module_specific_input_data": module_specific_input_data,
+        "output_data_location": output_data_location,
+    }
 
