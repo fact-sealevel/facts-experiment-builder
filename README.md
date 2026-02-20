@@ -2,129 +2,70 @@
 
 This is a prototype of configuring and managing facts v2 experiments. 
 
-Warning: it is very rough and incomplete! It currently has 2 modules implemented: fair and bamber19, and is only setup to generate global outputs, not local. 
-
+Warning: it is very rough and incomplete! 
 ## Overview
 
-![image](imgs/diagram.png)
+### Example
+(copy-pasting for now from old PR comment): 
+with the provided example experiment below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate compose`, and then successfully execute the docker compose file to run the experiment.
 
-This only has a few modules. To add a new module, create a new sub-module in `src/facts_experiment_builder/` with the module name. Specify any default values in `defaults.yml`. Add module components and logic in `module.py` and write parser in `parser.py`.
-
-### User interface
-The user specifies the experiment here. You could do it totally by hand but `setup_new_environment.py` is a helper. Pass an experiment name and the modules the experiment will include to this script and it will create a skeleton `experiment-metadata.yml`. Any default values that are specified in that file are set in the `defaults.yml` file of a specific module (in `src/core/modules`). 
-
-### Adapter
-Parses the metadata file and translates into domain objects.
-
-### Domain layer 
-Tries to conceptualize the building blocks of a FACTS experiment and how they work together. Each FACTS module has its on sub-module here that contains 3 files: `module.py`, `parser.py` and `defaults.yml`. `module.py` tries to represent the module and its inputs. `defaults.py` should be the only place that default values are specified so that its the single source of truth.
-
-## Usage example:
-
-Clone repo
+### Steps to run:
+#### Setup:
+1. Start from your project root dir. For now, the experiment builder assumes you have an experiments sub-directory in this location. so something like...
 ```shell
-git clone git@github.com:fact-sealevel/facts-experiment-builder.git
+mkdir fresh_facts_project
+cd fresh_facts_project
+mkdir experiments
+```
+2. experiment builder assumes you have facts input data downloaded (somewhere on your machine) and separated into module-specific input data and general input data.
+- `module_specific_inputs` (or whatever it is called on your machine) should have a sub-directory for each FACTS module with the directory name matching the module name. ie.
+```shell
+module_specific_input_data/               
+bamber19-icesheets                
+caron18                           
+deconto21-ais                            
+fair-temperature                 
+fair2-climate                    
+fittedismip-gris 
+...               
+```
+- have a separate `general_input_data` that contains `location.lst` and GRD fingerprint data. 
+```shell
+general_input_data/
+location.lst
+fingerprint_region_map.csv
+FPRINT
 ```
 
-### Step 1: Create experiment
-Then, create an experiment. To do this, you'll need to pass an experiment name and the modules you want to include in the experiment. The example below creates an experiment named <my_facts_experiment> that includes the fair and bamber19-icesheets modules. 
-
+#### 2. Create an experiment via CLI
+- at a minimum, this entails specifying:
+     - `experiment-name`
+     - `temperature-module` (if using. note: will be renamed to climate-step)
+     - `sealevel-modules`
+- optionally, can also include `--pipeline-id`, `--scenario`, `--pyear-start`, `--pyear-end`, `--pyear-step`, `--baseyear`, `--nsamps`, `--seed`
+Example:
 ```shell
-uv run setup-new-experiment my_facts_experiment fair bamber19-icesheets
+uv run setup-new-experiment --experiment-name test_experiment --temperature-module fair-temperature --sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,ipccar5-glaciers,ipccar5-icesheets,kopp14-verticallandmotion,nzinsargps-verticallandmotion,tlm-sterodynamics --scenario ssp585 --baseyear 2005 --pipeline-id aaa --pyear-start 2020 --pyear-end 2150 --pyear-step 10 --nsamps 100 --seed 1234
 ```
+- This command: 
+     - makes a sub-directory in experiments with the supplied `--experiment-name` 
+     - creates and partially pre-populates an `experiment-metadata.yml`. this is equivalent to a facts1 experiment `config.yml`. it is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
+     - `experiment-metadata.yml` is prepopulated based on the arguments you supply and the modules you specified
+3. Manually enter two fields in the experiment metadata yml and review
+- If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
+- You must specify two things:
+     - the path to the module specific input data on your machine (ie. `~/Desktop/facts_data/module_specific_inputs`)
+     - the path to the general input data on your machine (ie. `~/Desktop/facts_data/general_inputs`)
+- You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
+- 
+#### 3. Generate docker compose file via CLI
+Example:
+```uv run generate-compose --experiment-name test_experiment```
+- Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
+- this is the docker implementation of the abstract experiment specified by `experiment-metadata.yml`
 
-If it runs sucessfully, it should show something like:
-```shell
-project_root: /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder
-✓ Created directory: /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/v2_experiments/my_facts_experiment
-✓ Created data/v2_output_data directory
-✓ Created v2-experiment-metadata.yml
-✓ Created README.md
+Then,
+- inspect the compose file
+- run experiment like (assuming from project root) `docker compose -f experiments/experiment_name/experiment-compose.yaml up`
 
-✨ Experiment directory setup complete!
-
-Next steps:
-  1. Edit /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/v2_experiments/my_facts_experiment/v2-experiment-metadata.yml
-     - Fill in all placeholder values (pipeline-id, scenario, paths, etc.)
-  2. Generate Docker Compose:
-     uv run generate-compose /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/v2_experiments/my_facts_experiment
-```
-
-### Step 2: Configure experiment
-Now, fill in the newly created `v2-experiment-metadata.yml` file. Some defaults will be pre-populated; these are taken from defaults specified in a `defaults.yml` file that is within the core submodule for each FACTS module. (eg. `./src/facts_experiment_builder/core/modules/fair/defaults.yml`).
-
-A completed experiment metadata file looks like:
-(note: this has hardcoded file paths from my computer, need to be changed)
-```shell
-experiment_name:
-    my_facts_experiment
-pipeline-id:
-    "my_pipeline_id"
-scenario:
-    "ssp585"
-baseyear:
-    2005
-pyear_start:
-    2020
-pyear_end:
-    2150
-pyear_step:
-    10
-nsamps:
-    500
-seed:
-    1234
-temp_module:
-    fair
-sealevel_modules:
-    bamber19-icesheets
-common-inputs-path:
-    "$HOME/Desktop/facts_work/facts_v2/common_inputs_across_modules"
-location-file:
-    "location.lst"
-v2-output-path:
-    "./v2_experiments/my_facts_experiment/data/output"
-fair:
-  inputs:
-    input_dir: $HOME/Desktop/facts_work/facts_v2/fair/data/input
-    cyear_start: 1850
-    cyear_end: 1900
-    smooth_win: 19
-    rcmip_fname: rcmip
-    param_fname: parameters
-  options:
-    # Options are inherited from top-level metadata (pipeline-id, nsamps, seed, scenario)
-    # Module-specific options are in inputs
-  image: ghcr.io/fact-sealevel/fair-temperature:0.2.1
-  outputs:
-  - fair/climate.nc
-  - fair/ohc.nc
-  - fair/gsat.nc
-  - fair/oceantemp.nc
-bamber19-icesheets:
-  inputs:
-    input_dir: $HOME/Desktop/facts_work/facts_v2/bamber19-icesheets/data/input
-    replace: true
-    slr_proj_mat_file: SLRProjections190726core_SEJ_full.mat
-    climate_data_file: fair/climate.nc
-  options:
-    # Options inherited from top-level metadata: pipeline-id, nsamps, seed, scenario, pyear_start, pyear_end, pyear_step, baseyear
-    replace: true
-  image: ghcr.io/fact-sealevel/bamber19-icesheets:0.1.0
-  outputs:
-  - bamber19-icesheets/ais_gslr.nc
-  - bamber19-icesheets/eais_gslr.nc
-  - bamber19-icesheets/wais_gslr.nc
-  - bamber19-icesheets/gis_gslr.nc
-```
-
-### Step 3: Generate docker compose file
-
-To generate a docker compose script with the specified experiment:
-```shell
-uv run generate-compose my_facts_experiment
-```
-
-### Step 4: Run compose file 
-
-(note this doesn't work, need to fix a missing fair output file name and probably some other things)
+ This is still very much in progress/rough but this much should be working. will keep making updates to fix issues described above and expand functionality/coverage. 
