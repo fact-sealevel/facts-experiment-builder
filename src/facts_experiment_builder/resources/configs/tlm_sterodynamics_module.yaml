@@ -8,6 +8,7 @@ module_name: "tlm-sterodynamics"
 container_image: "ghcr.io/fact-sealevel/tlm-sterodynamics:latest"
 uses_climate_file: true
 climate_file_required: true
+command: "main"
 
 # Argument specifications
 arguments:

@@ -8,6 +8,7 @@ module_name: "ssp-landwaterstorage"
 container_image: "ghcr.io/fact-sealevel/ssp-landwaterstorage:latest"
 uses_climate_file: false
 climate_file_required: false
+command: "main"
 
 # Argument specifications
 arguments:

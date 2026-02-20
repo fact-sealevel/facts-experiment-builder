@@ -8,6 +8,7 @@ module_name: "fittedismip-gris"
 container_image: "ghcr.io/fact-sealevel/fittedismip-gris:0.1.2"
 uses_climate_file: true
 climate_file_required: true
+command: "main"
 
 # Argument specifications
 arguments:

@@ -8,6 +8,7 @@ module_name: "larmip-ais"
 container_image: "ghcr.io/fact-sealevel/larmip-ais:v0.1.0"
 uses_climate_file: true
 climate_file_required: true
+command: "main"
 
 # Argument specifications
 arguments:
