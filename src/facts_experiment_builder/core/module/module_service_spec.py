@@ -173,19 +173,23 @@ class ModuleServiceSpec:
         
         # Apply transform if specified
         transform = arg_spec.get('transform')
+        mount = arg_spec.get('mount', {})
         if transform == 'scenario_name':
             if hasattr(value, 'scenario_name'):
                 value = value.scenario_name
             elif isinstance(value, dict):
                 value = value.get('scenario_name', value.get('scenario', value))
         elif transform == 'filename':
-            if isinstance(value, (str, Path)):
+            # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
+            if isinstance(value, (str, Path)) and not (mount.get('volume') == 'output' and '/' in str(value)):
                 value = Path(value).name
 
         # Handle mount transformations for file paths (inputs and options only; outputs use _process_output_argument).
-        mount = arg_spec.get('mount', {})
         if mount and isinstance(value, (str, Path)):
-            container_path = mount.get('container_path', '')
+            container_path = (mount.get('container_path') or '').rstrip('/')
+            if container_path and mount.get('volume') == 'output' and '/' in str(value) and not Path(value).is_absolute():
+                # Path under output root from another service (e.g. fair-temperature/climate.nc) -> /mnt/out/fair-temperature/climate.nc
+                return f"{container_path}/{value}"
             if container_path:
                 # Transform to container path
                 if transform == 'filename':
