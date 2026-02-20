@@ -82,13 +82,6 @@ arguments:
       help: "TO DO ADD HELP TEXT"
 
   fingerprint_params:
-    - name: "fingerprint-dir"
-      type: "str"
-      source: "module_inputs.fingerprint_params.fingerprint_dir"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
     - name: "location-file"
       type: "str"
       source: "module_inputs.fingerprint_params.location_file"
