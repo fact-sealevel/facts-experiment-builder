@@ -73,16 +73,6 @@ arguments:
       source: "module_inputs.options.tlm_flag"
       optional: true
       help: "Use the two-layer model data, 1=yes"
-    - name: "nmsamps"
-      type: "int"
-      source: "module_inputs.options.nmsamps"
-      optional: true
-      help: "Number of method samples to generate"
-    - name: "ntsamps"
-      type: "int"
-      source: "module_inputs.options.ntsamps"
-      optional: true
-      help: "Number of climate samples to generate"
     - name: "nsamps"
       type: "int"
       source: "module_inputs.options.nsamps"
