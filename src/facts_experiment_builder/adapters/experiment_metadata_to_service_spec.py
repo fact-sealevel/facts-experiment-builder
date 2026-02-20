@@ -34,6 +34,16 @@ ALLOWED_MODULE_TYPES = {
     "other_module",
 }
 
+# Module names that may appear as the last path segment when metadata mistakenly
+# points at a specific module's dir (e.g. .../fair-temperature). Volume host path
+# must always be base + current module's suffix only; we use parent as base when this matches.
+KNOWN_MODULE_SUBDIR_NAMES = frozenset({
+    "fair-temperature", "fair-climate", "bamber19-icesheets", "deconto21-ais",
+    "ipccar5", "ipccar5-glaciers", "ipccar5-icesheets", "larmip-ais", "fittedismip-gris",
+    "tlm-sterodynamics", "ssp-landwaterstorage", "kopp14-verticallandmotion",
+    "nzinsargps-verticallandmotion",
+})
+
 
 def build_module_service_spec(
     metadata: Dict[str, Any],
@@ -89,12 +99,20 @@ def build_module_service_spec(
         f"{module_context} (general-input-data)",
     )
 
-    module_specific_input_data = expand_path(
+    module_specific_input_base = expand_path(
         experiment_paths["module_specific_input_data"],
         f"{module_context} (module-specific-input-data)",
     )
-    #Add module name to module-specific input data path
-    module_specific_input_data = module_specific_input_data + "/" + module_name
+    # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
+    # so volume host path is always base + current module's suffix only (never another module's name).
+    if Path(module_specific_input_base).name in KNOWN_MODULE_SUBDIR_NAMES:
+        module_specific_input_base = str(Path(module_specific_input_base).parent)
+    # Module-specific input dir: one shared dir per "module" (e.g. ipccar5 for both glaciers and icesheets).
+    # Output dir and service identity stay per service (ipccar5-glaciers, ipccar5-icesheets).
+    module_specific_input_path_suffix = (
+        "ipccar5" if module_name in ("ipccar5-glaciers", "ipccar5-icesheets") else module_name
+    )
+    module_specific_input_data = module_specific_input_base + "/" + module_specific_input_path_suffix
 
     output_data_partial = expand_path(
         experiment_paths["output_data_location"],
@@ -110,11 +128,19 @@ def build_module_service_spec(
             if not key.startswith("#"):
                 options_dict[key] = value
 
+    # Path under output root for files produced by another service (e.g. temperature climate file).
+    # Stored as relative (e.g. "fair-temperature/climate.nc") so compose command gets /mnt/out/<that>.
+    output_root_relative_inputs = {"climate_data_file", "climate-data-file", "climate_file", "climate-file"}
+
     inputs_dict = {}
     for key, value in module_inputs_section.items():
         if key == "input_dir":
             continue
         if isinstance(value, str) or (isinstance(value, dict) and "value" in value):
+            actual = (value.get("value", value) if isinstance(value, dict) else value) or ""
+            if key in output_root_relative_inputs and isinstance(actual, str) and actual.strip() and not actual.strip().startswith("/") and ".." not in actual:
+                inputs_dict[key] = actual.strip()  # e.g. "fair-temperature/climate.nc"
+                continue
             try:
                 resolved_path = resolve_input_path(
                     key,
