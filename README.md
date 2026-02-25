@@ -1,5 +1,8 @@
 # facts-experiment-builder
 
+> [!CAUTION]
+> This is a prototype. It is likely to change in breaking ways. It might delete all your data. Don't use it in production.
+
 ## Overview
 This is a prototype of a package for configuring and managing FACTS 2 experiments. A FACTS 2 experiment consists of running one or more modules from the FACTS 2 ecosystem. It produces sets of one or more distributions of projected future sea-level rise and/or future extreme sea-level events. FACTS 2 modules represent different physical processes. When run in the context of an experiment, they contribute to comprehensive estimates of future sea-level change under specified conditions.
 
@@ -81,6 +84,11 @@ Then,
 - inspect the compose file
 - run experiment like (assuming from project root) `docker compose -f experiments/experiment_name/experiment-compose.yaml up`
 
+## Support
+
+Source code is available online at https://github.com/fact-sealevel/facts-experiment-builder. This software is open source and available under the MIT license.
+
+Please file issues in the issue tracker at https://github.com/fact-sealevel/facts-experiment-builder/issues.
 
 ### Notes
 More in the weeds notes on internals
