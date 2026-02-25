@@ -115,9 +115,12 @@ def init_new_experiment(
     seed: int = None,
     location_file: str = None,
     fingerprint_dir: str = None,
+    workflow_dict: Dict[str, str] = None,
+    module_specific_inputs: str = None,
+    general_inputs: str = None,
     ) -> FactsExperiment:
     """
-    Create a new FactsExperiment from CLI inputs 
+    Create a new FactsExperiment from CLI inputs
     Uses FactsExperiment.create_new_experiment_obj with dependencies from this module.
     """
     return FactsExperiment.create_new_experiment_obj(
@@ -137,6 +140,9 @@ def init_new_experiment(
         seed=seed,
         location_file=location_file,
         fingerprint_dir=fingerprint_dir,
+        workflow_dict=workflow_dict,
+        module_specific_input_data=module_specific_inputs,
+        general_input_data=general_inputs,
         create_metadata_bundle=create_metadata_bundle,
         format_module_from_definition=format_module_from_definition,
         load_facts_module_by_name=load_facts_module_by_name,

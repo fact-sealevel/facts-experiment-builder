@@ -165,8 +165,11 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         except Exception as e:
             print(f"⚠ Warning: Failed to create sealevel module '{module_name}': {e}")
     
-    # Create framework modules if specified
+    # Create framework modules if specified (skip "facts-total" when workflows exist; we add per-workflow services below)
+    workflow_dict = metadata.get("workflows") or {}
     for module_name in manifest.get("framework_modules", []):
+        if module_name == "facts-total" and workflow_dict:
+            continue  # facts-total is added once per workflow below
         try:
             module = create_module_service_spec_from_metadata(
                 metadata_path,
@@ -220,10 +223,71 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             temperature_service_name=temperature_module_name
         )
         services[service_name] = compose_service
-    
+
+    # Add one facts-total service per workflow (after sealevel services)
+    if workflow_dict:
+        project_root = find_project_root(experiment_dir)
+        facts_total_yaml_path = find_module_yaml_path("facts-total", project_root)
+        with open(facts_total_yaml_path, "r") as f:
+            facts_total_config = yaml.safe_load(f) or {}
+        facts_total_image = facts_total_config.get(
+            "container_image", "ghcr.io/fact-sealevel/facts-total:v0.1.2"
+        )
+        for workflow_name, module_list_str in workflow_dict.items():
+            workflow_modules = [
+                m.strip() for m in module_list_str.split(",") if m.strip()
+            ]
+            # Collect output paths from metadata for modules in this workflow
+            item_paths = []
+            for mod in workflow_modules:
+                out_section = metadata.get(mod, {}) or {}
+                if not isinstance(out_section, dict):
+                    continue
+                outputs = out_section.get("outputs") or {}
+                if not isinstance(outputs, dict):
+                    continue
+                for v in outputs.values():
+                    if isinstance(v, dict) and "value" in v:
+                        p = v.get("value") or ""
+                    elif isinstance(v, str):
+                        p = v
+                    else:
+                        continue
+                    if p and isinstance(p, str):
+                        item_paths.append(f"/mnt/total_out/{p.strip()}")
+            service_name = f"facts-total-{workflow_name}"
+            synthetic_section = {
+                "inputs": {"item": item_paths},
+                "outputs": {"output-path": f"{workflow_name}_total.nc"},
+                "options": {},
+                "fingerprint_params": {},
+                "image": facts_total_image,
+                "_output_subdir": "facts-total",
+                "_output_container_base": "/mnt/total_out/facts-total",
+            }
+            metadata_copy = dict(metadata)
+            metadata_copy[service_name] = synthetic_section
+            try:
+                wf_module = create_module_service_spec_from_metadata(
+                    metadata_path,
+                    module_name=service_name,
+                    module_type="framework_module",
+                    metadata=metadata_copy,
+                    module_yaml_path=facts_total_yaml_path,
+                )
+                compose_svc = wf_module.generate_compose_service()
+                compose_svc["depends_on"] = {
+                    mod: {"condition": "service_completed_successfully"}
+                    for mod in workflow_modules
+                }
+                services[service_name] = compose_svc
+                print(f"✓ Created {service_name} workflow service")
+            except Exception as e:
+                print(f"⚠ Warning: Failed to create workflow service '{service_name}': {e}")
+
     # Step 5: Build complete Docker Compose file as dict
     compose_dict = {
         "services": services
     }
-    
+
     return compose_dict

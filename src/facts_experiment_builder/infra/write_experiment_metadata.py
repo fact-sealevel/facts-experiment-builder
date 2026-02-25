@@ -54,6 +54,14 @@ experiment_name:
 {% endif %}
 {% endfor %}
 
+##----- Workflows (facts-total) -----##
+{% if experiment.workflows %}
+workflows:
+{% for wf_name, wf_modules in experiment.workflows.items() %}
+  {{ wf_name }}: "{{ wf_modules }}"
+{% endfor %}
+{% endif %}
+
 ##----- Inputs -----##
 {% for key in inputs %}
 {% if key in experiment.paths %}

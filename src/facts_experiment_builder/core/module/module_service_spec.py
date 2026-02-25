@@ -38,6 +38,7 @@ class ModuleServiceSpecComponents:
     outputs: Dict[str, Any]
     image: ModuleContainerImage
     metadata: Dict[str, Any]
+    output_container_base: Optional[str] = None
     
 class ModuleServiceSpec:
     """Has all information needed to run a module and slot into an experiment implementation (e.g. one compose service).
@@ -107,11 +108,12 @@ class ModuleServiceSpec:
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
         
-        # Process fingerprint params
-        for arg_spec in arguments_config.get('fingerprint_params', []):
-            value = self._process_argument(arg_spec)
-            if value is not None:
-                command_args.append(f"--{arg_spec['name']}={value}")
+        if not "facts-total" in self.module_name:
+            # Process fingerprint params
+            for arg_spec in arguments_config.get('fingerprint_params', []):
+                value = self._process_argument(arg_spec)
+                if value is not None:
+                    command_args.append(f"--{arg_spec['name']}={value}")    
         # Process options
         for arg_spec in arguments_config.get('options', []):
             value = self._process_argument(arg_spec)
@@ -248,9 +250,15 @@ class ModuleServiceSpec:
 
         container_path = (mount.get('container_path') or '').rstrip('/')
         volume = mount.get('volume', '')
+        filename = Path(value).name
         if volume == 'output' and container_path:
+            output_container_base = getattr(
+                self.components, 'output_container_base', None
+            ) or None
+            if output_container_base:
+                base = (output_container_base or '').rstrip('/')
+                return f"{base}/{filename}"
             base = f"{container_path}/{self.components.module_name}"
-            filename = Path(value).name
             return f"{base}/{filename}"
         return value
 

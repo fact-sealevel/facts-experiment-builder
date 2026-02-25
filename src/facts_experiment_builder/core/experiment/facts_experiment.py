@@ -1,6 +1,6 @@
 """In-memory representation of an experiment (analogous to experiment-metadata.yml)."""
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable, Union
 
 from facts_experiment_builder.infra.path_manager import find_project_root
 
@@ -42,8 +42,9 @@ class FactsExperiment:
         manifest: Dict[str, Any],
         paths: Dict[str, Any],
         fingerprint_params: Dict[str, Any],
-        module_sections: Dict[str, Dict[str, Any]],
+        module_sections: Dict[str, Union[Dict[str, Any], Any]],
         extra: Optional[Dict[str, Any]] = None,
+        workflows: Optional[Dict[str, str]] = None,
         ):
         self._experiment_name = experiment_name
         self._top_level_params = dict(top_level_params)
@@ -52,6 +53,7 @@ class FactsExperiment:
         self._fingerprint_params = dict(fingerprint_params)
         self._module_sections = dict(module_sections)
         self._extra = dict(extra) if extra is not None else {}
+        self._workflows = dict(workflows) if workflows is not None else {}
 
         # Optional validation, e.g. require manifest keys
         if "temperature_module" not in self._manifest:
@@ -102,6 +104,11 @@ class FactsExperiment:
     def extra(self) -> Dict[str, Any]:
         return self._extra
 
+    @property
+    def workflows(self) -> Dict[str, str]:
+        """Workflows for facts-total: workflow name -> comma-separated module list."""
+        return self._workflows
+
     @classmethod
     def from_metadata_dict(cls, metadata: Dict[str, Any]) -> "FactsExperiment":
         """Build a FactsExperiment from the metadata dict shape (e.g. from YAML)."""
@@ -143,6 +150,11 @@ class FactsExperiment:
         excluded = set(TOP_LEVEL_PARAM_KEYS) | set(FINGERPRINT_PARAM_KEYS) | set(MANIFEST_KEYS) | set(PATH_KEYS_PRIMARY)
         excluded |= set().union(*(PATH_KEYS_ALTERNATIVES.get(k, []) for k in PATH_KEYS_PRIMARY))
         excluded.add("experiment_name")
+        excluded.add("workflows")
+
+        workflows = metadata.get("workflows")
+        if not isinstance(workflows, dict):
+            workflows = {}
 
         module_sections = {
             k: v for k, v in metadata.items()
@@ -153,6 +165,7 @@ class FactsExperiment:
             k: v for k, v in metadata.items()
             if k not in top_level_params and k not in manifest and k not in paths_normalized
             and k not in fingerprint_params and k not in module_sections and k != "experiment_name"
+            and k != "workflows"
         }
 
         return cls(
@@ -163,6 +176,7 @@ class FactsExperiment:
             fingerprint_params=fingerprint_params,
             module_sections=module_sections,
             extra=extra,
+            workflows=workflows,
         )
 
     @classmethod
@@ -175,6 +189,9 @@ class FactsExperiment:
         extremesealevel_module: str = None,
         experiment_path: Path = None,
         *,
+        workflow_dict: Optional[Dict[str, str]] = None,
+        module_specific_input_data: Optional[str] = None,
+        general_input_data: Optional[str] = None,
         pipeline_id: Optional[str] = None,
         scenario: Optional[str] = None,
         baseyear: Optional[int] = None,
@@ -195,8 +212,11 @@ class FactsExperiment:
         Create a new experiment from template/CLI inputs.
         Dependencies are injected to avoid circular imports (call from application layer).
         """
-        #First, create dict and fill with top level param keys 
-        #and their clues/values from top_level_param_clues 
+        # Normalize framework_modules to list (CLI may pass comma-separated string)
+        if framework_modules is not None and isinstance(framework_modules, str):
+            framework_modules = [m.strip() for m in framework_modules.split(",") if m.strip()] or None
+        # First, create dict and fill with top level param keys
+        # and their clues/values from top_level_param_clues
         # TODO top_level_param_clues currently hardcoded in setup_new_experiment
         # need to fix this. others are hardcoded at top of this script.
 
@@ -212,10 +232,14 @@ class FactsExperiment:
             "seed": create_metadata_bundle(top_level_param_clues.get("seed", "Random seed to use for sampling"), seed),
             "temperature_module": temperature_module,
             "sealevel_modules": sealevel_modules if len(sealevel_modules) > 1 else (sealevel_modules[0] if sealevel_modules else []),
-            "framework_modules": framework_modules ,
-            "esl_modules": extremesealevel_module ,
-            "module-specific-input-data": create_metadata_bundle("Module-specific input data"),
-            "general-input-data": create_metadata_bundle("General input data"),
+            "framework_modules": framework_modules,
+            "esl_modules": extremesealevel_module,
+            "module-specific-input-data": create_metadata_bundle(
+                "Module-specific input data", module_specific_input_data
+            ),
+            "general-input-data": create_metadata_bundle(
+                "General input data", general_input_data
+            ),
             "location-file": create_metadata_bundle("Location file", location_file),
             "fingerprint-dir": create_metadata_bundle("Fingerprint directory", fingerprint_dir),
             "output-data-location": create_metadata_bundle(
@@ -254,6 +278,8 @@ class FactsExperiment:
                     metadata[mod] = format_module_from_definition(mod_def)
                 except Exception:
                     pass
+        if workflow_dict:
+            metadata["workflows"] = workflow_dict
         # Remove None values but preserve comment keys
         def remove_none(d: Any) -> Any:
             if isinstance(d, dict):

@@ -118,7 +118,17 @@ def build_module_service_spec(
         experiment_paths["output_data_location"],
         f"{module_context} (output-data-location)",
     )
-    output_data_location = output_data_partial + "/" + module_name
+    # Only facts-total workflow services use a shared subdir and optional container base
+    is_facts_total_workflow = (
+        module_name.startswith("facts-total-")
+        or module_metadata.get("_output_subdir") == "facts-total"
+    )
+    if is_facts_total_workflow:
+        output_data_location = output_data_partial + "/facts-total"
+        output_container_base = module_metadata.get("_output_container_base") or "/mnt/total_out/facts-total"
+    else:
+        output_data_location = output_data_partial + "/" + module_name
+        output_container_base = None
 
     module_inputs_section = get_required_field(module_metadata, "inputs", module_context)
     options_dict = {}
@@ -135,6 +145,10 @@ def build_module_service_spec(
     inputs_dict = {}
     for key, value in module_inputs_section.items():
         if key == "input_dir":
+            continue
+        if isinstance(value, list):
+            # e.g. facts-total inputs.item: list of container paths (/mnt/out/...)
+            inputs_dict[key] = [str(v).strip() for v in value if v]
             continue
         if isinstance(value, str) or (isinstance(value, dict) and "value" in value):
             actual = (value.get("value", value) if isinstance(value, dict) else value) or ""
@@ -275,6 +289,7 @@ def build_module_service_spec(
         outputs=outputs_dict,
         image=image,
         metadata=metadata,
+        output_container_base=output_container_base,
     )
 
     return ModuleServiceSpec(
