@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Dict, Any
-
+import os
 from facts_experiment_builder.adapters.adapter_utils import (
     get_required_field,
     get_experiment_paths,
@@ -73,12 +73,14 @@ def build_module_service_spec(
 
     module_context = f"{module_name} module"
 
+    #TODO fix this
     if module_yaml_path and module_yaml_path.exists():
         resolved_yaml_path = module_yaml_path
+        #this is total module step/ workflows 
     else:
+        #this is climate + sea level module steps
         project_root = find_project_root(experiment_dir)
         resolved_yaml_path = find_module_yaml_path(module_name, project_root)
-
     module_definition = load_facts_module_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
@@ -118,16 +120,18 @@ def build_module_service_spec(
         experiment_paths["output_data_location"],
         f"{module_context} (output-data-location)",
     )
-    # Only facts-total workflow services use a shared subdir and optional container base
-    is_facts_total_workflow = (
-        module_name.startswith("facts-total-")
-        or module_metadata.get("_output_subdir") == "facts-total"
-    )
+    # Only facts-total workflow services (names like facts-total-wf1) use a shared output
+    # subdir and optional container base. Other modules are unchanged.
+    is_facts_total_workflow = module_name.startswith("facts-total-")
     if is_facts_total_workflow:
         output_data_location = output_data_partial + "/facts-total"
+        if not Path(output_data_location).exists():
+            os.makedirs(output_data_location, exist_ok=True)
         output_container_base = module_metadata.get("_output_container_base") or "/mnt/total_out/facts-total"
     else:
         output_data_location = output_data_partial + "/" + module_name
+        if not Path(output_data_location).exists():
+            os.makedirs(output_data_location, exist_ok=True)
         output_container_base = None
 
     module_inputs_section = get_required_field(module_metadata, "inputs", module_context)
