@@ -146,6 +146,7 @@ arguments:
       source: "module_inputs.outputs.global_output_file"
       filename: "global-output.nc"
       help: "Path to global output sea-level file"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -155,6 +156,7 @@ arguments:
       source: "module_inputs.outputs.local_output_file"
       filename: "local-output.nc"
       help: "Path to local output sea-level file"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"

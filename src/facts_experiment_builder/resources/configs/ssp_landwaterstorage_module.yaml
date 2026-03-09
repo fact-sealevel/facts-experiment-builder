@@ -154,6 +154,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_gslr_file"
       filename: "gslr.nc"
+      output_type: "global"
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "output"
@@ -163,6 +164,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_lslr_file"
       filename: "lslr.nc"
+      output_type: "local"
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "output"

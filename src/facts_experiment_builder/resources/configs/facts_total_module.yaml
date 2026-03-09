@@ -61,6 +61,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_path"
       filename: "total.nc"
+      output_type: "total"
       mount:
         volume: "output"
         container_path: "/mnt/total_out"

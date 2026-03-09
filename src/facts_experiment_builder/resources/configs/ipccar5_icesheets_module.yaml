@@ -141,6 +141,7 @@ arguments:
       source: "module_inputs.outputs.global_gis_output_file"
       filename: "global-gis-output.nc"
       help: "Path to global GIS output sea-level file"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -150,6 +151,7 @@ arguments:
       source: "module_inputs.outputs.global_ais_output_file"
       filename: "global-ais-output.nc"
       help: "Path to global AIS output sea-level file"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -159,6 +161,7 @@ arguments:
       source: "module_inputs.outputs.global_wais_output_file"
       filename: "global-wais-output.nc"
       help: "Path to global WAIS output sea-level file"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -168,6 +171,7 @@ arguments:
       source: "module_inputs.outputs.global_eais_output_file"
       filename: "global-eais-output.nc"
       help: "Path to global EAIS output sea-level file"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -177,6 +181,7 @@ arguments:
       source: "module_inputs.outputs.local_gis_output_file"
       filename: "local-gis-output.nc"
       help: "Path to local GIS output sea-level file"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -187,6 +192,7 @@ arguments:
       source: "module_inputs.outputs.local_ais_output_file"
       filename: "local-ais-output.nc"
       help: "Path to local AIS output sea-level file"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -197,6 +203,7 @@ arguments:
       source: "module_inputs.outputs.local_wais_output_file"
       filename: "local-wais-output.nc"
       help: "Path to local WAIS output sea-level file"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -207,6 +214,7 @@ arguments:
       source: "module_inputs.outputs.local_eais_output_file"
       filename: "local-eais-output.nc"
       help: "Path to local EAIS output sea-level file"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"

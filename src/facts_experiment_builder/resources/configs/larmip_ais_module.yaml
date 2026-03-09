@@ -140,6 +140,7 @@ arguments:
       source: "module_inputs.outputs.ais_global_output_file"
       filename: "ais-global-output.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -149,6 +150,7 @@ arguments:
       source: "module_inputs.outputs.eais_global_output_file"
       filename: "eais-global-output.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -158,6 +160,7 @@ arguments:
       source: "module_inputs.outputs.wais_global_output_file"
       filename: "wais-global-output.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -167,6 +170,7 @@ arguments:
       source: "module_inputs.outputs.pen_global_output_file"
       filename: "pen-global-output.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -176,6 +180,7 @@ arguments:
       source: "module_inputs.outputs.smb_global_output_file"
       filename: "smb-global-output.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -184,6 +189,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.wais_local_output_file"
       help: "TO DO ADD HELP TEXT"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -193,6 +199,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.eais_local_output_file"
       help: "TO DO ADD HELP TEXT"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -202,6 +209,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.ais_local_output_file"
       help: "TO DO ADD HELP TEXT"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"

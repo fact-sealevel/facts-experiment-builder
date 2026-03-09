@@ -132,6 +132,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_ais_gslr_file"
       filename: "ais-gslr.nc"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -140,6 +141,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_eais_gslr_file"
       filename: "eais-gslr.nc"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -148,6 +150,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_wais_gslr_file"
       filename: "wais-gslr.nc"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -156,6 +159,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_ais_lslr_file"
       filename: "ais-lslr.nc"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -165,6 +169,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_eais_lslr_file"
       filename: "eais-lslr.nc"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -174,6 +179,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_wais_lslr_file"
       filename: "wais-lslr.nc"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"
