@@ -35,11 +35,11 @@ logger = logging.getLogger(__name__)
     required=True,
     help="Names of the sea level modules, separated by commas"
 )
-@click.option("--framework-modules",
+@click.option("--framework-module",
     type=str,
     required=False,
     default= None,
-    help="Names of the framework modules, separated by commas"
+    help="Name of the framework module (use 'NONE' if no framework module)"
 )
 @click.option("--extremesealevel-module",
     type=str,
@@ -115,7 +115,7 @@ def main(
     experiment_name,
     temperature_module,
     sealevel_modules,
-    framework_modules,
+    framework_module,
     extremesealevel_module,
     pipeline_id,
     scenario,
@@ -137,10 +137,11 @@ def main(
     sealevel_modules_list = [m.strip() for m in sealevel_modules.split(",") if m.strip()]
     # Parse comma-separated framework modules into a list
     framework_modules_list = (
-        [m.strip() for m in framework_modules.split(",") if m.strip()]
-        if framework_modules
+        [m.strip() for m in framework_module.split(",") if m.strip()]
+        if framework_module
         else None
     )
+    extremesealevel_module_list = [m.strip() for m in extremesealevel_module.split(",") if m.strip()] if extremesealevel_module else []
 
     # If framework includes facts-total, collect workflows interactively
     workflow_dict = None
@@ -194,7 +195,7 @@ def main(
     click.echo(sealevel_modules_message)
     framework_modules_message = f"  Framework modules: {framework_modules_list}"
     click.echo(framework_modules_message)
-    extremesealevel_module_message = f"  Extreme sea level module: {extremesealevel_module}"
+    extremesealevel_module_message = f"  Extreme sea level module: {extremesealevel_module_list}"
     click.echo(extremesealevel_module_message)
 
     # Print some CLI info
@@ -230,7 +231,7 @@ def main(
     # Step 3: Populate experiment with defaults from defaults.yml files
     # Revert: for module_name in ...: metadata = populate_metadata_with_defaults(metadata, module_name)
     click.echo("Step 3: Populating metadata with defaults from defaults.yml files...")
-    for module_name in [temperature_module] + sealevel_modules_list:
+    for module_name in [temperature_module] + sealevel_modules_list + [framework_module] + extremesealevel_module_list:
         if module_name and module_name.upper() != "NONE":
             modules_message = f"  Populating defaults for module: {module_name}"
             click.echo(modules_message)

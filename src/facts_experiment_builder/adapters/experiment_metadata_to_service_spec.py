@@ -110,10 +110,12 @@ def build_module_service_spec(
     if Path(module_specific_input_base).name in KNOWN_MODULE_SUBDIR_NAMES:
         module_specific_input_base = str(Path(module_specific_input_base).parent)
     # Module-specific input dir: one shared dir per "module" (e.g. ipccar5 for both glaciers and icesheets).
-    # Output dir and service identity stay per service (ipccar5-glaciers, ipccar5-icesheets).
+    # Per-workflow ESL services (e.g. extremesealevel-pointsoverthreshold-wf1) share the base ESL module's input dir.
     module_specific_input_path_suffix = (
         "ipccar5" if module_name in ("ipccar5-glaciers", "ipccar5-icesheets") else module_name
     )
+    if module_name.startswith("extremesealevel-pointsoverthreshold-"):
+        module_specific_input_path_suffix = "extremesealevel-pointsoverthreshold"
     module_specific_input_data = module_specific_input_base + "/" + module_specific_input_path_suffix
 
     output_data_partial = expand_path(
@@ -275,8 +277,9 @@ def build_module_service_spec(
         general_input_dir=general_input_data,
         module_name=module_name,
     )
+    output_type = module_metadata.get("output_type", "")
     output_paths = build_module_output_paths(
-        output_data_location, module_name=module_name
+        output_data_location, module_name=module_name, output_type=output_type
     )
 
     fingerprint_params = {

@@ -259,6 +259,9 @@ class ModuleServiceSpec:
                 base = (output_container_base or '').rstrip('/')
                 return f"{base}/{filename}"
             base = f"{container_path}/{self.components.module_name}"
+            # If value is already a path ending in module_name (e.g. output-dir), avoid duplicating it
+            if filename == self.components.module_name:
+                return base
             return f"{base}/{filename}"
         return value
 

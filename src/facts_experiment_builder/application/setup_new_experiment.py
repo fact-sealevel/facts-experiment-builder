@@ -212,7 +212,7 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
             clue = get_clue_from_module_yaml(module_def, "options", field_name)
             module_options[field_name] = create_metadata_bundle(clue)
 
-    # Build outputs dict from each output spec's 'filename' key (same level as name, type, source, mount)
+    # Build outputs dict from each output spec's 'filename' key (same level as name, type, source, mount, output_type)
     module_outputs = {}
     for arg_spec in module_def.arguments.get("outputs", []):
         arg_name = arg_spec.get("name", "")
@@ -223,8 +223,17 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
             raise ValueError(
                 f"Module {module_def.module_name} output '{arg_name}' is missing required 'filename' key in module YAML (arguments.outputs)."
             )
+        output_type = arg_spec.get("output_type", "")
+        if not output_type:
+            raise ValueError(
+                f"Module {module_def.module_name} output '{arg_name}' is missing required 'output_type' key in module YAML (arguments.outputs)."
+            )
         # Path is module_name/filename so outputs live under the module's output subdir
-        module_outputs[arg_name] = f"{module_def.module_name}/{filename}"
+        module_arg_dict = {
+            "value": f"{module_def.module_name}/{filename}",
+            "output_type": output_type,
+        }
+        module_outputs[arg_name] = module_arg_dict
 
     module_dict = {
         "inputs": module_inputs,

@@ -3,6 +3,9 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable, Union
 
 from facts_experiment_builder.infra.path_manager import find_project_root
+from facts_experiment_builder.core.workflow.workflow import (
+    Workflow,
+)
 
 
 # Keys that appear in experiment-metadata.yml (for parsing and round-trip)
@@ -109,6 +112,13 @@ class FactsExperiment:
         """Workflows for facts-total: workflow name -> comma-separated module list."""
         return self._workflows
 
+    def get_workflows_as_objects(self) -> Dict[str, Workflow]:
+        """Workflows as Workflow instances (name -> Workflow) for use in generate_compose etc."""
+        return {
+            name: Workflow.from_dict(name, value)
+            for name, value in self._workflows.items()
+        }
+
     @classmethod
     def from_metadata_dict(cls, metadata: Dict[str, Any]) -> "FactsExperiment":
         """Build a FactsExperiment from the metadata dict shape (e.g. from YAML)."""
@@ -128,6 +138,8 @@ class FactsExperiment:
         }
         if isinstance(manifest["sealevel_modules"], str):
             manifest["sealevel_modules"] = [manifest["sealevel_modules"]]
+        if isinstance(manifest["esl_modules"], str):
+            manifest["esl_modules"] = [manifest["esl_modules"]]
 
         paths_normalized = {}
         for primary in PATH_KEYS_PRIMARY:
@@ -160,6 +172,13 @@ class FactsExperiment:
             k: v for k, v in metadata.items()
             if k not in excluded and isinstance(v, dict)
         }
+
+        # Infer esl_modules from module sections when not set (backward compatibility)
+        if not manifest["esl_modules"]:
+            manifest["esl_modules"] = [
+                k for k in module_sections
+                if isinstance(k, str) and k.startswith("extremesealevel-")
+            ]
 
         extra = {
             k: v for k, v in metadata.items()
@@ -233,7 +252,7 @@ class FactsExperiment:
             "temperature_module": temperature_module,
             "sealevel_modules": sealevel_modules if len(sealevel_modules) > 1 else (sealevel_modules[0] if sealevel_modules else []),
             "framework_modules": framework_modules,
-            "esl_modules": extremesealevel_module,
+            "esl_modules": [extremesealevel_module] if extremesealevel_module else [],
             "module-specific-input-data": create_metadata_bundle(
                 "Module-specific input data", module_specific_input_data
             ),
@@ -271,8 +290,9 @@ class FactsExperiment:
                     metadata[mod] = format_module_from_definition(mod_def)
                 except Exception:
                     pass
-        if extremesealevel_module:
-            for mod in extremesealevel_module:
+        extremesealevel_list = [extremesealevel_module] if extremesealevel_module else []
+        if extremesealevel_list:
+            for mod in extremesealevel_list:
                 try:
                     mod_def = load_facts_module_by_name(mod, project_root)
                     metadata[mod] = format_module_from_definition(mod_def)
