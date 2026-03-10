@@ -11,7 +11,6 @@ from facts_experiment_builder.infra.path_manager import (
 )
 from facts_experiment_builder.infra.write_compose import (
     make_compose_yaml,
-    format_compose_yaml,
     write_compose_yaml,
 )
 import logging
@@ -61,9 +60,8 @@ def main(
 
  
     yaml_content = make_compose_yaml(content_dict=compose_dict)
-    formatted_content = format_compose_yaml(content=yaml_content)
     write_compose_yaml(
-        compose_content=formatted_content, 
+        compose_content=yaml_content,
         output_path=output_path,
     )
 

@@ -143,6 +143,7 @@ arguments:
       source: "module_inputs.outputs.gris_global_out_file"
       filename: "gris-global-out.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -152,6 +153,7 @@ arguments:
       source: "module_inputs.outputs.gris_local_out_file"
       filename: "gris-local-out.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"

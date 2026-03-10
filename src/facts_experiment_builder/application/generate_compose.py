@@ -11,7 +11,6 @@ Usage:
     
 """
 
-
 import yaml
 from pathlib import Path
 from typing import Dict, Any, List
@@ -19,12 +18,12 @@ from typing import Dict, Any, List
 from facts_experiment_builder.adapters.module_adapter import (
     create_module_service_spec_from_metadata,
 )
-
+from facts_experiment_builder.adapters.adapter_utils import get_experiment_paths
 from facts_experiment_builder.core.experiment import FactsExperiment
+from facts_experiment_builder.core.workflow.workflow import Workflow, workflows_from_metadata
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
-from facts_experiment_builder.infra.path_utils import find_project_root
+from facts_experiment_builder.infra.path_utils import find_project_root, expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
-
 
 
 def _module_requires_climate_file(module_name: str, experiment_dir: Path) -> bool:
@@ -91,6 +90,111 @@ def _validate_climate_file_inputs(metadata: Dict[str, Any], sealevel_modules: Li
             f"Please provide 'climate_data_file' (or 'climate-data-file', 'climate_file', etc.) "
             f"in the inputs section for each sealevel module."
         )
+
+
+def _collect_workflow_output_paths_by_type(
+    metadata: Dict[str, Any],
+    wf: Workflow,
+    output_type: str,
+    *,
+    container_prefix: str = "/mnt/total_out",
+) -> List[str]:
+    """
+    Collect container paths for workflow module outputs that match the given output_type.
+
+    For each module in the workflow, reads metadata[mod].outputs; each value can be
+    a string path or a dict with "value" and "output_type". Missing output_type
+    is treated as "local" for backward compatibility.
+    """
+    paths: List[str] = []
+    prefix = container_prefix.rstrip("/")
+    for mod in wf.module_names:
+        out_section = metadata.get(mod, {}) or {}
+        if not isinstance(out_section, dict):
+            continue
+        outputs = out_section.get("outputs") or {}
+        if not isinstance(outputs, dict):
+            continue
+        for v in outputs.values():
+            if isinstance(v, dict) and "value" in v:
+                p = v.get("value") or ""
+                ot = v.get("output_type", "local")
+            elif isinstance(v, str):
+                p = v
+                ot = "local"
+            else:
+                continue
+            if p and isinstance(p, str) and ot == output_type:
+                paths.append(f"{prefix}/{p.strip()}")
+    return paths
+
+
+# One facts-total service per (workflow, output_type), e.g. facts-total-wf1-global, facts-total-wf1-local
+FACTS_TOTAL_OUTPUT_TYPES = ("global", "local")
+
+
+def _build_facts_total_section_for_workflow(
+    wf: Workflow,
+    facts_total_image: str,
+    output_type: str,
+) -> Dict[str, Any]:
+    """Build the synthetic metadata section for a facts-total workflow service with empty inputs.item and type-specific output-path."""
+    return {
+        "inputs": {"item": []},
+        "outputs": {"output-path": wf.total_output_filename_for_type(output_type)},
+        "options": {},
+        "fingerprint_params": {},
+        "image": facts_total_image,
+        "_output_subdir": "facts-total",
+        "_output_container_base": "/mnt/total_out/facts-total",
+    }
+
+
+def _populate_section_with_global_outputs(
+    section: Dict[str, Any],
+    metadata: Dict[str, Any],
+    wf: Workflow,
+) -> None:
+    """Extend section["inputs"]["item"] with container paths for outputs with output_type "global"."""
+    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global")
+    section["inputs"]["item"].extend(paths)
+
+
+def _populate_section_with_local_outputs(
+    section: Dict[str, Any],
+    metadata: Dict[str, Any],
+    wf: Workflow,
+) -> None:
+    """Extend section["inputs"]["item"] with container paths for outputs with output_type "local"."""
+    paths = _collect_workflow_output_paths_by_type(metadata, wf, "local")
+    section["inputs"]["item"].extend(paths)
+
+
+def _create_facts_total_compose_service(
+    section: Dict[str, Any],
+    service_name: str,
+    wf: Workflow,
+    metadata: Dict[str, Any],
+    metadata_path: Path,
+    facts_total_yaml_path: Path,
+) -> Dict[str, Any]:
+    """Build the compose service dict for a facts-total workflow from its synthetic section."""
+    metadata_copy = dict(metadata)
+    metadata_copy[service_name] = section
+    wf_module = create_module_service_spec_from_metadata(
+        metadata_path,
+        module_name=service_name,
+        module_type="framework_module",
+        metadata=metadata_copy,
+        module_yaml_path=facts_total_yaml_path,
+    )
+    compose_svc = wf_module.generate_compose_service()
+    compose_svc["depends_on"] = {
+        mod: {"condition": "service_completed_successfully"}
+        for mod in wf.module_names
+    }
+    return compose_svc
+
 
 def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     """
@@ -165,8 +269,11 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         except Exception as e:
             print(f"⚠ Warning: Failed to create sealevel module '{module_name}': {e}")
     
-    # Create framework modules if specified
+    # Create framework modules if specified (skip "facts-total" when workflows exist; we add per-workflow services below)
+    workflows = workflows_from_metadata(metadata)
     for module_name in manifest.get("framework_modules", []):
+        if module_name == "facts-total" and workflows:
+            continue  # facts-total is added once per workflow below
         try:
             module = create_module_service_spec_from_metadata(
                 metadata_path,
@@ -220,10 +327,105 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             temperature_service_name=temperature_module_name
         )
         services[service_name] = compose_service
-    
+
+    # Add one facts-total service per workflow (after sealevel services)
+    if workflows:
+        project_root = find_project_root(experiment_dir)
+        facts_total_yaml_path = find_module_yaml_path("facts-total", project_root)
+        with open(facts_total_yaml_path, "r") as f:
+            facts_total_config = yaml.safe_load(f) or {}
+        facts_total_image = facts_total_config.get(
+            "container_image", "ghcr.io/fact-sealevel/facts-total:v0.1.2"
+        )
+        for wf_name, wf in workflows.items():
+            for output_type in FACTS_TOTAL_OUTPUT_TYPES:
+                section = _build_facts_total_section_for_workflow(wf, facts_total_image, output_type)
+                if output_type == "global":
+                    _populate_section_with_global_outputs(section, metadata, wf)
+                else:
+                    _populate_section_with_local_outputs(section, metadata, wf)
+                service_name = wf.facts_total_service_name_for_type(output_type)
+                try:
+                    compose_svc = _create_facts_total_compose_service(
+                        section,
+                        service_name,
+                        wf,
+                        metadata,
+                        metadata_path,
+                        facts_total_yaml_path,
+                    )
+                    services[service_name] = compose_svc
+                    print(f"✓ Created {service_name} workflow service")
+                except Exception as e:
+                    print(f"⚠ Warning: Failed to create workflow service '{service_name}': {e}")
+
+        # One ESL service per workflow when both workflows and esl_modules are specified
+        esl_module_names = manifest.get("esl_modules") or []
+        if isinstance(esl_module_names, str):
+            esl_module_names = [esl_module_names]
+        if esl_module_names:
+            for esl_module_name in esl_module_names:
+                try:
+                    esl_yaml_path = find_module_yaml_path(esl_module_name, project_root)
+                except FileNotFoundError:
+                    print(f"⚠ Warning: ESL module YAML not found for '{esl_module_name}', skipping per-workflow ESL")
+                    continue
+                base_section = metadata.get(esl_module_name) or {}
+                if not isinstance(base_section, dict):
+                    base_section = {}
+                # Resolve module-specific input base so we can set gesla_dir when it's a placeholder
+                try:
+                    exp_paths = get_experiment_paths(metadata, f"{esl_module_name} module")
+                    module_specific_base = expand_path(
+                        exp_paths.get("module_specific_input_data"),
+                        "module-specific-input-data",
+                    )
+                except (KeyError, TypeError):
+                    module_specific_base = ""
+                for wf_name, wf in workflows.items():
+                    service_name = f"{esl_module_name}-{wf.name}"
+                    base_inputs = dict(base_section.get("inputs") or {})
+                    base_inputs["total_localsl_file"] = wf.total_localsl_path_under_output
+                    # Ensure gesla_dir is a valid path so --gesla-dir appears in the compose command
+                    gesla_val = base_inputs.get("gesla_dir")
+                    if not gesla_val or (isinstance(gesla_val, dict) and gesla_val.get("value") in (None, "")):
+                        if module_specific_base:
+                            base_inputs["gesla_dir"] = f"{module_specific_base}/{esl_module_name}/gesla_data"
+                    base_outputs = base_section.get("outputs") or {}
+                    synthetic_section = {
+                        **base_section,
+                        "inputs": base_inputs,
+                        "outputs": {**base_outputs, "output-dir": "."},
+                    }
+                    metadata_copy = dict(metadata)
+                    metadata_copy[service_name] = synthetic_section
+                    try:
+                        esl_module = create_module_service_spec_from_metadata(
+                            metadata_path,
+                            module_name=service_name,
+                            module_type="extreme_sealevel_module",
+                            metadata=metadata_copy,
+                            module_yaml_path=esl_yaml_path,
+                        )
+                        compose_svc = esl_module.generate_compose_service()
+                        compose_svc["depends_on"] = {
+                            wf.facts_total_service_name_for_type("local"): {"condition": "service_completed_successfully"}
+                        }
+                        services[service_name] = compose_svc
+                        print(f"✓ Created {service_name} ESL workflow service")
+                    except Exception as e:
+                        print(f"⚠ Warning: Failed to create ESL workflow service '{service_name}': {e}")
+
+    # When there are no workflows, add a single ESL service per ESL module
+    if not workflows:
+        for _esl_name, esl_module in modules["esl_modules"].items():
+            service_name = esl_module.module_name
+            services[service_name] = esl_module.generate_compose_service()
+            print(f"✓ Created {service_name} module")
+
     # Step 5: Build complete Docker Compose file as dict
     compose_dict = {
         "services": services
     }
-    
+
     return compose_dict

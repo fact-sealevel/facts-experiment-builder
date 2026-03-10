@@ -54,6 +54,14 @@ experiment_name:
 {% endif %}
 {% endfor %}
 
+##----- Workflows (facts-total) -----##
+{% if experiment.workflows %}
+workflows:
+{% for wf_name, wf_modules in experiment.workflows.items() %}
+  {{ wf_name }}: "{{ wf_modules }}"
+{% endfor %}
+{% endif %}
+
 ##----- Inputs -----##
 {% for key in inputs %}
 {% if key in experiment.paths %}
@@ -250,14 +258,18 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
     fingerprint_params = [
         "fingerprint-dir", "location-file"
     ]
-    # Included modules (temperature_module and sealevel_modules)
+    # Included modules (temperature_module, sealevel_modules, framework_modules, esl_modules)
     # These are the keys that appear in the "Modules included in experiment" section
     included_modules = []
     if "temperature_module" in experiment.manifest:
         included_modules.append("temperature_module")
     if "sealevel_modules" in experiment.manifest:
         included_modules.append("sealevel_modules")
-    
+    if "framework_modules" in experiment.manifest and experiment.manifest["framework_modules"]:
+        included_modules.append("framework_modules")
+    if "esl_modules" in experiment.manifest and experiment.manifest["esl_modules"]:
+        included_modules.append("esl_modules")
+
     # Inputs section (module-specific-input-data, general-input-data, location-file-name)
     inputs = []
     if "module-specific-input-data" in experiment.paths:

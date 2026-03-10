@@ -3,7 +3,7 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 
 def expand_path(path_str: Any, context: str = "") -> str:
@@ -61,6 +61,7 @@ def _resolve_module_input_dir(module_specific_input_dir: str, module_name: str) 
     return os.path.join(module_specific_input_dir, module_name)
 
 
+ModuleOutputType = Literal["local","global","total","esl"]
 
 @dataclass(frozen=True)
 class ModuleInputPaths:
@@ -76,6 +77,7 @@ class ModuleOutputPaths:
     """Output paths for a module."""
 
     output_dir: str
+    output_type: ModuleOutputType
 
 
 def build_module_input_paths(
@@ -111,7 +113,7 @@ def build_module_input_paths(
     )
 
 
-def build_module_output_paths(output_dir: str, module_name: str = "") -> ModuleOutputPaths:
+def build_module_output_paths(output_dir: str, output_type: ModuleOutputType, module_name: str = "") -> ModuleOutputPaths:
     """Build and validate ModuleOutputPaths. Raises ValueError if invalid."""
     if output_dir is None:
         raise ValueError(
@@ -122,7 +124,7 @@ def build_module_output_paths(output_dir: str, module_name: str = "") -> ModuleO
         raise ValueError(
             f"output_dir has invalid type for {module_name}: expected str, got {type(output_dir)}"
         )
-    return ModuleOutputPaths(output_dir=output_dir)
+    return ModuleOutputPaths(output_dir=output_dir, output_type=output_type)
 
 
 def find_project_root(start_path: Path = None) -> Path:

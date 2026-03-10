@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from typing import Dict, Any
-
+import os
 from facts_experiment_builder.adapters.adapter_utils import (
     get_required_field,
     get_experiment_paths,
@@ -73,12 +73,14 @@ def build_module_service_spec(
 
     module_context = f"{module_name} module"
 
+    #TODO fix this
     if module_yaml_path and module_yaml_path.exists():
         resolved_yaml_path = module_yaml_path
+        #this is total module step/ workflows 
     else:
+        #this is climate + sea level module steps
         project_root = find_project_root(experiment_dir)
         resolved_yaml_path = find_module_yaml_path(module_name, project_root)
-
     module_definition = load_facts_module_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
@@ -108,17 +110,31 @@ def build_module_service_spec(
     if Path(module_specific_input_base).name in KNOWN_MODULE_SUBDIR_NAMES:
         module_specific_input_base = str(Path(module_specific_input_base).parent)
     # Module-specific input dir: one shared dir per "module" (e.g. ipccar5 for both glaciers and icesheets).
-    # Output dir and service identity stay per service (ipccar5-glaciers, ipccar5-icesheets).
+    # Per-workflow ESL services (e.g. extremesealevel-pointsoverthreshold-wf1) share the base ESL module's input dir.
     module_specific_input_path_suffix = (
         "ipccar5" if module_name in ("ipccar5-glaciers", "ipccar5-icesheets") else module_name
     )
+    if module_name.startswith("extremesealevel-pointsoverthreshold-"):
+        module_specific_input_path_suffix = "extremesealevel-pointsoverthreshold"
     module_specific_input_data = module_specific_input_base + "/" + module_specific_input_path_suffix
 
     output_data_partial = expand_path(
         experiment_paths["output_data_location"],
         f"{module_context} (output-data-location)",
     )
-    output_data_location = output_data_partial + "/" + module_name
+    # Only facts-total workflow services (names like facts-total-wf1) use a shared output
+    # subdir and optional container base. Other modules are unchanged.
+    is_facts_total_workflow = module_name.startswith("facts-total-")
+    if is_facts_total_workflow:
+        output_data_location = output_data_partial + "/facts-total"
+        if not Path(output_data_location).exists():
+            os.makedirs(output_data_location, exist_ok=True)
+        output_container_base = module_metadata.get("_output_container_base") or "/mnt/total_out/facts-total"
+    else:
+        output_data_location = output_data_partial + "/" + module_name
+        if not Path(output_data_location).exists():
+            os.makedirs(output_data_location, exist_ok=True)
+        output_container_base = None
 
     module_inputs_section = get_required_field(module_metadata, "inputs", module_context)
     options_dict = {}
@@ -135,6 +151,10 @@ def build_module_service_spec(
     inputs_dict = {}
     for key, value in module_inputs_section.items():
         if key == "input_dir":
+            continue
+        if isinstance(value, list):
+            # e.g. facts-total inputs.item: list of container paths (/mnt/out/...)
+            inputs_dict[key] = [str(v).strip() for v in value if v]
             continue
         if isinstance(value, str) or (isinstance(value, dict) and "value" in value):
             actual = (value.get("value", value) if isinstance(value, dict) else value) or ""
@@ -257,8 +277,9 @@ def build_module_service_spec(
         general_input_dir=general_input_data,
         module_name=module_name,
     )
+    output_type = module_metadata.get("output_type", "")
     output_paths = build_module_output_paths(
-        output_data_location, module_name=module_name
+        output_data_location, module_name=module_name, output_type=output_type
     )
 
     fingerprint_params = {
@@ -275,6 +296,7 @@ def build_module_service_spec(
         outputs=outputs_dict,
         image=image,
         metadata=metadata,
+        output_container_base=output_container_base,
     )
 
     return ModuleServiceSpec(

@@ -115,9 +115,12 @@ def init_new_experiment(
     seed: int = None,
     location_file: str = None,
     fingerprint_dir: str = None,
+    workflow_dict: Dict[str, str] = None,
+    module_specific_inputs: str = None,
+    general_inputs: str = None,
     ) -> FactsExperiment:
     """
-    Create a new FactsExperiment from CLI inputs 
+    Create a new FactsExperiment from CLI inputs
     Uses FactsExperiment.create_new_experiment_obj with dependencies from this module.
     """
     return FactsExperiment.create_new_experiment_obj(
@@ -137,6 +140,9 @@ def init_new_experiment(
         seed=seed,
         location_file=location_file,
         fingerprint_dir=fingerprint_dir,
+        workflow_dict=workflow_dict,
+        module_specific_input_data=module_specific_inputs,
+        general_input_data=general_inputs,
         create_metadata_bundle=create_metadata_bundle,
         format_module_from_definition=format_module_from_definition,
         load_facts_module_by_name=load_facts_module_by_name,
@@ -206,7 +212,7 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
             clue = get_clue_from_module_yaml(module_def, "options", field_name)
             module_options[field_name] = create_metadata_bundle(clue)
 
-    # Build outputs dict from each output spec's 'filename' key (same level as name, type, source, mount)
+    # Build outputs dict from each output spec's 'filename' key (same level as name, type, source, mount, output_type)
     module_outputs = {}
     for arg_spec in module_def.arguments.get("outputs", []):
         arg_name = arg_spec.get("name", "")
@@ -217,8 +223,17 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
             raise ValueError(
                 f"Module {module_def.module_name} output '{arg_name}' is missing required 'filename' key in module YAML (arguments.outputs)."
             )
+        output_type = arg_spec.get("output_type", "")
+        if not output_type:
+            raise ValueError(
+                f"Module {module_def.module_name} output '{arg_name}' is missing required 'output_type' key in module YAML (arguments.outputs)."
+            )
         # Path is module_name/filename so outputs live under the module's output subdir
-        module_outputs[arg_name] = f"{module_def.module_name}/{filename}"
+        module_arg_dict = {
+            "value": f"{module_def.module_name}/{filename}",
+            "output_type": output_type,
+        }
+        module_outputs[arg_name] = module_arg_dict
 
     module_dict = {
         "inputs": module_inputs,

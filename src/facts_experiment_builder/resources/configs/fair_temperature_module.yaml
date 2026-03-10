@@ -69,6 +69,7 @@ arguments:
       source: "module_inputs.outputs.output_0"  # First output (oceantemp)
       filename: "oceantemp.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -77,6 +78,7 @@ arguments:
       type: "file"
       source: "module_inputs.outputs.output_1"  # Second output (climate)
       filename: "climate.nc"
+      output_type: "global"
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "output"
@@ -87,6 +89,7 @@ arguments:
       source: "module_inputs.outputs.output_2"  # Third output (ohc)
       filename: "ohc.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -96,6 +99,7 @@ arguments:
       source: "module_inputs.outputs.output_3"  # Fourth output (gsat)
       filename: "gsat.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "global"
       mount:
         volume: "output"
         container_path: "/mnt/out"

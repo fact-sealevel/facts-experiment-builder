@@ -35,11 +35,11 @@ logger = logging.getLogger(__name__)
     required=True,
     help="Names of the sea level modules, separated by commas"
 )
-@click.option("--framework-modules",
+@click.option("--framework-module",
     type=str,
     required=False,
     default= None,
-    help="Names of the framework modules, separated by commas"
+    help="Name of the framework module (use 'NONE' if no framework module)"
 )
 @click.option("--extremesealevel-module",
     type=str,
@@ -99,11 +99,23 @@ logger = logging.getLogger(__name__)
     help="Name of directory holding GRD fingerprint data",
     default="FPRINT"
 )
+@click.option("--module-specific-inputs",
+    type=str,
+    required=False,
+    default=None,
+    help="Path to module-specific input data (written to experiment metadata)"
+)
+@click.option("--general-inputs",
+    type=str,
+    required=False,
+    default=None,
+    help="Path to general input data (written to experiment metadata)"
+)
 def main(
-    experiment_name, 
-    temperature_module, 
+    experiment_name,
+    temperature_module,
     sealevel_modules,
-    framework_modules,
+    framework_module,
     extremesealevel_module,
     pipeline_id,
     scenario,
@@ -115,13 +127,59 @@ def main(
     seed,
     location_file,
     fingerprint_dir,
+    module_specific_inputs,
+    general_inputs,
 ):
     """Create a new experiment directory with template files using Jinja2 templating.
     """
 
     # Parse comma-separated sealevel modules into a list
-    sealevel_modules_list = [m.strip() for m in sealevel_modules.split(',') if m.strip()]
-    
+    sealevel_modules_list = [m.strip() for m in sealevel_modules.split(",") if m.strip()]
+    # Parse comma-separated framework modules into a list
+    framework_modules_list = (
+        [m.strip() for m in framework_module.split(",") if m.strip()]
+        if framework_module
+        else None
+    )
+    extremesealevel_module_list = [m.strip() for m in extremesealevel_module.split(",") if m.strip()] if extremesealevel_module else []
+
+    # If framework includes facts-total, collect workflows interactively
+    workflow_dict = None
+    if framework_modules_list:
+        normalized_framework = [
+            m.replace(" ", "-").replace("_", "-").strip().lower()
+            for m in framework_modules_list
+        ]
+        if "facts-total" in normalized_framework:
+            workflow_dict = {}
+            first = True
+            while True:
+                if first:
+                    workflow_name = click.prompt(
+                        "Enter a name for your first workflow, ex. wf1",
+                        type=str,
+                        default="wf1",
+                    )
+                    first = False
+                else:
+                    workflow_name = click.prompt(
+                        "Enter a name for this workflow",
+                        type=str,
+                    )
+                workflow_name = workflow_name.strip() or "wf"
+                module_list_str = click.prompt(
+                    "Enter the names of the modules to include in this workflow. "
+                    "Modules should be separated by commas with no spaces between words",
+                    type=str,
+                )
+                workflow_dict[workflow_name] = module_list_str.strip()
+                if not click.confirm(
+                    "Would you like to enter another workflow?",
+                    default=False,
+                ):
+                    break
+            click.echo(f"  Workflows: {workflow_dict}")
+
     # Step 1: Create experiment directory and sub-directories
     click.echo("Step 1: Creating experiment directory and sub-directories...")
     module_names = [temperature_module] + sealevel_modules_list
@@ -135,9 +193,9 @@ def main(
     click.echo(temp_module_message)
     sealevel_modules_message = f"  Sea level modules: {sealevel_modules_list}"
     click.echo(sealevel_modules_message)
-    framework_modules_message = f"  Framework modules: {framework_modules}"
+    framework_modules_message = f"  Framework modules: {framework_modules_list}"
     click.echo(framework_modules_message)
-    extremesealevel_module_message = f"  Extreme sea level module: {extremesealevel_module}"
+    extremesealevel_module_message = f"  Extreme sea level module: {extremesealevel_module_list}"
     click.echo(extremesealevel_module_message)
 
     # Print some CLI info
@@ -152,7 +210,7 @@ def main(
         experiment_name=experiment_name,
         temperature_module=temperature_module,
         sealevel_modules=sealevel_modules_list,
-        framework_modules=framework_modules,
+        framework_modules=framework_modules_list,
         extremesealevel_module=extremesealevel_module,
         experiment_path=experiment_path,
         pipeline_id=pipeline_id,
@@ -165,12 +223,15 @@ def main(
         seed=seed,
         location_file=location_file,
         fingerprint_dir=fingerprint_dir,
+        workflow_dict=workflow_dict,
+        module_specific_inputs=module_specific_inputs,
+        general_inputs=general_inputs,
     )
     
     # Step 3: Populate experiment with defaults from defaults.yml files
     # Revert: for module_name in ...: metadata = populate_metadata_with_defaults(metadata, module_name)
     click.echo("Step 3: Populating metadata with defaults from defaults.yml files...")
-    for module_name in [temperature_module] + sealevel_modules_list:
+    for module_name in [temperature_module] + sealevel_modules_list + [framework_module] + extremesealevel_module_list:
         if module_name and module_name.upper() != "NONE":
             modules_message = f"  Populating defaults for module: {module_name}"
             click.echo(modules_message)

@@ -12,6 +12,7 @@ def create_module_service_spec_from_metadata(
     module_name: str,
     module_type: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
+    module_yaml_path: Optional[Path] = None,
     ):
     """
     Create a single module service spec from experiment metadata.
@@ -21,6 +22,7 @@ def create_module_service_spec_from_metadata(
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
         module_type: Optional category (e.g. 'temperature_module', 'sealevel_module')
         metadata: Optional pre-loaded metadata (if provided, metadata_path is used only for experiment_dir)
+        module_yaml_path: Optional path to module YAML (e.g. for facts-total workflow services)
 
     Returns:
         ModuleServiceSpec
@@ -35,6 +37,7 @@ def create_module_service_spec_from_metadata(
             experiment_dir,
             module_name=module_name,
             module_type=module_type,
+            module_yaml_path=module_yaml_path,
         )
     except Exception as e:
         error_msg = str(e)

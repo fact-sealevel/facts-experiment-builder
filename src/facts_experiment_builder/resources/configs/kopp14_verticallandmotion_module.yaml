@@ -90,6 +90,7 @@ arguments:
       source: "module_inputs.outputs.output_lslr_file"
       filename: "lslr.nc"
       help: "TO DO ADD HELP TEXT"
+      output_type: "local"
       mount:
         volume: "output"
         container_path: "/mnt/out"

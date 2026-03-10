@@ -1,0 +1,11 @@
+# Default values for the EMULANDICE GRIS module command (ais)
+# These values are used when creating new experiments and can be overridden in experiment metadata
+
+# internal note: Location file defaults DO NOT belong here.
+
+# Module-specific options
+options: 
+  chunksize: 50
+
+inputs:
+  fprint-gis-file: "fprint_gis.nc"
