@@ -43,17 +43,21 @@ mkdir experiments
 
 Example:
 ```shell
-uv run setup-new-experiment --experiment-name toy_experiment --pipeline-id aaa --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 --temperature-module fair-temperature --sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion --framework-module facts-total --extremesealevel-module extremesealevel-pointsoverthreshold --module-specific-inputs /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs --general-inputs /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs 
+uv run setup-new-experiment --experiment-name toy_experiment --pipeline-id aaa --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 --temperature-module fair-temperature --sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion --framework-module facts-total --extremesealevel-module extremesealevel-pointsoverthreshold 
 ```
 - If `facts-total` is passed to `--framework-module`, the CLI prompts the user for information about the workflows included in the experiment:
 ![workflow prompts](imgs/toy_experiment_workflow_prompts.png)
-Once completed, the command:
+Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
      - Creates and partially pre-populates an `experiment-metadata.yml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
      - `experiment-metadata.yml` is pre-populated based on the arguments you supply and the modules you specified
 ![rest of experiment setup](imgs/toy_experiment_rest_of_setup_new_exp.png)
 
 #### 3. Review and manually complete any empty fields in the top section of the experiment metadata file. 
+
+> [!NOTE}
+> If you copy and paste the `setup-new-experiment` command above, complete the `module-specific-inputs` and `general-inputs` fields in the `experiment-metdata.yaml` that is created.
+
 - If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
 - 
