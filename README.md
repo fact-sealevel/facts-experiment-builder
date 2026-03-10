@@ -55,7 +55,7 @@ Once completed, the program:
 
 #### 3. Review and manually complete any empty fields in the top section of the experiment metadata file. 
 
-> [!NOTE}
+> [!NOTE]
 > If you copy and paste the `setup-new-experiment` command above, complete the `module-specific-inputs` and `general-inputs` fields in the `experiment-metdata.yaml` that is created.
 
 - If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
