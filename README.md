@@ -141,10 +141,3 @@ Options:
 Source code is available online at https://github.com/fact-sealevel/facts-experiment-builder. This software is open source and available under the MIT license.
 
 Please file issues in the issue tracker at https://github.com/fact-sealevel/facts-experiment-builder/issues.
-
-### Notes
-More in the weeds notes on internals
-`experiment-metadata.yml` and `*_modul.yaml` files represent artifacts for experiments and modules, respectively. In contrast, `experiment-compose.yml` is an executable implementation of an experiment. To handle the various translations between these states and entities, we define domain types and adapters to pass information between them. `FactsModule` represents the abstraction of a module, independent of any experiment. `ModuleExperimentSpec` holds the information about a module that is required for that module's section of a `experiment-metadata.yml`. Similarly, `ModuleServiceSpec` holds information about a module that is required for that module's section of a `experiment-metadata.yml`. 
-
-
- This is still very much in progress/rough but this much should be working. will keep making updates to fix issues described above and expand functionality/coverage. 
