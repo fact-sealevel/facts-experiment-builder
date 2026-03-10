@@ -8,7 +8,7 @@ def build_compose_service_dict(
     command: List[str],
     volumes: List[str],
     depends_on: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+) -> Dict[str, Any]:
     """
     Build a Docker Compose service dictionary from a ModuleServiceSpec.
 
@@ -21,7 +21,7 @@ def build_compose_service_dict(
     Returns:
         Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
     """
-    #TODO: better fix for this but should work for now
+    # TODO: better fix for this but should work for now
     if command[0] == "main":
         command = command[1:]
     service = {

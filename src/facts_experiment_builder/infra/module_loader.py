@@ -1,8 +1,8 @@
 import yaml
 from pathlib import Path
-from typing import Dict, Any
 from facts_experiment_builder.core.module.facts_module import FactsModule
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
+
 
 def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
     """
@@ -23,11 +23,16 @@ def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
     volumes = data.get("volumes", {})
     if not isinstance(volumes, dict):
         volumes = {}
-    
-    
+
     known_keys = {
-        "module_name", "container_image", "arguments", "volumes",
-        "depends_on", "command", "uses_climate_file", "climate_file_required",
+        "module_name",
+        "container_image",
+        "arguments",
+        "volumes",
+        "depends_on",
+        "command",
+        "uses_climate_file",
+        "climate_file_required",
     }
     extra = {k: v for k, v in data.items() if k not in known_keys}
 
@@ -44,6 +49,7 @@ def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
 
     return facts_module
 
+
 def load_facts_module_by_name(module_name: str, project_root: Path) -> FactsModule:
     """
     Load a FactsModule by module name (resolve path then load).
@@ -57,4 +63,3 @@ def load_facts_module_by_name(module_name: str, project_root: Path) -> FactsModu
     """
     yaml_path = find_module_yaml_path(module_name, project_root)
     return load_facts_module_from_yaml(yaml_path)
-

@@ -4,10 +4,9 @@ Does not contain everything needed to run a module; used to build
 experiment-metadata content and, with experiment data, to build ModuleServiceSpec.
 """
 
-import yaml
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Dict, Any, List, Optional
+
 
 @dataclass
 class FactsModule:
@@ -27,4 +26,3 @@ class FactsModule:
             self.arguments = {}
         if self.volumes is None:
             self.volumes = {}
-
