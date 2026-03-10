@@ -14,7 +14,7 @@ To run a FACTS 2 experiment, we need more than the abstract information stored i
 
 ## Example
 Warning: it is still rough! 
-With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate compose`, and then successfully execute the docker compose file to run the experiment.
+With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-metadata.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/test_experiment/experiment-metadata.yml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/test_experiment/experiment-compose.yaml) for examples of files created by the program.
 
 ### Steps to run:
 #### Setup:
