@@ -60,7 +60,7 @@ Once completed, the program:
 
 - If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
-- 
+
 #### 3. Generate docker compose file via CLI
 Example:
 `uv run generate-compose --experiment-name toy_experiment`
