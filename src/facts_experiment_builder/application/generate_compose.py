@@ -43,7 +43,7 @@ def _module_requires_climate_file(module_name: str, experiment_dir: Path) -> boo
         with open(module_yaml_path, 'r') as f:
             module_config = yaml.safe_load(f) or {}
         return module_config.get("climate_file_required", True)
-    except (FileNotFoundError, Exception):
+    except (FileNotFoundError):
         return True
 
 def _validate_climate_file_inputs(metadata: Dict[str, Any], sealevel_modules: List[str], experiment_dir: Path) -> None:
@@ -246,7 +246,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             #modules.append(module)
             modules['temperature_module'] = module
             print(f"✓ Created {temperature_module_name} module")
-        except Exception as e: ### TODO What type of error to use for these?
+        except (FileNotFoundError, ValueError, yaml.YAMLError) as e: 
             print(f"⚠ Warning: Failed to create temp module '{temperature_module_name}': {e}")
     elif temperature_module_name and temperature_module_name.upper() == "NONE":
         # No temperature module - validate that sealevel modules have climate file inputs
@@ -266,7 +266,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             #modules.append(module)
             modules['sealevel_modules'][module_name] = module
             print(f"✓ Created {module_name} module")
-        except Exception as e:
+        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
             print(f"⚠ Warning: Failed to create sealevel module '{module_name}': {e}")
     
     # Create framework modules if specified (skip "facts-total" when workflows exist; we add per-workflow services below)
@@ -283,7 +283,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             )
             modules['framework_modules'][module_name] = module
             print(f"✓ Created {module_name} module")
-        except Exception as e:
+        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
             print(f"⚠ Warning: Failed to create framework module '{module_name}': {e}")
     
     # Create ESL modules if specified
@@ -298,7 +298,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             #modules.append(module)
             modules['esl_modules'][module_name] = module
             print(f"✓ Created {module_name} module")
-        except Exception as e:
+        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
             print(f"⚠ Warning: Failed to create ESL module '{module_name}': {e}")
     
     if (not modules['temperature_module'] and 
@@ -356,7 +356,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
                     )
                     services[service_name] = compose_svc
                     print(f"✓ Created {service_name} workflow service")
-                except Exception as e:
+                except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
                     print(f"⚠ Warning: Failed to create workflow service '{service_name}': {e}")
 
         # One ESL service per workflow when both workflows and esl_modules are specified
@@ -413,7 +413,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
                         }
                         services[service_name] = compose_svc
                         print(f"✓ Created {service_name} ESL workflow service")
-                    except Exception as e:
+                    except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
                         print(f"⚠ Warning: Failed to create ESL workflow service '{service_name}': {e}")
 
     # When there are no workflows, add a single ESL service per ESL module
