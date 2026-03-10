@@ -18,7 +18,6 @@ from facts_experiment_builder.infra.path_utils import (
 
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
-    ScenarioConfig,
     ModuleServiceSpecComponents,
     ModuleContainerImage,
 )
@@ -26,6 +25,7 @@ from facts_experiment_builder.infra.module_loader import (
     load_facts_module_from_yaml,
     find_module_yaml_path,
 )
+
 ALLOWED_MODULE_TYPES = {
     "temperature_module",
     "sealevel_module",
@@ -37,12 +37,23 @@ ALLOWED_MODULE_TYPES = {
 # Module names that may appear as the last path segment when metadata mistakenly
 # points at a specific module's dir (e.g. .../fair-temperature). Volume host path
 # must always be base + current module's suffix only; we use parent as base when this matches.
-KNOWN_MODULE_SUBDIR_NAMES = frozenset({
-    "fair-temperature", "fair-climate", "bamber19-icesheets", "deconto21-ais",
-    "ipccar5", "ipccar5-glaciers", "ipccar5-icesheets", "larmip-ais", "fittedismip-gris",
-    "tlm-sterodynamics", "ssp-landwaterstorage", "kopp14-verticallandmotion",
-    "nzinsargps-verticallandmotion",
-})
+KNOWN_MODULE_SUBDIR_NAMES = frozenset(
+    {
+        "fair-temperature",
+        "fair-climate",
+        "bamber19-icesheets",
+        "deconto21-ais",
+        "ipccar5",
+        "ipccar5-glaciers",
+        "ipccar5-icesheets",
+        "larmip-ais",
+        "fittedismip-gris",
+        "tlm-sterodynamics",
+        "ssp-landwaterstorage",
+        "kopp14-verticallandmotion",
+        "nzinsargps-verticallandmotion",
+    }
+)
 
 
 def build_module_service_spec(
@@ -51,7 +62,7 @@ def build_module_service_spec(
     module_name: str,
     module_type: str = None,
     module_yaml_path: Path = None,
-    ) -> ModuleServiceSpec:
+) -> ModuleServiceSpec:
     """
     Build a ModuleServiceSpec for the given module from experiment metadata and module YAML.
 
@@ -73,12 +84,12 @@ def build_module_service_spec(
 
     module_context = f"{module_name} module"
 
-    #TODO fix this
+    # TODO fix this
     if module_yaml_path and module_yaml_path.exists():
         resolved_yaml_path = module_yaml_path
-        #this is total module step/ workflows 
+        # this is total module step/ workflows
     else:
-        #this is climate + sea level module steps
+        # this is climate + sea level module steps
         project_root = find_project_root(experiment_dir)
         resolved_yaml_path = find_module_yaml_path(module_name, project_root)
     module_definition = load_facts_module_from_yaml(resolved_yaml_path)
@@ -89,11 +100,11 @@ def build_module_service_spec(
         scenario_name = scenario_name.get(
             "scenario_name", scenario_name.get("scenario", "")
         )
-    experiment_name = get_required_field(metadata, "experiment_name", module_context)
-    scenario = ScenarioConfig(
-        scenario_name=scenario_name,
-        description=f"Scenario for {experiment_name}",
-    )
+    # experiment_name = get_required_field(metadata, "experiment_name", module_context)
+    # scenario = ScenarioConfig(
+    #    scenario_name=scenario_name,
+    #    description=f"Scenario for {experiment_name}",
+    # )
 
     experiment_paths = get_experiment_paths(metadata, module_context)
     general_input_data = expand_path(
@@ -112,11 +123,15 @@ def build_module_service_spec(
     # Module-specific input dir: one shared dir per "module" (e.g. ipccar5 for both glaciers and icesheets).
     # Per-workflow ESL services (e.g. extremesealevel-pointsoverthreshold-wf1) share the base ESL module's input dir.
     module_specific_input_path_suffix = (
-        "ipccar5" if module_name in ("ipccar5-glaciers", "ipccar5-icesheets") else module_name
+        "ipccar5"
+        if module_name in ("ipccar5-glaciers", "ipccar5-icesheets")
+        else module_name
     )
     if module_name.startswith("extremesealevel-pointsoverthreshold-"):
         module_specific_input_path_suffix = "extremesealevel-pointsoverthreshold"
-    module_specific_input_data = module_specific_input_base + "/" + module_specific_input_path_suffix
+    module_specific_input_data = (
+        module_specific_input_base + "/" + module_specific_input_path_suffix
+    )
 
     output_data_partial = expand_path(
         experiment_paths["output_data_location"],
@@ -129,14 +144,19 @@ def build_module_service_spec(
         output_data_location = output_data_partial + "/facts-total"
         if not Path(output_data_location).exists():
             os.makedirs(output_data_location, exist_ok=True)
-        output_container_base = module_metadata.get("_output_container_base") or "/mnt/total_out/facts-total"
+        output_container_base = (
+            module_metadata.get("_output_container_base")
+            or "/mnt/total_out/facts-total"
+        )
     else:
         output_data_location = output_data_partial + "/" + module_name
         if not Path(output_data_location).exists():
             os.makedirs(output_data_location, exist_ok=True)
         output_container_base = None
 
-    module_inputs_section = get_required_field(module_metadata, "inputs", module_context)
+    module_inputs_section = get_required_field(
+        module_metadata, "inputs", module_context
+    )
     options_dict = {}
     options_section = module_metadata.get("options", {})
     if isinstance(options_section, dict):
@@ -146,7 +166,12 @@ def build_module_service_spec(
 
     # Path under output root for files produced by another service (e.g. temperature climate file).
     # Stored as relative (e.g. "fair-temperature/climate.nc") so compose command gets /mnt/out/<that>.
-    output_root_relative_inputs = {"climate_data_file", "climate-data-file", "climate_file", "climate-file"}
+    output_root_relative_inputs = {
+        "climate_data_file",
+        "climate-data-file",
+        "climate_file",
+        "climate-file",
+    }
 
     inputs_dict = {}
     for key, value in module_inputs_section.items():
@@ -157,8 +182,16 @@ def build_module_service_spec(
             inputs_dict[key] = [str(v).strip() for v in value if v]
             continue
         if isinstance(value, str) or (isinstance(value, dict) and "value" in value):
-            actual = (value.get("value", value) if isinstance(value, dict) else value) or ""
-            if key in output_root_relative_inputs and isinstance(actual, str) and actual.strip() and not actual.strip().startswith("/") and ".." not in actual:
+            actual = (
+                value.get("value", value) if isinstance(value, dict) else value
+            ) or ""
+            if (
+                key in output_root_relative_inputs
+                and isinstance(actual, str)
+                and actual.strip()
+                and not actual.strip().startswith("/")
+                and ".." not in actual
+            ):
                 inputs_dict[key] = actual.strip()  # e.g. "fair-temperature/climate.nc"
                 continue
             try:

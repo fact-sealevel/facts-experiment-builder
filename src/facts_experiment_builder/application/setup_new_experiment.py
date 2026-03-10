@@ -1,4 +1,3 @@
-import yaml
 from pathlib import Path
 
 from facts_experiment_builder.infra.path_utils import find_project_root
@@ -24,7 +23,7 @@ from facts_experiment_builder.adapters.adapter_utils import is_metadata_value
 
 
 # Mapping of top-level param keys to their clue/help text
-#TODO ultimately want to move this to be in each module yaml file (i think)
+# TODO ultimately want to move this to be in each module yaml file (i think)
 TOP_LEVEL_PARAM_CLUES = {
     "pipeline-id": "Pipeline ID",
     "scenario": "Emissions scenario name",
@@ -36,7 +35,7 @@ TOP_LEVEL_PARAM_CLUES = {
     "seed": "Random seed to use for sampling",
     "module-specific-input-data": "Module-specific input data",
     "general-input-data": "General input data",
-    #"location-file-name": "Location file name",
+    # "location-file-name": "Location file name",
     "output-data-location": "Output path",
 }
 
@@ -51,7 +50,9 @@ def create_metadata_bundle(clue: str, value: Any = None) -> Dict[str, Any]:
     return {"clue": clue, "value": value}
 
 
-def get_clue_from_module_yaml(module_def: FactsModule, arg_type: str, field_name: str) -> str:
+def get_clue_from_module_yaml(
+    module_def: FactsModule, arg_type: str, field_name: str
+) -> str:
     """
     Extract clue/help text from module definition for a specific field.
 
@@ -65,7 +66,7 @@ def get_clue_from_module_yaml(module_def: FactsModule, arg_type: str, field_name
     """
     # Look through arguments of the specified type
     arg_specs = module_def.arguments.get(arg_type, [])
-    
+
     for arg_spec in arg_specs:
         # Check if this arg_spec matches the field_name
         source = arg_spec.get("source", "")
@@ -76,27 +77,28 @@ def get_clue_from_module_yaml(module_def: FactsModule, arg_type: str, field_name
                 help_text = arg_spec.get("help", "")
                 if help_text:
                     return help_text
-    
+
     # Fallback: generate clue from field name
     return f"add your {field_name} here"
+
 
 def setup_new_experiment_fs(
     experiment_name: str,
     module_names: List[str],
-    ):
-    
-    #Resolve the experiment directory path
+):
+    # Resolve the experiment directory path
     experiment_path = resolve_experiment_directory_path(experiment_name)
     # Raise error if it already exists
     if check_if_experiment_directory_exists(experiment_path):
         raise ValueError(f"Experiment directory {experiment_path} already exists")
-    
+
     # Create the experiment directory
     create_experiment_directory(experiment_path)
     # Create the experiment directory files
     create_experiment_directory_files(experiment_path, module_names)
 
     return experiment_path
+
 
 def init_new_experiment(
     experiment_name: str,
@@ -118,7 +120,7 @@ def init_new_experiment(
     workflow_dict: Dict[str, str] = None,
     module_specific_inputs: str = None,
     general_inputs: str = None,
-    ) -> FactsExperiment:
+) -> FactsExperiment:
     """
     Create a new FactsExperiment from CLI inputs
     Uses FactsExperiment.create_new_experiment_obj with dependencies from this module.
@@ -155,20 +157,18 @@ def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) 
     """
     Load defaults from defaults.yml for the module and merge into the experiment (application layer: I/O).
     """
-    #Make a dict with defaults read from module's defaults.yml
+    # Make a dict with defaults read from module's defaults.yml
     defaults_yml = load_module_defaults(module_name)
-    
+
     if not defaults_yml:
         return
     module_def = None
     try:
         project_root = find_project_root()
         module_def = load_facts_module_by_name(module_name, project_root)
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         # Module YAML or project root not found; continue with module_def=None
-        raise ValueError(
-            f"Could not load module definition for '{module_name}': {e}"
-        )
+        raise ValueError(f"Could not load module definition for '{module_name}") from e
 
     experiment.merge_defaults_for_module(
         module_name,
@@ -191,7 +191,9 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
             field_name = source.split(".")[-1]
             clue = get_clue_from_module_yaml(module_def, "inputs", field_name)
             if field_name == "climate_data_file":
-                module_inputs[field_name] = create_metadata_bundle(clue, "fair-temperature/climate.nc")  # TODO will need to fix this.
+                module_inputs[field_name] = create_metadata_bundle(
+                    clue, "fair-temperature/climate.nc"
+                )  # TODO will need to fix this.
             else:
                 module_inputs[field_name] = create_metadata_bundle(clue)
 
@@ -201,7 +203,9 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
     top_level_names = [arg.get("name", "") for arg in top_level_args]
     if top_level_names:
         top_level_str = ", ".join(top_level_names)
-        module_options[f"# Options inherited from top-level metadata: {top_level_str}"] = None
+        module_options[
+            f"# Options inherited from top-level metadata: {top_level_str}"
+        ] = None
 
     # Add module-specific options
     for arg_spec in module_def.arguments.get("options", []):
@@ -242,4 +246,3 @@ def format_module_from_definition(module_def: FactsModule) -> dict:
         "outputs": module_outputs,
     }
     return module_dict
-

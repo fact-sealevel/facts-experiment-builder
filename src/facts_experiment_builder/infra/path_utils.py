@@ -22,9 +22,7 @@ def expand_path(path_str: Any, context: str = "") -> str:
     """
     if path_str is None:
         context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Path string is None{context_msg}. Cannot expand None value."
-        )
+        raise ValueError(f"Path string is None{context_msg}. Cannot expand None value.")
     if isinstance(path_str, list):
         path_str = path_str[0] if path_str else ""
         if not path_str:
@@ -61,7 +59,8 @@ def _resolve_module_input_dir(module_specific_input_dir: str, module_name: str) 
     return os.path.join(module_specific_input_dir, module_name)
 
 
-ModuleOutputType = Literal["local","global","total","esl"]
+ModuleOutputType = Literal["local", "global", "total", "esl"]
+
 
 @dataclass(frozen=True)
 class ModuleInputPaths:
@@ -85,13 +84,15 @@ def build_module_input_paths(
     module_specific_input_dir: str = "",
     general_input_dir: str = "",
     module_name: str = "",
-    ) -> ModuleInputPaths:
+) -> ModuleInputPaths:
     """Build and validate ModuleInputPaths. Raises ValueError if invalid."""
     if module_specific_input_dir is None:
         raise ValueError(
             f"module_specific_input_dir is None when building paths for {module_name}."
         )
-    if module_specific_input_dir != "" and not isinstance(module_specific_input_dir, str):
+    if module_specific_input_dir != "" and not isinstance(
+        module_specific_input_dir, str
+    ):
         raise ValueError(
             f"module_specific_input_dir has invalid type for {module_name}: expected str, got {type(module_specific_input_dir)}"
         )
@@ -113,7 +114,9 @@ def build_module_input_paths(
     )
 
 
-def build_module_output_paths(output_dir: str, output_type: ModuleOutputType, module_name: str = "") -> ModuleOutputPaths:
+def build_module_output_paths(
+    output_dir: str, output_type: ModuleOutputType, module_name: str = ""
+) -> ModuleOutputPaths:
     """Build and validate ModuleOutputPaths. Raises ValueError if invalid."""
     if output_dir is None:
         raise ValueError(
@@ -185,7 +188,7 @@ def is_general_input(field_name: str) -> bool:
         True if field is a general input, False if module-specific
     """
     field_lower = field_name.lower()
-    general_patterns = ['location', 'fingerprint', 'fp']
+    general_patterns = ["location", "fingerprint", "fp"]
     return any(pattern in field_lower for pattern in general_patterns)
 
 
@@ -195,8 +198,8 @@ def resolve_input_path(
     general_input_data: str,
     module_specific_input_data: str,
     module_name: str = "",
-    context: str = ""
-    ):
+    context: str = "",
+):
     """
     Resolve an input file path based on whether it's a general or module-specific input.
 
@@ -227,7 +230,9 @@ def resolve_input_path(
             f"Invalid field value type for '{field_name}': expected str or dict, got {type(field_value)}{context_msg}"
         )
 
-    if not actual_value or (isinstance(actual_value, str) and actual_value.strip() == ""):
+    if not actual_value or (
+        isinstance(actual_value, str) and actual_value.strip() == ""
+    ):
         context_msg = f" in {context}" if context else ""
         raise ValueError(
             f"Empty or missing value for input field '{field_name}'{context_msg}"
@@ -270,16 +275,27 @@ def resolve_input_path(
             ) from e
         if module_specific_path.name == module_name:
             base_path = module_specific_input_data
-        elif module_specific_path.name and module_name.startswith(module_specific_path.name + "-"):
+        elif module_specific_path.name and module_name.startswith(
+            module_specific_path.name + "-"
+        ):
             # Multi-command module sharing one dir (e.g. ipccar5 for ipccar5-glaciers/ipccar5-icesheets).
             # Files sit directly under module_specific_input_data; do not append module_name.
             base_path = module_specific_input_data
         else:
-            if module_specific_path.name in ["fair-temperature", "fair-climate", "bamber19-icesheets",
-                                             "deconto21-ais", "ipccar5-glaciers", "ipccar5-icesheets",
-                                             "larmip-ais", "fittedismip-gris", "tlm-sterodynamics",
-                                             "ssp-landwaterstorage", "kopp14-verticallandmotion",
-                                             "nzinsargps-verticallandmotion"]:
+            if module_specific_path.name in [
+                "fair-temperature",
+                "fair-climate",
+                "bamber19-icesheets",
+                "deconto21-ais",
+                "ipccar5-glaciers",
+                "ipccar5-icesheets",
+                "larmip-ais",
+                "fittedismip-gris",
+                "tlm-sterodynamics",
+                "ssp-landwaterstorage",
+                "kopp14-verticallandmotion",
+                "nzinsargps-verticallandmotion",
+            ]:
                 base_path = str(module_specific_path.parent / module_name)
             else:
                 base_path = os.path.join(module_specific_input_data, module_name)
@@ -288,11 +304,7 @@ def resolve_input_path(
     return os.path.normpath(resolved_path)
 
 
-def resolve_output_path(
-    field_value: Any,
-    output_data_location: str,
-    context: str = ""
-    ):
+def resolve_output_path(field_value: Any, output_data_location: str, context: str = ""):
     """
     Resolve an output file path using the output-data-location base path.
 
@@ -330,11 +342,11 @@ def resolve_output_path(
             f"Invalid field value type for output: expected str or dict, got {type(field_value)}{context_msg}"
         )
 
-    if not actual_value or (isinstance(actual_value, str) and actual_value.strip() == ""):
+    if not actual_value or (
+        isinstance(actual_value, str) and actual_value.strip() == ""
+    ):
         context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Empty or missing value for output field{context_msg}"
-        )
+        raise ValueError(f"Empty or missing value for output field{context_msg}")
 
     if os.path.isabs(actual_value):
         return actual_value

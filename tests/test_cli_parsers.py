@@ -1,7 +1,5 @@
 """Tests for CLI input parsers (pure functions, no Click)."""
 
-import pytest
-
 from facts_experiment_builder.cli.parsers import parse_comma_separated_modules
 
 

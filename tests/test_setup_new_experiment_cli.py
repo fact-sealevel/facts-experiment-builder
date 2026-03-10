@@ -1,5 +1,8 @@
 """Minimal pytest suite for setup_new_experiment_cli."""
 
+from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 from click.testing import CliRunner
 
 from facts_experiment_builder.cli.setup_new_experiment_cli import main
@@ -15,29 +18,29 @@ def test_cli_help_exits_zero():
     assert "experiment-name" in result.output
     assert "temperature-module" in result.output
     assert "sealevel-modules" in result.output
+    assert "framework-module" in result.output
 
 
 def test_cli_fails_without_required_args():
     """Invoking without required options exits non-zero."""
     result = runner.invoke(main, [])
     assert result.exit_code != 0
-    assert "experiment-name" in result.output or "Missing" in result.output or "Error" in result.output
+    assert (
+        "experiment-name" in result.output
+        or "Missing" in result.output
+        or "Error" in result.output
+    )
 
 
 def test_cli_parses_sealevel_modules():
     """Sealevel modules string is parsed into a list (via mocked app)."""
-    from unittest.mock import patch, MagicMock
-
     with (
         patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.create_experiment_directory",
-            return_value=MagicMock(),
+            "facts_experiment_builder.cli.setup_new_experiment_cli.setup_new_experiment_fs",
+            return_value=Path("/tmp/test-exp"),
         ),
         patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.create_experiment_directory_files",
-        ),
-        patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.create_new_experiment",
+            "facts_experiment_builder.cli.setup_new_experiment_cli.init_new_experiment",
             return_value=MagicMock(),
         ),
         patch(

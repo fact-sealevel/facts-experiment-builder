@@ -3,9 +3,12 @@
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import build_module_service_spec
+from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import (
+    build_module_service_spec,
+)
 
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
+
 
 def create_module_service_spec_from_metadata(
     metadata_path: Path,
@@ -13,7 +16,7 @@ def create_module_service_spec_from_metadata(
     module_type: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
     module_yaml_path: Optional[Path] = None,
-    ):
+):
     """
     Create a single module service spec from experiment metadata.
 
@@ -43,5 +46,3 @@ def create_module_service_spec_from_metadata(
         error_msg = str(e)
         print(f"Error creating module from metadata: {error_msg}")
         raise e
-
-

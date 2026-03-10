@@ -3,6 +3,7 @@ from typing import Optional
 from facts_experiment_builder.resources import get_module_configs_dir
 from facts_experiment_builder.infra.path_utils import find_project_root
 
+
 def get_module_defaults_path(module_name: str) -> Optional[Path]:
     """Get the path to the defaults file for a module (uses shared config location)."""
     from facts_experiment_builder.resources import get_module_configs_dir
@@ -15,6 +16,7 @@ def get_module_defaults_path(module_name: str) -> Optional[Path]:
         if path.exists():
             return path
     return None
+
 
 def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
     """
@@ -42,10 +44,12 @@ def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
     ]
 
     if module_name == "fair" or module_name.startswith("fair"):
-        possible_paths.extend([
-            modules_dir / "fair_temperature_module.yaml",
-            modules_dir / "fair_module.yaml",
-        ])
+        possible_paths.extend(
+            [
+                modules_dir / "fair_temperature_module.yaml",
+                modules_dir / "fair_module.yaml",
+            ]
+        )
 
     for path in possible_paths:
         if path.exists():
@@ -56,30 +60,29 @@ def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
         f"Tried paths: {[str(p) for p in possible_paths]}"
     )
 
-def find_experiment_metadata_file(experiment_name:str):
 
-    #Resolve path to experiment directory
+def find_experiment_metadata_file(experiment_name: str):
+    # Resolve path to experiment directory
     project_root = find_project_root()
     experiment_dir = project_root / "experiments" / experiment_name
 
     if not experiment_dir.exists():
         raise FileNotFoundError(f"Experiment directory not found: {experiment_dir}")
 
-    #Resolve absolute path to file
+    # Resolve absolute path to file
     metadata_file = experiment_dir / "experiment-metadata.yml"
     if not metadata_file.exists():
         raise FileNotFoundError(f"Experiment metadata file not found: {metadata_file}")
 
     return metadata_file
 
-def resolve_experiment_compose_path(
-    metadata_path:Path,
-    custom_output_path:Optional[Path] = None) -> Path:
 
+def resolve_experiment_compose_path(
+    metadata_path: Path, custom_output_path: Optional[Path] = None
+) -> Path:
     if custom_output_path:
         output_path = Path(custom_output_path).resolve()
     else:
         output_path = metadata_path.parent / "experiment-compose.yaml"
 
     return output_path
-
