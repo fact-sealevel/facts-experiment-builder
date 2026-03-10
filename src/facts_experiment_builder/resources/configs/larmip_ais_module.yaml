@@ -5,7 +5,7 @@
 # corresponding containerized facts module repository and be generated semi programmatically.
 
 module_name: "larmip-ais"
-container_image: "ghcr.io/fact-sealevel/larmip-ais:v0.1.0"
+container_image: "ghcr.io/fact-sealevel/larmip-ais:0.1.2"
 uses_climate_file: true
 climate_file_required: true
 command: "main"
@@ -138,7 +138,7 @@ arguments:
     - name: "ais-global-output-file"
       type: "file"
       source: "module_inputs.outputs.ais_global_output_file"
-      filename: "ais-global-output.nc"
+      filename: "ais_global_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "global"
       mount:
@@ -148,7 +148,7 @@ arguments:
     - name: "eais-global-output-file"
       type: "file"
       source: "module_inputs.outputs.eais_global_output_file"
-      filename: "eais-global-output.nc"
+      filename: "eais_global_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "global"
       mount:
@@ -158,7 +158,7 @@ arguments:
     - name: "wais-global-output-file"
       type: "file"
       source: "module_inputs.outputs.wais_global_output_file"
-      filename: "wais-global-output.nc"
+      filename: "wais_global_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "global"
       mount:
@@ -168,7 +168,7 @@ arguments:
     - name: "pen-global-output-file"
       type: "file"
       source: "module_inputs.outputs.pen_global_output_file"
-      filename: "pen-global-output.nc"
+      filename: "pen_global_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "global"
       mount:
@@ -178,7 +178,7 @@ arguments:
     - name: "smb-global-output-file"
       type: "file"
       source: "module_inputs.outputs.smb_global_output_file"
-      filename: "smb-global-output.nc"
+      filename: "smb_global_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "global"
       mount:
@@ -188,6 +188,7 @@ arguments:
     - name: "wais-local-output-file"
       type: "file"
       source: "module_inputs.outputs.wais_local_output_file"
+      filename: "wais_local_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "local"
       mount:
@@ -198,6 +199,7 @@ arguments:
     - name: "eais-local-output-file"
       type: "file"
       source: "module_inputs.outputs.eais_local_output_file"
+      filename: "eais_local_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "local"
       mount:
@@ -208,6 +210,7 @@ arguments:
     - name: "ais-local-output-file"
       type: "file"
       source: "module_inputs.outputs.ais_local_output_file"
+      filename: "ais_local_output.nc"
       help: "TO DO ADD HELP TEXT"
       output_type: "local"
       mount:
