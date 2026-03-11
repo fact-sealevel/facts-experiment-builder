@@ -31,9 +31,9 @@ arguments:
     - name: "scenario"
       type: "str"
       source: "metadata.scenario"
-      transform: "scenario_name"
+      transform: "scenario_name_ssp_landwaterstorage"
       optional: true
-      help: "Emissions scenario name"
+      help: "Emissions scenario name (mapped from common name via scenario_name_mapping_ssp_landwaterstorage.yaml)"
     - name: "baseyear"
       type: "int"
       source: "metadata.baseyear"

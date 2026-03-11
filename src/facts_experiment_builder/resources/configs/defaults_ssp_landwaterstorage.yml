@@ -15,8 +15,9 @@ inputs:
   pophist_file: UNWPP2012_population_historical.csv
   reservoir_file: Chao2008_groundwater_impoundment.csv
   popscen_file: ssp_iam_baseline_popscenarios2100.csv
-  gwd_file: Konikow2011_GWD.csv
-  gwd_file: Wada2012_GWD.csv
-  gwd_file: Wada2012_GWD.csv
+  gwd_file:
+    - Konikow2011_GWD.csv
+    - Wada2012_GWD.csv
+    - Pokhrel2012_GWD.csv
   fp_file: REL_GROUNDWATER_NOMASK.nc
   
