@@ -1,7 +1,7 @@
 """Build ModuleServiceSpec instances from experiment metadata and module YAML."""
 
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Set
 import os
 from facts_experiment_builder.adapters.adapter_utils import (
     get_required_field,
@@ -21,6 +21,7 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpecComponents,
     ModuleContainerImage,
 )
+from facts_experiment_builder.core.typed_path import HostPath, ContainerPath
 from facts_experiment_builder.infra.module_loader import (
     load_facts_module_from_yaml,
     find_module_yaml_path,
@@ -54,6 +55,21 @@ KNOWN_MODULE_SUBDIR_NAMES = frozenset(
         "nzinsargps-verticallandmotion",
     }
 )
+
+
+def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
+    """Return set of input field names that are multiple file inputs (from module YAML)."""
+    keys: Set[str] = set()
+    for arg_spec in module_definition.arguments.get("inputs", []):
+        if not arg_spec.get("multiple", False):
+            continue
+        if not (arg_spec.get("mount") or arg_spec.get("type") == "file"):
+            continue
+        source = arg_spec.get("source", "")
+        if "." in source:
+            field = source.split(".")[-1]
+            keys.add(field)
+    return keys
 
 
 def build_module_service_spec(
@@ -173,13 +189,68 @@ def build_module_service_spec(
         "climate-file",
     }
 
+    multiple_file_input_keys = _multiple_file_input_keys(module_definition)
+
     inputs_dict = {}
     for key, value in module_inputs_section.items():
         if key == "input_dir":
             continue
+        if key in multiple_file_input_keys:
+            # List of already container paths (e.g. facts-total item from generate_compose): do not resolve.
+            if isinstance(value, list) and value and all(
+                str(v).strip().startswith("/mnt/") for v in value if v
+            ):
+                inputs_dict[key] = [
+                    ContainerPath(str(v).strip()) for v in value if v
+                ]
+                continue
+            # Multiple file inputs with host paths (e.g. gwd_file): resolve each path, wrap as HostPath
+            if isinstance(value, list):
+                items = [v for v in value if v is not None and str(v).strip()]
+            else:
+                actual = (
+                    value.get("value", value) if isinstance(value, dict) else value
+                )
+                if isinstance(actual, list):
+                    items = [v for v in actual if v is not None and str(v).strip()]
+                else:
+                    items = (
+                        [actual]
+                        if actual is not None and str(actual).strip()
+                        else []
+                    )
+            resolved = []
+            for item in items:
+                item_value = item if isinstance(item, (str, dict)) else {"value": item}
+                try:
+                    resolved.append(
+                        resolve_input_path(
+                            key,
+                            item_value,
+                            general_input_data,
+                            module_specific_input_data,
+                            module_name,
+                            module_context,
+                        )
+                    )
+                except (ValueError, KeyError, TypeError) as e:
+                    error_msg = str(e)
+                    if "None" in error_msg or "NoneType" in error_msg:
+                        raise ValueError(
+                            f"Input field '{key}' in {module_context} has None value or None in path resolution. "
+                            f"Original error: {error_msg}. "
+                            f"Check that '{key}' has a valid value in metadata.{module_name}.inputs"
+                        ) from e
+                    resolved.append(
+                        item_value.get("value", item_value)
+                        if isinstance(item_value, dict)
+                        else item_value
+                    )
+            inputs_dict[key] = [HostPath(p) for p in resolved]
+            continue
         if isinstance(value, list):
-            # e.g. facts-total inputs.item: list of container paths (/mnt/out/...)
-            inputs_dict[key] = [str(v).strip() for v in value if v]
+            # e.g. facts-total inputs.item: list of container paths (/mnt/total_out/...)
+            inputs_dict[key] = [ContainerPath(str(v).strip()) for v in value if v]
             continue
         if isinstance(value, str) or (isinstance(value, dict) and "value" in value):
             actual = (
@@ -203,7 +274,7 @@ def build_module_service_spec(
                     module_name,
                     module_context,
                 )
-                inputs_dict[key] = resolved_path
+                inputs_dict[key] = HostPath(resolved_path)
             except (ValueError, KeyError, TypeError) as e:
                 error_msg = str(e)
                 if "None" in error_msg or "NoneType" in error_msg:
