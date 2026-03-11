@@ -197,27 +197,23 @@ def build_module_service_spec(
             continue
         if key in multiple_file_input_keys:
             # List of already container paths (e.g. facts-total item from generate_compose): do not resolve.
-            if isinstance(value, list) and value and all(
-                str(v).strip().startswith("/mnt/") for v in value if v
+            if (
+                isinstance(value, list)
+                and value
+                and all(str(v).strip().startswith("/mnt/") for v in value if v)
             ):
-                inputs_dict[key] = [
-                    ContainerPath(str(v).strip()) for v in value if v
-                ]
+                inputs_dict[key] = [ContainerPath(str(v).strip()) for v in value if v]
                 continue
             # Multiple file inputs with host paths (e.g. gwd_file): resolve each path, wrap as HostPath
             if isinstance(value, list):
                 items = [v for v in value if v is not None and str(v).strip()]
             else:
-                actual = (
-                    value.get("value", value) if isinstance(value, dict) else value
-                )
+                actual = value.get("value", value) if isinstance(value, dict) else value
                 if isinstance(actual, list):
                     items = [v for v in actual if v is not None and str(v).strip()]
                 else:
                     items = (
-                        [actual]
-                        if actual is not None and str(actual).strip()
-                        else []
+                        [actual] if actual is not None and str(actual).strip() else []
                     )
             resolved = []
             for item in items:
