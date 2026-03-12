@@ -1,0 +1,24 @@
+# Scenario name mapping: common (experiment) name -> ssp-landwaterstorage module name
+# Used only by the ssp-landwaterstorage module. Other modules use the common name as-is.
+# Add or edit entries to match what the ssp-landwaterstorage container expects.
+# If a name is not listed, it is passed through unchanged.
+
+ssp585: "SSP5-8.5"
+ssp370: "SSP3-7.0"
+ssp245: "SSP2-4.5"
+ssp126: "SSP1-2.6"
+ssp119: "SSP1-1.9"
+
+"rcp19": "ssp1"
+"rcp26": "ssp1"
+"rcp45": "ssp2"
+"rcp60": "ssp4"
+"rcp70": "ssp3"
+"rcp85": "ssp5"
+"ssp585": "ssp5"
+"ssp370": "ssp3"
+"ssp245": "ssp2"
+"ssp126": "ssp1"
+"ssp119": "ssp1"
+#COME BACK AND FIX THIS!!!! TODO 
+  

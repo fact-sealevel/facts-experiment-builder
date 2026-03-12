@@ -2,8 +2,9 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
+from facts_experiment_builder.core.typed_path import TypedPath, PathValue
 from facts_experiment_builder.infra.path_utils import (
     ModuleInputPaths,
     ModuleOutputPaths,
@@ -15,6 +16,7 @@ from facts_experiment_builder.core.module.facts_module import FactsModule
 from facts_experiment_builder.core.source_resolver import (
     resolve_value as resolve_source_value,
 )
+from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
 
 
 @dataclass(frozen=True)
@@ -42,7 +44,7 @@ class ModuleServiceSpecComponents:
     input_paths: ModuleInputPaths
     output_paths: ModuleOutputPaths
     fingerprint_params: Dict[str, Any]
-    inputs: Dict[str, Any]
+    inputs: Dict[str, Union[PathValue, Any]]
     outputs: Dict[str, Any]
     image: ModuleContainerImage
     metadata: Dict[str, Any]
@@ -155,6 +157,29 @@ class ModuleServiceSpec:
 
         return command_args
 
+    def _host_path_to_container(self, path_str: str, arg_spec: Dict[str, Any]) -> str:
+        """Transform a host path to container path using mount and transform from arg_spec."""
+        mount = arg_spec.get("mount", {})
+        transform = arg_spec.get("transform")
+        container_path = (mount.get("container_path") or "").rstrip("/")
+        if not container_path:
+            return path_str
+        value_path = Path(path_str)
+        if transform == "filename":
+            return f"{container_path}/{value_path.name}"
+        if value_path.is_absolute() and hasattr(self.components, "input_paths"):
+            input_dir = Path(self.components.input_paths.input_dir)
+            try:
+                relative_path = value_path.relative_to(input_dir)
+                return str(Path(container_path) / relative_path)
+            except ValueError:
+                return str(Path(container_path) / value_path.name)
+        return str(
+            Path(container_path) / value_path.name
+            if value_path.is_absolute()
+            else Path(container_path) / value_path.parent / value_path.name
+        )
+
     def _process_argument(self, arg_spec: Dict[str, Any]) -> Any:
         """
         Process a single argument specification.
@@ -194,6 +219,8 @@ class ModuleServiceSpec:
                 value = value.scenario_name
             elif isinstance(value, dict):
                 value = value.get("scenario_name", value.get("scenario", value))
+        elif transform == "scenario_name_ssp_landwaterstorage":
+            value = scenario_name_ssp_landwaterstorage(value)
         elif transform == "filename":
             # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
             if isinstance(value, (str, Path)) and not (
@@ -201,7 +228,20 @@ class ModuleServiceSpec:
             ):
                 value = Path(value).name
 
-        # Handle mount transformations for file paths (inputs and options only; outputs use _process_output_argument).
+        # Typed paths: container pass-through, host rewrite. Single rule for all path inputs.
+        if mount and isinstance(value, TypedPath):
+            if value.kind == "container":
+                return value.path
+            return self._host_path_to_container(value.path, arg_spec)
+        if mount and isinstance(value, list) and len(value) > 0:
+            if all(isinstance(v, TypedPath) for v in value):
+                if value[0].kind == "container":
+                    return [tp.path for tp in value]
+                return [self._host_path_to_container(tp.path, arg_spec) for tp in value]
+            # Legacy: list of non-TypedPath (should not occur once adapter always wraps)
+            pass
+
+        # Handle mount transformations for file paths (legacy str/Path; outputs use _process_output_argument).
         if mount and isinstance(value, (str, Path)):
             container_path = (mount.get("container_path") or "").rstrip("/")
             if (
