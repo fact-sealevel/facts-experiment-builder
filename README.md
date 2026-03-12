@@ -43,7 +43,13 @@ mkdir experiments
 
 Example:
 ```shell
-uv run setup-new-experiment --experiment-name toy_experiment --pipeline-id aaa --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 --temperature-module fair-temperature --sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion --framework-module facts-total --extremesealevel-module extremesealevel-pointsoverthreshold 
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+--experiment-name toy_experiment --pipeline-id aaa --scenario ssp585 \
+--pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
+--temperature-module fair-temperature \
+--sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
+--framework-module facts-total \
+--extremesealevel-module extremesealevel-pointsoverthreshold
 ```
 - If `facts-total` is passed to `--framework-module`, the CLI prompts the user for information about the workflows included in the experiment:
 ![workflow prompts](imgs/toy_experiment_workflow_prompts.png)
@@ -63,7 +69,8 @@ Once completed, the program:
 
 #### 3. Generate docker compose file via CLI
 Example:
-`uv run generate-compose --experiment-name toy_experiment`
+`git+https://github.com/fact-sealevel/facts-experiment-builder@main generate-compose \
+--experiment-name toy_experiment`
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - this is the docker implementation of the abstract experiment specified by `experiment-metadata.yml`
 
