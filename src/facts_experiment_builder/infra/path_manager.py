@@ -1,32 +1,20 @@
 from pathlib import Path
 from typing import Optional
-from facts_experiment_builder.resources import get_module_configs_dir
+from facts_experiment_builder.core.registry import ModuleRegistry
 
 
 def get_module_defaults_path(module_name: str) -> Optional[Path]:
-    """Get the path to the defaults file for a module (uses shared config location)."""
-    from facts_experiment_builder.resources import get_module_configs_dir
-
-    mod_snake = module_name.replace("-", "_")
-    configs_dir = get_module_configs_dir()
-    # Try defaults_{module}.yml then {module}_defaults.yml
-    for name in (f"defaults_{mod_snake}.yml", f"{mod_snake}_defaults.yml"):
-        path = configs_dir / name
-        if path.exists():
-            return path
-    return None
+    """Get the path to the defaults file for a module."""
+    return ModuleRegistry.default().get_module_defaults_path(module_name)
 
 
 def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
     """
     Resolve the path to a module's YAML file by module name.
 
-    Uses the same filename conventions and special cases (e.g. fair /
-    fair-temperature) as used by setup and the generic parser.
-
     Args:
-        module_name: Module name (e.g. 'fair', 'bamber19-icesheets').
-        project_root: Project root (directory containing pyproject.toml).
+        module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets').
+        project_root: Project root (unused; kept for backwards compatibility).
 
     Returns:
         Path to the module YAML file.
@@ -34,30 +22,7 @@ def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
     Raises:
         FileNotFoundError: If no matching module YAML is found.
     """
-    modules_dir = get_module_configs_dir()
-    module_dir_name = module_name.replace("-", "_")
-
-    possible_paths = [
-        modules_dir / f"{module_dir_name}_module.yaml",
-        modules_dir / f"{module_name}_module.yaml",
-    ]
-
-    if module_name == "fair" or module_name.startswith("fair"):
-        possible_paths.extend(
-            [
-                modules_dir / "fair_temperature_module.yaml",
-                modules_dir / "fair_module.yaml",
-            ]
-        )
-
-    for path in possible_paths:
-        if path.exists():
-            return path
-
-    raise FileNotFoundError(
-        f"Module YAML file not found for module '{module_name}'. "
-        f"Tried paths: {[str(p) for p in possible_paths]}"
-    )
+    return ModuleRegistry.default().get_module_yaml_path(module_name)
 
 
 def find_experiment_metadata_file(experiment_name: str):

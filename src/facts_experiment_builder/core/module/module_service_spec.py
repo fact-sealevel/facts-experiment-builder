@@ -123,7 +123,7 @@ class ModuleServiceSpec:
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
 
-        if "facts-total" not in self.module_name:
+        if not self.module_definition.extra.get("skip_fingerprint_params"):
             # Process fingerprint params
             for arg_spec in arguments_config.get("fingerprint_params", []):
                 value = self._process_argument(arg_spec)

@@ -137,8 +137,16 @@ def _collect_workflow_output_paths_by_type(
     return paths
 
 
-# One facts-total service per (workflow, output_type), e.g. facts-total-wf1-global, facts-total-wf1-local
-FACTS_TOTAL_OUTPUT_TYPES = ("global", "local")
+def _module_is_per_workflow(module_name: str) -> bool:
+    """Return True if the module YAML declares per_workflow: true."""
+    try:
+        project_root = Path.cwd()
+        module_yaml_path = find_module_yaml_path(module_name, project_root)
+        with open(module_yaml_path) as f:
+            cfg = yaml.safe_load(f) or {}
+        return bool(cfg.get("per_workflow"))
+    except FileNotFoundError:
+        return False
 
 
 def _build_facts_total_section_for_workflow(
@@ -282,11 +290,11 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
             print(f"⚠ Warning: Failed to create sealevel module '{module_name}': {e}")
 
-    # Create framework modules if specified (skip "facts-total" when workflows exist; we add per-workflow services below)
+    # Create framework modules if specified (skip per-workflow modules when workflows exist; we add per-workflow services below)
     workflows = workflows_from_metadata(metadata)
     for module_name in manifest.get("framework_modules", []):
-        if module_name == "facts-total" and workflows:
-            continue  # facts-total is added once per workflow below
+        if _module_is_per_workflow(module_name) and workflows:
+            continue  # per-workflow modules are added once per workflow below
         try:
             module = create_module_service_spec_from_metadata(
                 metadata_path,
@@ -350,14 +358,19 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Add one facts-total service per workflow (after sealevel services)
     if workflows:
         project_root = Path.cwd()
-        facts_total_yaml_path = find_module_yaml_path("facts-total", project_root)
+        per_workflow_fw = [
+            m for m in manifest.get("framework_modules", [])
+            if _module_is_per_workflow(m)
+        ]
+        facts_total_name = per_workflow_fw[0] if per_workflow_fw else "facts-total"
+        facts_total_yaml_path = find_module_yaml_path(facts_total_name, project_root)
         with open(facts_total_yaml_path, "r") as f:
             facts_total_config = yaml.safe_load(f) or {}
         facts_total_image = facts_total_config.get(
             "container_image", "ghcr.io/fact-sealevel/facts-total:v0.1.2"
         )
         for wf_name, wf in workflows.items():
-            for output_type in FACTS_TOTAL_OUTPUT_TYPES:
+            for output_type in facts_total_config.get("output_types", ["global", "local"]):
                 section = _build_facts_total_section_for_workflow(
                     wf, facts_total_image, output_type
                 )

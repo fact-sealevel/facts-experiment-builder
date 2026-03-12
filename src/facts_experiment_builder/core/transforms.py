@@ -8,15 +8,14 @@ from typing import Any
 
 import yaml
 
-# Config filename for ssp-landwaterstorage scenario name mapping
-_SCENARIO_MAPPING_SSP_LWS = "scenario_name_mapping_ssp_landwaterstorage.yaml"
-
 
 def _load_scenario_mapping_ssp_landwaterstorage() -> dict:
     """Load common -> ssp-landwaterstorage scenario name mapping from config."""
-    from facts_experiment_builder.resources import get_module_configs_dir
+    from facts_experiment_builder.core.registry import ModuleRegistry
 
-    path = get_module_configs_dir() / _SCENARIO_MAPPING_SSP_LWS
+    path = ModuleRegistry.default().get_module_file(
+        "ssp-landwaterstorage", "scenario_name_mapping_ssp_landwaterstorage.yaml"
+    )
     if not path.exists():
         return {}
     with open(path, "r") as f:
