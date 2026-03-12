@@ -1,6 +1,5 @@
 from pathlib import Path
 from typing import List
-from facts_experiment_builder.infra.path_manager import find_project_root
 
 
 def resolve_experiment_directory_path(
@@ -8,7 +7,7 @@ def resolve_experiment_directory_path(
     project_root: Path = None,
 ) -> Path:
     if project_root is None:
-        project_root = find_project_root()
+        project_root = Path.cwd()
 
     experiment_directory = project_root / "experiments" / experiment_name
     return experiment_directory

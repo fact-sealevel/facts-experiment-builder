@@ -13,7 +13,6 @@ from facts_experiment_builder.infra.path_utils import (
     resolve_output_path,
     build_module_input_paths,
     build_module_output_paths,
-    find_project_root,
 )
 
 from facts_experiment_builder.core.module.module_service_spec import (
@@ -106,7 +105,7 @@ def build_module_service_spec(
         # this is total module step/ workflows
     else:
         # this is climate + sea level module steps
-        project_root = find_project_root(experiment_dir)
+        project_root = Path.cwd()
         resolved_yaml_path = find_module_yaml_path(module_name, project_root)
     module_definition = load_facts_module_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)

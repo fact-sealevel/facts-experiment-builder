@@ -129,51 +129,6 @@ def build_module_output_paths(
         )
     return ModuleOutputPaths(output_dir=output_dir, output_type=output_type)
 
-
-def find_project_root(start_path: Path = None) -> Path:
-    """
-    Find the project root by looking for pyproject.toml.
-
-    Searches upward from start_path (or cwd). If not found, falls back to
-    searching from this file's directory so setup remains robust when run
-    from arbitrary cwds.
-
-    Args:
-        start_path: Path to start searching from (defaults to current working directory)
-
-    Returns:
-        Path to project root (directory containing pyproject.toml)
-
-    Raises:
-        FileNotFoundError: If pyproject.toml is not found
-    """
-    if start_path is None:
-        start_path = Path.cwd()
-    else:
-        start_path = Path(start_path).resolve()
-
-    current = start_path
-    while current != current.parent:
-        pyproject_path = current / "pyproject.toml"
-        if pyproject_path.exists():
-            return current
-        current = current.parent
-
-    # Fallback: search from this file's location
-    script_path = Path(__file__).resolve().parent
-    current = script_path
-    while current != current.parent:
-        pyproject_path = current / "pyproject.toml"
-        if pyproject_path.exists():
-            return current
-        current = current.parent
-
-    raise FileNotFoundError(
-        f"Could not find pyproject.toml starting from {start_path}. "
-        "Please run from within the project directory."
-    )
-
-
 def is_general_input(field_name: str) -> bool:
     """
     Determine if an input field is a general input (shared across modules).

@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Optional
 from facts_experiment_builder.resources import get_module_configs_dir
-from facts_experiment_builder.infra.path_utils import find_project_root
 
 
 def get_module_defaults_path(module_name: str) -> Optional[Path]:
@@ -63,7 +62,7 @@ def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
 
 def find_experiment_metadata_file(experiment_name: str):
     # Resolve path to experiment directory
-    project_root = find_project_root()
+    project_root = Path.cwd()
     experiment_dir = project_root / "experiments" / experiment_name
 
     if not experiment_dir.exists():
