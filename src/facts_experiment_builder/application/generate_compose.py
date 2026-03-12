@@ -25,7 +25,7 @@ from facts_experiment_builder.core.workflow.workflow import (
     workflows_from_metadata,
 )
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
-from facts_experiment_builder.infra.path_utils import find_project_root, expand_path
+from facts_experiment_builder.infra.path_utils import expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
 
 
@@ -41,7 +41,7 @@ def _module_requires_climate_file(module_name: str, experiment_dir: Path) -> boo
         True if climate_file_required is True in module YAML, False otherwise
     """
     try:
-        project_root = find_project_root(experiment_dir)
+        project_root = Path.cwd()
         module_yaml_path = find_module_yaml_path(module_name, project_root)
         with open(module_yaml_path, "r") as f:
             module_config = yaml.safe_load(f) or {}
@@ -349,7 +349,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     # Add one facts-total service per workflow (after sealevel services)
     if workflows:
-        project_root = find_project_root(experiment_dir)
+        project_root = Path.cwd()
         facts_total_yaml_path = find_module_yaml_path("facts-total", project_root)
         with open(facts_total_yaml_path, "r") as f:
             facts_total_config = yaml.safe_load(f) or {}
