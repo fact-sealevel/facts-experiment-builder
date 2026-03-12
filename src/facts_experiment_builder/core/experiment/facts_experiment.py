@@ -245,7 +245,6 @@ class FactsExperiment:
         create_metadata_bundle: Callable[[str, Any], Dict[str, Any]],
         format_module_from_definition: Callable[[Any], Dict[str, Any]],
         load_facts_module_by_name: Callable[[str, Path], Any],
-        find_project_root: Callable[[], Path],
         top_level_param_clues: Dict[str, str],
     ) -> "FactsExperiment":
         """
@@ -313,8 +312,7 @@ class FactsExperiment:
                 f"./experiments/{experiment_name}/data/output",
             ),
         }
-        # Find project root (dir w/ pyproject.toml)
-        project_root = find_project_root()
+        project_root = Path.cwd()
         # Load the module definition files for the specified temperature module, if any
         # uses fn from facts_module.py
         if temperature_module and temperature_module.upper() != "NONE":

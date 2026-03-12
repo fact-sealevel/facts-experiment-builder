@@ -1,6 +1,5 @@
 from pathlib import Path
 
-from facts_experiment_builder.infra.path_utils import find_project_root
 from facts_experiment_builder.core.module.facts_module import (
     FactsModule,
 )
@@ -148,7 +147,6 @@ def init_new_experiment(
         create_metadata_bundle=create_metadata_bundle,
         format_module_from_definition=format_module_from_definition,
         load_facts_module_by_name=load_facts_module_by_name,
-        find_project_root=find_project_root,
         top_level_param_clues=TOP_LEVEL_PARAM_CLUES,
     )
 
@@ -164,7 +162,7 @@ def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) 
         return
     module_def = None
     try:
-        project_root = find_project_root()
+        project_root = Path.cwd()
         module_def = load_facts_module_by_name(module_name, project_root)
     except FileNotFoundError as e:
         # Module YAML or project root not found; continue with module_def=None
