@@ -14,6 +14,11 @@ from facts_experiment_builder.application.setup_new_experiment import (
 from facts_experiment_builder.infra.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )  # TODO move this eventually
+from facts_experiment_builder.core.experiment.module_name_validation import (
+    parse_module_list,
+    validate_module_names,
+)
+from facts_experiment_builder.core.registry import ModuleRegistry
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -244,23 +249,74 @@ def main(
     click.echo(f"✓ Created experiment-metadata.yml at {metadata_path}")
 
     # Summary
-    format_message = "\n" + "=" * 70
-    click.echo(format_message)
-    dir_setup_complete_message = "✨ Experiment directory setup complete!"
-    click.echo(dir_setup_complete_message)
-    next_steps_message = "\nNext steps:"
-    click.echo(next_steps_message)
-    edit_metadata_message = f"  1. Edit {metadata_path}"
-    click.echo(edit_metadata_message)
-    fill_in_placeholders_message = (
-        "     - Fill in all placeholder values (pipeline-id, scenario, paths, etc.)"
-    )
-    click.echo(fill_in_placeholders_message)
-    generate_compose_message = "  2. Generate Docker Compose:"
-    click.echo(generate_compose_message)
-    run_compose_message = f"     uv run generate-compose {experiment_path}"
-    click.echo(run_compose_message)
+    console.rule(style="rule")
+    console.print("[success]✨ Experiment directory setup complete![/success]")
+    console.print("\n[primary]Next steps:[/primary]")
+    console.print(f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]")
+    console.print("     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]")
+    console.print("  [muted]2.[/muted] Generate Docker Compose:")
+    console.print(f"     [accent]uv run generate-compose {experiment_path}[/accent]")
 
+def _parse_modules_list(
+        temperature_module: str,
+        sealevel_modules: str,
+        framework_module: str,
+        extremesealevel_module: str,
+    ) -> tuple[list[str], list[str], list[str], list[str]]:
+        """Parse the module lists strings and return them as lists"""
+        temperature_module_list = parse_module_list(temperature_module)
+        sealevel_modules_list = parse_module_list(sealevel_modules)
+        framework_modules_list = parse_module_list(framework_module)
+        extremesealevel_module_list = parse_module_list(extremesealevel_module)
+        return (
+            temperature_module_list, 
+            sealevel_modules_list, 
+            framework_modules_list, 
+            extremesealevel_module_list
+        )
+
+def _validate_modules_list(
+        modules_list: list[str],
+    ) -> None:
+
+        valid_module_names = ModuleRegistry.default().list_modules()
+        try:
+            validate_module_names(modules_list, valid_module_names)
+        except ValueError as e:
+            raise click.UsageError(
+                f"{e}\nIt looks like an invalid module name was passed to setup-new-experiment. \nThe modules passed are {modules_list}. \nCheck if you made a typo or if the module is available in the registry (try running 'uv run list-modules')."
+            )
+
+def _collect_workflows() -> dict[str, str]:
+        workflow_dict = {}
+        first = True
+        while True:
+            if first:
+                workflow_name = click.prompt(
+                    "Enter a name for your first workflow, ex. wf1",
+                    type=str,
+                    default="wf1",
+                )
+                first = False
+            else:
+                workflow_name = click.prompt(
+                    "Enter a name for this workflow",
+                    type=str,
+                )
+                workflow_name = workflow_name.strip() or "wf"
+                module_list_str = click.prompt(
+                    "Enter the names of the modules to include in this workflow. "
+                    "Modules should be separated by commas with no spaces between words",
+                    type=str,
+                )
+                workflow_dict[workflow_name] = module_list_str.strip()
+                if not click.confirm(
+                    "Would you like to enter another workflow?",
+                    default=False,
+                ):
+                    break
+            console.print(f"  Workflows: [secondary]{workflow_dict}[/secondary]")
+        return workflow_dict
 
 if __name__ == "__main__":
     main()
