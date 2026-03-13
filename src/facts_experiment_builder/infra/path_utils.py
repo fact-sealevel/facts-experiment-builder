@@ -3,7 +3,17 @@
 import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Optional
+
+_KNOWN_MODULE_NAMES: Optional[frozenset] = None
+
+
+def _registry_module_names() -> frozenset:
+    global _KNOWN_MODULE_NAMES
+    if _KNOWN_MODULE_NAMES is None:
+        from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
+        _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
+    return _KNOWN_MODULE_NAMES
 
 
 def expand_path(path_str: Any, context: str = "") -> str:
@@ -237,20 +247,7 @@ def resolve_input_path(
             # Files sit directly under module_specific_input_data; do not append module_name.
             base_path = module_specific_input_data
         else:
-            if module_specific_path.name in [
-                "fair-temperature",
-                "fair-climate",
-                "bamber19-icesheets",
-                "deconto21-ais",
-                "ipccar5-glaciers",
-                "ipccar5-icesheets",
-                "larmip-ais",
-                "fittedismip-gris",
-                "tlm-sterodynamics",
-                "ssp-landwaterstorage",
-                "kopp14-verticallandmotion",
-                "nzinsargps-verticallandmotion",
-            ]:
+            if module_specific_path.name in _registry_module_names():
                 base_path = str(module_specific_path.parent / module_name)
             else:
                 base_path = os.path.join(module_specific_input_data, module_name)

@@ -7,6 +7,11 @@
 module_name: "facts-total"
 container_image: "ghcr.io/fact-sealevel/facts-total:0.1.3"
 climate_file_required: false
+skip_fingerprint_params: true
+per_workflow: true
+output_types:
+  - global
+  - local
 
 # Argument specifications
 arguments:

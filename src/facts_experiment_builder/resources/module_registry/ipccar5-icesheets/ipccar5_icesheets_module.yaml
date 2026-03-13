@@ -9,6 +9,7 @@ container_image: "ghcr.io/fact-sealevel/ipccar5:0.1.1"
 uses_climate_file: true
 climate_file_required: true
 command: "icesheets"  # Specify which command to run
+input_dir_name: "ipccar5"  # Both ipccar5-* modules share one input directory
 
 # Argument specifications
 arguments:

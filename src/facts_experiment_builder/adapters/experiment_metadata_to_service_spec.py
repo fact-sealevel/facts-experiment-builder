@@ -1,7 +1,7 @@
 """Build ModuleServiceSpec instances from experiment metadata and module YAML."""
 
 from pathlib import Path
-from typing import Dict, Any, Set
+from typing import Dict, Any, Optional, Set
 import os
 from facts_experiment_builder.adapters.adapter_utils import (
     get_required_field,
@@ -34,26 +34,15 @@ ALLOWED_MODULE_TYPES = {
     "other_module",
 }
 
-# Module names that may appear as the last path segment when metadata mistakenly
-# points at a specific module's dir (e.g. .../fair-temperature). Volume host path
-# must always be base + current module's suffix only; we use parent as base when this matches.
-KNOWN_MODULE_SUBDIR_NAMES = frozenset(
-    {
-        "fair-temperature",
-        "fair-climate",
-        "bamber19-icesheets",
-        "deconto21-ais",
-        "ipccar5",
-        "ipccar5-glaciers",
-        "ipccar5-icesheets",
-        "larmip-ais",
-        "fittedismip-gris",
-        "tlm-sterodynamics",
-        "ssp-landwaterstorage",
-        "kopp14-verticallandmotion",
-        "nzinsargps-verticallandmotion",
-    }
-)
+_KNOWN_MODULE_NAMES: "Optional[frozenset]" = None
+
+
+def _registry_module_names() -> frozenset:
+    global _KNOWN_MODULE_NAMES
+    if _KNOWN_MODULE_NAMES is None:
+        from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
+        _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
+    return _KNOWN_MODULE_NAMES
 
 
 def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
@@ -133,17 +122,15 @@ def build_module_service_spec(
     )
     # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
     # so volume host path is always base + current module's suffix only (never another module's name).
-    if Path(module_specific_input_base).name in KNOWN_MODULE_SUBDIR_NAMES:
+    if Path(module_specific_input_base).name in _registry_module_names():
         module_specific_input_base = str(Path(module_specific_input_base).parent)
-    # Module-specific input dir: one shared dir per "module" (e.g. ipccar5 for both glaciers and icesheets).
-    # Per-workflow ESL services (e.g. extremesealevel-pointsoverthreshold-wf1) share the base ESL module's input dir.
+    # Module-specific input dir: driven by input_dir_name in module YAML (e.g. "ipccar5" for both
+    # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that
+    # per-workflow service names (e.g. extremesealevel-pointsoverthreshold-wf1) resolve to the base
+    # module's dir automatically.
     module_specific_input_path_suffix = (
-        "ipccar5"
-        if module_name in ("ipccar5-glaciers", "ipccar5-icesheets")
-        else module_name
+        module_definition.extra.get("input_dir_name") or module_definition.module_name
     )
-    if module_name.startswith("extremesealevel-pointsoverthreshold-"):
-        module_specific_input_path_suffix = "extremesealevel-pointsoverthreshold"
     module_specific_input_data = (
         module_specific_input_base + "/" + module_specific_input_path_suffix
     )

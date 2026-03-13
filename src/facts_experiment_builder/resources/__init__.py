@@ -11,3 +11,13 @@ def get_module_configs_dir() -> Path:
     (e.g. to a different package or repo), change only this return value.
     """
     return Path(__file__).resolve().parent / "configs"
+
+
+def get_module_registry_dir() -> Path:
+    """
+    Directory containing the structured module registry.
+
+    Each module has its own subdirectory named with kebab-case
+    (e.g. module_registry/bamber19-icesheets/).
+    """
+    return Path(__file__).resolve().parent / "module_registry"
