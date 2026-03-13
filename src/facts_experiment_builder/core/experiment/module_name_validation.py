@@ -10,6 +10,4 @@ def validate_module_names(module_names: list[str], valid_modules: set[str]) -> N
     """Raise ValueError if any module name is not in the valid set"""
     invalid_names = [name for name in module_names if name not in valid_modules]
     if invalid_names:
-        raise ValueError(
-            f"Invalid module name(s): {', '.join(invalid_names)}."
-            )
+        raise ValueError(f"Invalid module name(s): {', '.join(invalid_names)}.")

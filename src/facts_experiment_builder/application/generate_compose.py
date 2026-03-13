@@ -359,7 +359,8 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     if workflows:
         project_root = Path.cwd()
         per_workflow_fw = [
-            m for m in manifest.get("framework_modules", [])
+            m
+            for m in manifest.get("framework_modules", [])
             if _module_is_per_workflow(m)
         ]
         facts_total_name = per_workflow_fw[0] if per_workflow_fw else "facts-total"
@@ -370,7 +371,9 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             "container_image", "ghcr.io/fact-sealevel/facts-total:v0.1.2"
         )
         for wf_name, wf in workflows.items():
-            for output_type in facts_total_config.get("output_types", ["global", "local"]):
+            for output_type in facts_total_config.get(
+                "output_types", ["global", "local"]
+            ):
                 section = _build_facts_total_section_for_workflow(
                     wf, facts_total_image, output_type
                 )
