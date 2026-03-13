@@ -13,6 +13,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "netcdf4>=1.7.3",
     "pyyaml>=6.0.3",
+    "rich>=14.3.3",
     "xarray>=2025.12.0",
 ]
 
@@ -21,6 +22,7 @@ facts-experiment-builder = "facts_experiment_builder.cli.cli:main"
 setup-new-experiment = "facts_experiment_builder.cli.setup_new_experiment_cli:main"
 setup-new-experiment-jinja2 = "facts_experiment_builder.cli.setup_new_experiment_jinja2_cli:main"
 generate-compose = "facts_experiment_builder.cli.generate_compose_cli:main"
+list-modules = "facts_experiment_builder.cli.list_modules_cli:list_modules"
 
 [build-system]
 requires = ["uv_build>=0.8.11,<0.9.0"]

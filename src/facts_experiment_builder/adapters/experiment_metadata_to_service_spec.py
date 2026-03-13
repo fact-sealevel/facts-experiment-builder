@@ -40,7 +40,10 @@ _KNOWN_MODULE_NAMES: "Optional[frozenset]" = None
 def _registry_module_names() -> frozenset:
     global _KNOWN_MODULE_NAMES
     if _KNOWN_MODULE_NAMES is None:
-        from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
+        from facts_experiment_builder.core.registry.module_registry import (
+            ModuleRegistry,
+        )
+
         _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
     return _KNOWN_MODULE_NAMES
 

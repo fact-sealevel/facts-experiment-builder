@@ -11,7 +11,10 @@ _KNOWN_MODULE_NAMES: Optional[frozenset] = None
 def _registry_module_names() -> frozenset:
     global _KNOWN_MODULE_NAMES
     if _KNOWN_MODULE_NAMES is None:
-        from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
+        from facts_experiment_builder.core.registry.module_registry import (
+            ModuleRegistry,
+        )
+
         _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
     return _KNOWN_MODULE_NAMES
 
@@ -138,6 +141,7 @@ def build_module_output_paths(
             f"output_dir has invalid type for {module_name}: expected str, got {type(output_dir)}"
         )
     return ModuleOutputPaths(output_dir=output_dir, output_type=output_type)
+
 
 def is_general_input(field_name: str) -> bool:
     """
