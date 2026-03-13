@@ -34,4 +34,3 @@ def create_experiment_directory_files(
     if module_names:
         for name in module_names:
             (data_dir / name).mkdir(parents=True)
-    print("✓ Created data/output directory")

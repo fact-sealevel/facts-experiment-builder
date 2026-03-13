@@ -13,6 +13,7 @@ dependencies = [
     "jinja2>=3.1.6",
     "netcdf4>=1.7.3",
     "pyyaml>=6.0.3",
+    "rich>=14.3.3",
     "xarray>=2025.12.0",
 ]
 

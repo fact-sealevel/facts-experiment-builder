@@ -5,7 +5,8 @@ This script uses Jinja2-based YAML generation from setup_new_experiment.py.
 """
 
 import click
-import logging
+from rich.console import Console
+from rich.theme import Theme
 from facts_experiment_builder.application.setup_new_experiment import (
     setup_new_experiment_fs,
     init_new_experiment,
@@ -20,8 +21,20 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 )
 from facts_experiment_builder.core.registry import ModuleRegistry
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Mid-range lapaz stops — visible on both light and dark terminals
+# Avoids the near-black (#190B35) and near-white (#F9F3C5) extremes
+lapaz_theme = Theme({
+    "primary":   "bold #1E6896",   # lapaz_25 — royal blue, high contrast on both
+    "secondary": "#228B8D",        # lapaz_50 — teal, solid mid-tone
+    "accent":    "#5AADA8",        # lapaz_40ish — slightly lighter teal
+    "success":   "#82C8A0",        # lapaz_75 — sage green, readable on dark/mid BGs
+    "muted":     "#4A7FA5",        # slightly desaturated blue — safe mid-tone
+    "rule":      "#228B8D",        # teal rule lines
+    "warning":   "bold #C4A862",   # warm gold — visible on both (not in lapaz but complements it)
+    "danger":    "bold #C0504A",   # muted red — universal danger signal
+})
+
+console = Console(theme=lapaz_theme)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -110,7 +123,7 @@ def main(
     fingerprint_dir,
     module_specific_inputs,
     general_inputs,
-):
+    ):
     """Create a new experiment directory with template files using Jinja2 templating."""
 
     # Parse comma-separated sealevel modules into a list
@@ -166,27 +179,24 @@ def main(
                     break
             click.echo(f"  Workflows: {workflow_dict}")
 
-    # Step 1: Create experiment directory and sub-directories
-    click.echo("Step 1: Creating experiment directory and sub-directories...")
-    module_names = [temperature_module] + sealevel_modules_list
+    # Step 2: Create experiment directory and sub-directories
+    console.print("[primary]Step 2:[/primary] Creating experiment directory and sub-directories...")
 
     experiment_path = setup_new_experiment_fs(
         experiment_name=experiment_name, module_names=module_names
     )
 
+    console.print(f"[bold]     Setting up new experiment:[/bold] [secondary]{experiment_name}[/secondary]")
+
+    console.print(f"     ✓ Created experiment directory at: [secondary]{experiment_path}[/secondary]")
+    console.print("[muted]-The experiment has the following modules:[/muted]")
     # Print some setup info
-    exp_setup_message = f"Setting up new experiment: {experiment_name}"
-    click.echo(exp_setup_message)
-    temp_module_message = f"  Temperature module: {temperature_module}"
-    click.echo(temp_module_message)
-    sealevel_modules_message = f"  Sea level modules: {sealevel_modules_list}"
-    click.echo(sealevel_modules_message)
-    framework_modules_message = f"  Framework modules: {framework_modules_list}"
-    click.echo(framework_modules_message)
-    extremesealevel_module_message = (
-        f"  Extreme sea level module: {extremesealevel_module_list}"
-    )
-    click.echo(extremesealevel_module_message)
+    console.print(f"    - Temperature module: [secondary]{temperature_module_list}[/secondary]")
+    console.print(f"    - Sea level modules: [secondary]{sealevel_modules_list}[/secondary]")
+    console.print(f"    - Framework modules: [secondary]{framework_modules_list}[/secondary]")
+    console.print(f"    - Extreme sea level module: [secondary]{extremesealevel_module_list}[/secondary]")
+
+
 
     # Print some CLI info
     if any(
@@ -201,11 +211,11 @@ def main(
             seed,
         ]
     ):
-        click.echo("  CLI arguments provided - will be included in metadata")
-    click.echo("\n" + "=" * 70)
+        console.print("[muted]-CLI arguments provided will be included in metadata[/muted]")
+    console.rule(style="rule")
 
-    # Step 2: Create FactsExperiment from template (FactsExperiment-centric flow)
-    click.echo("Step 2: Generating metadata template...")
+    # Step 2: Create FactsExperiment from template
+    console.print("[primary]Step 3: Generating metadata template...[/primary]")
     experiment = init_new_experiment(
         experiment_name=experiment_name,
         temperature_module=temperature_module,
@@ -230,7 +240,7 @@ def main(
 
     # Step 3: Populate experiment with defaults from defaults.yml files
     # Revert: for module_name in ...: metadata = populate_metadata_with_defaults(metadata, module_name)
-    click.echo("Step 3: Populating metadata with defaults from defaults.yml files...")
+    console.print("[primary]Step 4: Populating metadata with defaults from defaults.yml files...[/primary]")
     for module_name in (
         [temperature_module]
         + sealevel_modules_list
@@ -238,15 +248,14 @@ def main(
         + extremesealevel_module_list
     ):
         if module_name and module_name.upper() != "NONE":
-            modules_message = f"  Populating defaults for module: {module_name}"
-            click.echo(modules_message)
+            console.print(f"  Populating defaults for module: [secondary]{module_name}[/secondary]")
             populate_experiment_defaults(experiment, module_name)
 
-    # Step 5: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
-    click.echo("Step 4: Writing metadata file using Jinja2 templating...")
+    # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
+    console.print("[primary]Step 5: Writing metadata file using Jinja2 templating...[/primary]")
     metadata_path = experiment_path / "experiment-metadata.yml"
     write_metadata_yaml_jinja2(experiment, metadata_path)
-    click.echo(f"✓ Created experiment-metadata.yml at {metadata_path}")
+    console.print(f"[success]✓ Created experiment-metadata.yml at[/success] [secondary]{metadata_path}[/secondary]")
 
     # Summary
     console.rule(style="rule")
