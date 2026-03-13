@@ -125,65 +125,33 @@ def main(
     general_inputs,
     ):
     """Create a new experiment directory with template files using Jinja2 templating."""
+    console.rule(style="rule", title="Setting up new FACTS experiment")
+    console.print("[primary]Step 1:[/primary] I'm reading the information you provided and making sure everything looks okay...")
 
-    # Parse comma-separated sealevel modules into a list
-    sealevel_modules_list = [
-        m.strip() for m in sealevel_modules.split(",") if m.strip()
-    ]
-    # Parse comma-separated framework modules into a list
-    framework_modules_list = (
-        [m.strip() for m in framework_module.split(",") if m.strip()]
-        if framework_module
-        else None
+    # Parse comma-separated module names into a list
+    temperature_module_list, sealevel_modules_list, framework_modules_list, extremesealevel_module_list = _parse_modules_list(
+        temperature_module,
+        sealevel_modules,
+        framework_module,
+        extremesealevel_module,
     )
-    extremesealevel_module_list = (
-        [m.strip() for m in extremesealevel_module.split(",") if m.strip()]
-        if extremesealevel_module
-        else []
-    )
+    # Combine into a total list of all modules in the experiment
+    total_modules_list = temperature_module_list + sealevel_modules_list + framework_modules_list + extremesealevel_module_list
+
+    # Validate the total list of modules
+    _validate_modules_list(total_modules_list)
 
     # If framework includes facts-total, collect workflows interactively
-    workflow_dict = None
-    if framework_modules_list:
-        normalized_framework = [
-            m.replace(" ", "-").replace("_", "-").strip().lower()
-            for m in framework_modules_list
-        ]
-        if "facts-total" in normalized_framework:
-            workflow_dict = {}
-            first = True
-            while True:
-                if first:
-                    workflow_name = click.prompt(
-                        "Enter a name for your first workflow, ex. wf1",
-                        type=str,
-                        default="wf1",
-                    )
-                    first = False
-                else:
-                    workflow_name = click.prompt(
-                        "Enter a name for this workflow",
-                        type=str,
-                    )
-                workflow_name = workflow_name.strip() or "wf"
-                module_list_str = click.prompt(
-                    "Enter the names of the modules to include in this workflow. "
-                    "Modules should be separated by commas with no spaces between words",
-                    type=str,
-                )
-                workflow_dict[workflow_name] = module_list_str.strip()
-                if not click.confirm(
-                    "Would you like to enter another workflow?",
-                    default=False,
-                ):
-                    break
-            click.echo(f"  Workflows: {workflow_dict}")
+    if framework_modules_list and "facts-total" in framework_modules_list:
+        workflow_dict = _collect_workflows()
+    else:
+        workflow_dict = {}
 
     # Step 2: Create experiment directory and sub-directories
     console.print("[primary]Step 2:[/primary] Creating experiment directory and sub-directories...")
 
     experiment_path = setup_new_experiment_fs(
-        experiment_name=experiment_name, module_names=module_names
+        experiment_name=experiment_name, module_names=total_modules_list
     )
 
     console.print(f"[bold]     Setting up new experiment:[/bold] [secondary]{experiment_name}[/secondary]")
