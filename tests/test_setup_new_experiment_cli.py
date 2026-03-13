@@ -1,8 +1,5 @@
 """Minimal pytest suite for setup_new_experiment_cli."""
 
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
 from click.testing import CliRunner
 
 from facts_experiment_builder.cli.setup_new_experiment_cli import main
@@ -32,33 +29,17 @@ def test_cli_fails_without_required_args():
     )
 
 
-def test_cli_parses_sealevel_modules():
-    """Sealevel modules string is parsed into a list (via mocked app)."""
-    with (
-        patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.setup_new_experiment_fs",
-            return_value=Path("/tmp/test-exp"),
-        ),
-        patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.init_new_experiment",
-            return_value=MagicMock(),
-        ),
-        patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.populate_experiment_defaults",
-        ),
-        patch(
-            "facts_experiment_builder.cli.setup_new_experiment_cli.write_metadata_yaml_jinja2",
-        ),
-    ):
-        result = runner.invoke(
-            main,
-            [
-                "--experiment-name",
-                "test-exp",
-                "--temperature-module",
-                "fair_temperature",
-                "--sealevel-modules",
-                "ipccar5_icesheets, ipccar5_glaciers",
-            ],
-        )
-    assert result.exit_code == 0
+def test_setup_new_experiment_fails_with_invalid_module_name():
+    result = runner.invoke(
+        main,
+        [
+            "--experiment-name",
+            "test-exp",
+            "--temperature-module",
+            "fair-temperature",
+            "--sealevel-modules",
+            "ipccar5-icesheets,ipccar5-glaciers,invalid-module-name",
+        ],
+    )
+    assert result.exit_code != 0
+    # assert "Invalid module name(s): invalid-module-name" in result.output
