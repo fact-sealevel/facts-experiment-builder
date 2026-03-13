@@ -8,5 +8,6 @@ def list_modules():
     modules = module_registry.list_modules()
     click.echo(f"Modules: {modules}")
 
+    
 if __name__ == "__main__":
     list_modules()
