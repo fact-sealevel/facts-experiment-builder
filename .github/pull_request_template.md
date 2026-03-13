@@ -30,6 +30,11 @@
 <!-- If relevant, include plots, metric comparisons, sample outputs, or before/after visuals. -->
 
 
+## Gen AI
+Was generative AI used in any part of this PR? If so, describe...
+
+
+
 ## Checklist
 - [ ] Code runs without errors locally
 - [ ] Tests added or updated (if applicable)
