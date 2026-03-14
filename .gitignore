@@ -185,8 +185,5 @@ data/
 .history
 
 
-docs/
-v2_experiments/
-old_code/
 experiments/
 src/facts_experiment_builder/resources/clues
