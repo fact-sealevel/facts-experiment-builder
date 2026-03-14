@@ -33,6 +33,11 @@ dev = [
     "pytest>=8.0.0",
     "ruff>=0.14.5",
 ]
+docs = [
+    "mkdocs>=1.6",
+    "mkdocs-material>=9.5",
+    "pymdown-extensions>=10.0",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
