@@ -1,8 +1,13 @@
 """Minimal pytest suite for setup_new_experiment_cli."""
 
 from click.testing import CliRunner
-
-from facts_experiment_builder.cli.setup_new_experiment_cli import main
+import click
+from facts_experiment_builder.cli.setup_new_experiment_cli import (
+    main,
+    _validate_modules_list_experiment,
+    _validate_modules_list_workflow,
+)
+import pytest
 
 
 runner = CliRunner()
@@ -43,3 +48,42 @@ def test_setup_new_experiment_fails_with_invalid_module_name():
     )
     assert result.exit_code != 0
     # assert "Invalid module name(s): invalid-module-name" in result.output
+
+
+def test_validate_modules_list_experiment_passes_for_valid():
+    valid_module_names = ["fair-temperature", "ipccar5-icesheets", "ipccar5-glaciers"]
+    _validate_modules_list_experiment(valid_module_names)
+
+
+def test_validate_modules_list_experiment_fails_for_invalid():
+    invalid_module_names = ["invalid-module-name", "invalid-module-name-2"]
+    with pytest.raises(click.UsageError):
+        _validate_modules_list_experiment(invalid_module_names)
+
+
+def test_validate_modules_list_workflow_passes_for_valid():
+    experiment_modules_list = [
+        "ipccar5-icesheets",
+        "ipccar5-glaciers",
+        "fair-temperature",
+    ]
+    workflow_modules_list = [
+        "ipccar5-icesheets",
+        "ipccar5-glaciers",
+    ]
+    _validate_modules_list_workflow(workflow_modules_list, experiment_modules_list)
+
+
+def test_validate_modules_list_workflow_fails_for_invalid():
+    experiment_modules_list = [
+        "ipccar5-icesheets",
+        "ipccar5-glaciers",
+        "fair-temperature",
+    ]
+    workflow_modules_list = [
+        "ipccar5-icesheets",
+        "ipccar5-glaciers",
+        "tlm-sterodynamics",
+    ]
+    with pytest.raises(click.UsageError):
+        _validate_modules_list_workflow(workflow_modules_list, experiment_modules_list)
