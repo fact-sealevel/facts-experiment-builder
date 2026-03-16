@@ -1,6 +1,7 @@
 import click
 from pathlib import Path
 from typing import Optional
+from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose_from_metadata,
 )
@@ -12,10 +13,6 @@ from facts_experiment_builder.infra.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
 )
-import logging
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -36,44 +33,49 @@ def main(
     custom_output_path: Optional[str] = None,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
+    console.rule(style="rule")
+    console.rule(
+        style="rule", title="Generating Docker Compose file for specified experiment"
+    )
 
+    # Step 1: Find experiment metadata file
+    console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
     metadata_path = find_experiment_metadata_file(experiment_name)
+    console.print(
+        f"[success]✓ Found experiment metadata file:[/success] [secondary]{metadata_path}[/secondary]"
+    )
 
-    message1 = f"Generating Docker Compose from: {metadata_path}"
-    message2 = "=" * 70
-    click.echo(message1)
-    click.echo(message2)
-
+    # Step 2: Build compose dictionary from metadata
+    console.print("[primary]Step 2:[/primary] Building compose dictionary from metadata...")
     try:
-        # Generate compose file as dict
         compose_dict = generate_compose_from_metadata(metadata_path)
     except Exception as e:
-        logger.error(f"✗ Error generating compose content: {e}")
+        console.print(f"[danger]✗ Error generating compose content: {e}[/danger]")
         raise click.ClickException(str(e))
 
-    # Determine output path
-    # if custom_output_path:
-    #    output_path = Path(output).resolve()
-    # else:
-    #    output_path = experiment_dir / "experiment-compose.yaml"
+    # Step 3: Resolve output path for compose file
+    console.print("[primary]Step 3:[/primary] Resolving output path for compose file...")
     output_path = resolve_experiment_compose_path(metadata_path, custom_output_path)
 
+    # Step 4: Make compose YAML content from dict
+    console.print("[primary]Step 4:[/primary] Making compose YAML content from dict...")
     yaml_content = make_compose_yaml(content_dict=compose_dict)
+
+    # Step 5: Write compose YAML content to file
+    console.print("[primary]Step 5:[/primary] Writing compose YAML content to file...")
     write_compose_yaml(
         compose_content=yaml_content,
         output_path=output_path,
     )
-
-    message3 = "=" * 70
-    click.echo(message3)
-    message4 = f"✓ Generated Docker Compose file: {output_path}"
-    click.echo(message4)
-
-    # Print instructions for how to run experiment
-    message5 = "\nTo run the experiment:"
-    click.echo(message5)
-    message6 = f"  docker compose -f {output_path.relative_to(Path.cwd())} up"
-    click.echo(message6)
+    console.print("[primary]Step 6:[/primary] Print success message...")
+    console.print(
+        f"[success]✓ Generated Docker Compose file:[/success] [secondary]{output_path}[/secondary]"
+    )
+    console.print("\n[primary]Next steps:[/primary]")
+    console.print(
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {output_path.relative_to(Path.cwd())} up[/accent]"
+    )
+    console.rule(style="rule", title="[success]Docker Compose file generated successfully![/success]")
 
 
 if __name__ == "__main__":
