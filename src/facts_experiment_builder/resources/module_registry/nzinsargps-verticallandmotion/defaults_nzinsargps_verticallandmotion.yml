@@ -1,0 +1,11 @@
+# Default values for the NZINSARGPS VERTICALLANDMOTION module
+# These values are used when creating new experiments and can be overridden in experiment metadata
+
+# internal note: Image information andLocation file defaults DO NOT belong here.
+options:
+  min_qf: 5
+  use_boprates: 1
+  chunksize: 50
+
+inputs:
+  input_fname: NZ_2km.txt

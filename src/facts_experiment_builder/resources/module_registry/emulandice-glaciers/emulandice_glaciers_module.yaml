@@ -1,0 +1,118 @@
+# EMULANDICE GLACIERS MODULE CONFIGURATION
+# This YAML file describes the arguments and configuration needed to run the module.
+# It is used to generate FactsModule objects.
+# Based on https://github.com/fact-sealevel/emulandice/blob/main/src/emulandice/cli.py (glaciers command).
+
+module_name: "emulandice-glaciers"
+container_image: "ghcr.io/fact-sealevel/emulandice:latest"
+uses_climate_file: true
+climate_file_required: true
+command: "glaciers"
+
+# Argument specifications
+arguments:
+  top_level:
+    - name: "pipeline-id"
+      type: "str"
+      source: "metadata.pipeline-id"
+      optional: true
+      help: "Unique identifier for this instance of the module"
+    - name: "baseyear"
+      type: "int"
+      source: "metadata.baseyear"
+      optional: true
+      help: "Base year to which projections should be referenced"
+
+  options:
+    - name: "chunksize"
+      type: "int"
+      source: "module_inputs.options.chunksize"
+      optional: true
+      help: "Number of locations to process at a time"
+
+  fingerprint_params:
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        volume: "general_input"
+        container_path: "/mnt/general_in"
+    - name: "fprint-glacier-dir"
+      type: "str"
+      source: "module_inputs.fingerprint_params.fingerprint_dir"
+      help: "Path to directory containing glacier fingerprint files"
+      mount:
+        volume: "general_input"
+        container_path: "/mnt/general_in"
+    - name: "fprint-map-file"
+      type: "str"
+      source: "module_inputs.fingerprint_params.fprint_map_file"
+      help: "Path to the fingerprint region map CSV file"
+      mount:
+        volume: "general_input"
+        container_path: "/mnt/general_in"
+
+  inputs:
+    - name: "input-data-file"
+      type: "file"
+      source: "module_inputs.inputs.climate_data_file"
+      help: "Full path for temperature trajectory input file"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+      external_volume: true
+    - name: "forcing-head-path"
+      type: "file"
+      source: "module_inputs.inputs.forcing_head_path"
+      help: "Path to the climate forcing head CSV file"
+      mount:
+        volume: "module_specific_input"
+        container_path: "/mnt/module_specific_in"
+
+  outputs:
+    - name: "output-gslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_gslr_file"
+      filename: "output-gslr.nc"
+      help: "Path to write output global SLR file"
+      output_type: "global"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+    - name: "output-lslr-file"
+      type: "file"
+      source: "module_inputs.outputs.output_lslr_file"
+      filename: "output-lslr.nc"
+      help: "Path to write output local SLR file"
+      output_type: "local"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+        transform: "filename"
+      optional: true
+    - name: "output-glacier-dir"
+      type: "str"
+      source: "module_inputs.outputs.output_glacier_dir"
+      help: "Directory into which output glacier GSLR files will be stored"
+      mount:
+        volume: "output"
+        container_path: "/mnt/out"
+      optional: true
+
+# Volume specifications
+volumes:
+  module_specific_input:
+    host_path: "module_inputs.input_paths.module_specific_input_dir"
+    help: "Module-specific input directory"
+    container_path: "/mnt/module_specific_in"
+  general_input:
+    host_path: "module_inputs.input_paths.general_input_dir"
+    help: "General input directory (fingerprints, location file, map file)"
+    container_path: "/mnt/general_in"
+  output:
+    host_path: "module_inputs.output_paths.output_dir"
+    help: "Output directory for SLR files"
+    container_path: "/mnt/out"

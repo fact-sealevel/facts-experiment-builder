@@ -1,0 +1,14 @@
+# Default values for the larmip-ais module
+# These values are used when creating new experiments and can be overridden in experiment metadata
+
+# internal note: Image information and Location file defaults DO NOT belong here.
+
+options:
+  refyear_start: 1850
+  refyear_end: 1900
+  year_start: 1900
+  year_end: 2300
+
+inputs:
+  scaling_coefficients_dir: "ScalingCoefficients"
+  r_functions_dir: "RFunctions"

@@ -1,0 +1,13 @@
+# Default values for the Bamber19 Icesheets module
+# These values are used when creating new experiments and can be overridden in experiment metadata
+
+# internal note: Location file defaults DO NOT belong here.
+
+# Module-specific options
+options:
+  replace: 1
+  chunksize: 50
+
+inputs:
+  slr_proj_mat_file: "SLRProjections190726core_SEJ_full.mat"
+
