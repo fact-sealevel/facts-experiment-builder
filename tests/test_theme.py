@@ -10,7 +10,9 @@ LAPAZ_CUSTOM_KEYS = [k for k in lapaz_theme.styles if k not in _DEFAULT_KEYS]
 
 
 def test_lapaz_theme_has_custom_keys():
-    assert len(LAPAZ_CUSTOM_KEYS) > 0, "lapaz_theme defines no custom keys beyond Rich defaults"
+    assert len(LAPAZ_CUSTOM_KEYS) > 0, (
+        "lapaz_theme defines no custom keys beyond Rich defaults"
+    )
 
 
 def test_lapaz_theme_values_are_valid_rich_styles():
@@ -32,7 +34,9 @@ def test_console_has_all_lapaz_custom_keys():
 
 
 def test_console_custom_styles_match_active_theme():
-    for key in LAPAZ_CUSTOM_KEYS: # switch this (and create new key list) to use a different theme
+    for key in (
+        LAPAZ_CUSTOM_KEYS
+    ):  # switch this (and create new key list) to use a different theme
         assert console._theme_stack.get(key) == lapaz_theme.styles[key], (
             f"Console style for '{key}' does not match lapaz_theme — "
             "was the console switched to a different theme?"
