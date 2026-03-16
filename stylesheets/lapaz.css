@@ -1,0 +1,171 @@
+/*
+ * Lapaz colormap theme for facts-experiment-builder docs.
+ * Mid-range stops only — visible on both light and dark backgrounds.
+ * Mirrors the Rich lapaz_theme defined in src/facts_experiment_builder/cli/theme.py.
+ *
+ * lapaz_25  #1E6896  — royal blue   (primary / header)
+ * lapaz_40  #5AADA8  — lighter teal (accent / links hover)
+ * lapaz_50  #228B8D  — teal         (secondary / visited links, borders)
+ * lapaz_75  #82C8A0  — sage green   (success / admonition tip)
+ *           #4A7FA5  — muted blue   (secondary text)
+ *           #C4A862  — warm gold    (warning)
+ *           #C0504A  — muted red    (danger)
+ */
+
+:root,
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color:        #1E6896;
+  --md-primary-fg-color--light: #4A7FA5;
+  --md-primary-fg-color--dark:  #155070;
+  --md-primary-bg-color:        #ffffff;
+
+  --md-accent-fg-color:         #5AADA8;
+  --md-accent-fg-color--transparent: #5AADA820;
+
+  /* Links */
+  --md-typeset-a-color:         #1E6896;
+
+  /* Admonition: note → teal */
+  --md-admonition-fg-color:     #228B8D;
+}
+
+/* Visited links — secondary teal */
+.md-typeset a:visited {
+  color: #228B8D;
+}
+
+/* Admonition colour overrides */
+.md-typeset .admonition.note,
+.md-typeset details.note {
+  border-color: #228B8D;
+}
+.md-typeset .note > .admonition-title,
+.md-typeset .note > summary {
+  background-color: #228B8D18;
+}
+.md-typeset .note > .admonition-title::before,
+.md-typeset .note > summary::before {
+  background-color: #228B8D;
+}
+
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: #C4A862;
+}
+.md-typeset .warning > .admonition-title,
+.md-typeset .warning > summary {
+  background-color: #C4A86218;
+}
+.md-typeset .warning > .admonition-title::before,
+.md-typeset .warning > summary::before {
+  background-color: #C4A862;
+}
+
+.md-typeset .admonition.danger,
+.md-typeset details.danger {
+  border-color: #C0504A;
+}
+.md-typeset .danger > .admonition-title,
+.md-typeset .danger > summary {
+  background-color: #C0504A18;
+}
+.md-typeset .danger > .admonition-title::before,
+.md-typeset .danger > summary::before {
+  background-color: #C0504A;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dark mode (slate scheme)                                            */
+/* Use lighter/brighter lapaz stops so they read on dark backgrounds. */
+/* ------------------------------------------------------------------ */
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color:        #5AADA8; /* lapaz_40 — lighter teal, pops on dark */
+  --md-primary-fg-color--light: #82C8A0; /* lapaz_75 — sage green for lighter variant */
+  --md-primary-fg-color--dark:  #228B8D; /* lapaz_50 — deeper teal for darker variant */
+  --md-primary-bg-color:        #0d1117; /* near-black background */
+
+  --md-accent-fg-color:         #82C8A0; /* sage green accent on dark */
+  --md-accent-fg-color--transparent: #82C8A020;
+
+  /* Links — use lighter teal so they're readable on dark bg */
+  --md-typeset-a-color:         #5AADA8;
+
+  /* Default text — slightly warm off-white */
+  --md-typeset-color:           #e8edf2;
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:visited {
+  color: #4A7FA5;
+}
+
+/* Admonitions — dark mode variants (slightly more opaque fills) */
+[data-md-color-scheme="slate"] .md-typeset .admonition.note,
+[data-md-color-scheme="slate"] .md-typeset details.note {
+  border-color: #5AADA8;
+}
+[data-md-color-scheme="slate"] .md-typeset .note > .admonition-title,
+[data-md-color-scheme="slate"] .md-typeset .note > summary {
+  background-color: #5AADA825;
+}
+[data-md-color-scheme="slate"] .md-typeset .note > .admonition-title::before,
+[data-md-color-scheme="slate"] .md-typeset .note > summary::before {
+  background-color: #5AADA8;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition.warning,
+[data-md-color-scheme="slate"] .md-typeset details.warning {
+  border-color: #C4A862;
+}
+[data-md-color-scheme="slate"] .md-typeset .warning > .admonition-title,
+[data-md-color-scheme="slate"] .md-typeset .warning > summary {
+  background-color: #C4A86225;
+}
+[data-md-color-scheme="slate"] .md-typeset .warning > .admonition-title::before,
+[data-md-color-scheme="slate"] .md-typeset .warning > summary::before {
+  background-color: #C4A862;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition.danger,
+[data-md-color-scheme="slate"] .md-typeset details.danger {
+  border-color: #C0504A;
+}
+[data-md-color-scheme="slate"] .md-typeset .danger > .admonition-title,
+[data-md-color-scheme="slate"] .md-typeset .danger > summary {
+  background-color: #C0504A25;
+}
+[data-md-color-scheme="slate"] .md-typeset .danger > .admonition-title::before,
+[data-md-color-scheme="slate"] .md-typeset .danger > summary::before {
+  background-color: #C0504A;
+}
+
+[data-md-color-scheme="slate"] .md-typeset .admonition.tip,
+[data-md-color-scheme="slate"] .md-typeset details.tip {
+  border-color: #82C8A0;
+}
+[data-md-color-scheme="slate"] .md-typeset .tip > .admonition-title,
+[data-md-color-scheme="slate"] .md-typeset .tip > summary {
+  background-color: #82C8A025;
+}
+[data-md-color-scheme="slate"] .md-typeset .tip > .admonition-title::before,
+[data-md-color-scheme="slate"] .md-typeset .tip > summary::before {
+  background-color: #82C8A0;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tip / success → sage green (light mode)                             */
+/* ------------------------------------------------------------------ */
+
+/* Tip / success → sage green */
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: #82C8A0;
+}
+.md-typeset .tip > .admonition-title,
+.md-typeset .tip > summary {
+  background-color: #82C8A018;
+}
+.md-typeset .tip > .admonition-title::before,
+.md-typeset .tip > summary::before {
+  background-color: #82C8A0;
+}
