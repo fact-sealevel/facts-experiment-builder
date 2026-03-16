@@ -22,7 +22,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 from facts_experiment_builder.core.registry import ModuleRegistry
 
 
-
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "--experiment-name", type=str, required=True, help="Name of the experiment"
