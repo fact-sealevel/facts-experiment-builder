@@ -1183,10 +1183,10 @@
 
 
 <h1 id="facts-experiment-builder">facts-experiment-builder</h1>
-<blockquote>
-<p>[!CAUTION]
-This is a prototype. It is likely to change in breaking ways. It might delete all your data. Don't use it in production.</p>
-</blockquote>
+<div class="admonition danger">
+<p class="admonition-title">Caution</p>
+<p>This is a prototype. It is likely to change in breaking ways. It might delete all your data. Don't use it in production.</p>
+</div>
 <h2 id="overview">Overview</h2>
 <p><code>facts-experiment-builder</code> is a CLI tool for configuring and managing <a href="https://github.com/fact-sealevel/FACTS">FACTS v2</a> sea-level rise experiments.</p>
 <p>A FACTS v2 experiment consists of running one or more containerized modules from the FACTS v2 ecosystem. It typically has a set of <strong>top-level parameters</strong> shared across all modules (e.g. <code>nsamps</code>, <code>scenario</code>, <code>pyear-start/end/step</code>, <code>baseyear</code>) and one or more <strong>workflows</strong> — combinations of sea-level modules that are summed to produce output distributions of projected future sea-level rise.</p>
