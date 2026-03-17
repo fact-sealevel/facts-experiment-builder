@@ -46,7 +46,9 @@ def main(
     )
 
     # Step 2: Build compose dictionary from metadata
-    console.print("[primary]Step 2:[/primary] Building compose dictionary from metadata...")
+    console.print(
+        "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
+    )
     try:
         compose_dict = generate_compose_from_metadata(metadata_path)
     except Exception as e:
@@ -54,7 +56,9 @@ def main(
         raise click.ClickException(str(e))
 
     # Step 3: Resolve output path for compose file
-    console.print("[primary]Step 3:[/primary] Resolving output path for compose file...")
+    console.print(
+        "[primary]Step 3:[/primary] Resolving output path for compose file..."
+    )
     output_path = resolve_experiment_compose_path(metadata_path, custom_output_path)
 
     # Step 4: Make compose YAML content from dict
@@ -75,7 +79,10 @@ def main(
     console.print(
         f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {output_path.relative_to(Path.cwd())} up[/accent]"
     )
-    console.rule(style="rule", title="[success]Docker Compose file generated successfully![/success]")
+    console.rule(
+        style="rule",
+        title="[success]Docker Compose file generated successfully![/success]",
+    )
 
 
 if __name__ == "__main__":
