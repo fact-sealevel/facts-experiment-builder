@@ -55,12 +55,13 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --extremesealevel-module extremesealevel-pointsoverthreshold
 ```
 - If `facts-total` is passed to `--framework-module`, the CLI prompts the user for information about the workflows included in the experiment:
-![workflow prompts](imgs/toy_experiment_workflow_prompts.png)
+![workflow prompts](imgs/cli_output_workflow_prompts.png)
 Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
      - Creates and partially pre-populates an `experiment-metadata.yml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
      - `experiment-metadata.yml` is pre-populated based on the arguments you supply and the modules you specified
-![rest of experiment setup](imgs/toy_experiment_rest_of_setup_new_exp.png)
+You will see the following output in your terminal window:
+![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.png)
 
 #### 3. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
@@ -79,11 +80,14 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main ge
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - this is the docker implementation of the abstract experiment specified by `experiment-metadata.yml`
 
-![generate-compose](imgs/toy_experiment_generate_compose.png)
+![generate-compose](imgs/cli_output_generate_compose.png)
 
 Then,
 - Inspect the compose file
-- Run experiment like (assuming from project root) `docker compose -f experiments/toy_experiment/experiment-compose.yaml up`
+- Run experiment like (assuming from project root):
+```shell
+docker compose -f experiments/toy_experiment/experiment-compose.yaml up
+```
 
 **Not yet implemented: async-flow equivalent of `generate-compose`.**
 
