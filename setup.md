@@ -2,8 +2,8 @@
 
 This page describes how to download and organize input data for modules in the FACTS 2 ecosystem for use with `facts-experiment-builder`.
 
->[!ATTENTION]
-> This is a temporary approach. A future version will have a more detailed/automated method for downloading and organizing input data (maybe).
+>[!CAUTION]
+> This is a temporary approach. A future version will have a more detailed/automated method for downloading and organizing input data.
 
 ## Setup directories
 
@@ -27,6 +27,7 @@ mkdir -p module_specific_inputs/fair-temperature module_specific_inputs/fair2-cl
 
 curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o general_input_data/grd_fingerprints_data.tgz
 tar -xzf general_input_data/grd_fingerprints_data.tgz -C general_input_data
+echo "New_York	12	40.70	-74.01" > general_input_data
 
 curl -L https://zenodo.org/record/7478192/files/fair_temperature_fit_data.tgz -o module_specific_inputs/fair-temperature/fair_temperature_fit_data.tgz
 tar -xzf module_specific_inputs/fair-temperature/fair_temperature_fit_data.tgz -C module_specific_inputs/fair-temperature
@@ -72,13 +73,16 @@ Each block below can be copied and run independently from the directory containi
 
 ### General input data
 
+GRD fingerprint data (note- how this is hadnled is subject to change in the future. this is most likely a temporary solution)
 ```bash
 curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o general_input_data/grd_fingerprints_data.tgz
 tar -xzf general_input_data/grd_fingerprints_data.tgz -C general_input_data
 ```
+Location file:
+```bash
+echo "New_York	12	40.70	-74.01" > general_input_data
+```
 
-> [!NOTE]
-> A `location.lst` file is also required in `general_input_data`.
 
 ### fair-temperature
 
