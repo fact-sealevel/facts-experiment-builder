@@ -37,6 +37,3 @@ dev = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-
-[tool.uv.sources]
-facts_experiment_builder = { path = "$HOME/Desktop/facts_work/facts_v2/FACTS-experiment-builder" }   
