@@ -1,7 +1,7 @@
 # facts-experiment-builder
 
 > [!CAUTION]
-> This is a prototype. It is likely to change in breaking ways. It might delete all your data. Don't use it in production.
+> This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases.
 
 ## Overview
 This is a prototype of a package for configuring and managing FACTS 2 experiments. A FACTS 2 experiment consists of running one or more modules from the FACTS 2 ecosystem. It usually has a set of specified 'top-level parameters' that apply across all of the modules in the experiment. These can include parameters such as `nsamps`, `pyear-start`, `pyear-step`, `pyear-end`, `baseyear`, and `scenario`. Within an experiment, one can define multiple 'workflows`, these represent different combinations of sea-level modules to be summed to produce output distributions of projected future sea level rise. 
