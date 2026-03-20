@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from facts_experiment_builder.core.module.facts_module import (
-    FactsModule,
+from facts_experiment_builder.core.experiment.exceptions import (
+    ExperimentAlreadyExistsError,
 )
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.infra.module_loader import (
     load_facts_module_by_name,
 )
@@ -16,9 +17,12 @@ from facts_experiment_builder.infra.experiment_manager import (
     create_experiment_directory_files,
 )
 from facts_experiment_builder.core.experiment import FactsExperiment
-from typing import Any, List, Dict
+from typing import List, Dict
 
-from facts_experiment_builder.adapters.adapter_utils import is_metadata_value
+from facts_experiment_builder.core.components.metadata_bundle import (
+    create_metadata_bundle,
+    is_metadata_value,
+)
 
 
 # Mapping of top-level param keys to their clue/help text
@@ -44,19 +48,14 @@ FINGERPRINT_PARAM_CLUES = {
 }
 
 
-def create_metadata_bundle(clue: str, value: Any = None) -> Dict[str, Any]:
-    """Create a metadata bundle with clue and optional value."""
-    return {"clue": clue, "value": value}
-
-
 def get_clue_from_module_yaml(
-    module_def: FactsModule, arg_type: str, field_name: str
+    module_def: ModuleSchema, arg_type: str, field_name: str
 ) -> str:
     """
     Extract clue/help text from module definition for a specific field.
 
     Args:
-        module_def: FactsModule instance (from module YAML)
+        module_def: ModuleSchema instance (from module YAML)
         arg_type: Type of argument ('options', 'inputs', 'outputs', 'top_level')
         field_name: Field name to look up
 
@@ -89,7 +88,9 @@ def setup_new_experiment_fs(
     experiment_path = resolve_experiment_directory_path(experiment_name)
     # Raise error if it already exists
     if check_if_experiment_directory_exists(experiment_path):
-        raise ValueError(f"Experiment directory {experiment_path} already exists")
+        raise ExperimentAlreadyExistsError(
+            f"Experiment directory {experiment_path} already exists"
+        )
 
     # Create the experiment directory
     create_experiment_directory(experiment_path)
@@ -178,8 +179,8 @@ def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) 
     )
 
 
-def format_module_from_definition(module_def: FactsModule) -> dict:
-    """Build metadata dict for one module from its FactsModule (inputs, options, outputs, image)."""
+def format_module_from_definition(module_def: ModuleSchema) -> dict:
+    """Build metadata dict for one module from its ModuleSchema (inputs, options, outputs, image)."""
     # First build inputs dict
     module_inputs = {}
     for arg_spec in module_def.arguments.get("inputs", []):

@@ -1,6 +1,6 @@
 from pathlib import Path
 from facts_experiment_builder.core.experiment import FactsExperiment
-from facts_experiment_builder.adapters.adapter_utils import is_metadata_value
+from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 from typing import Any, List, Dict
 from jinja2 import Environment, BaseLoader
 
