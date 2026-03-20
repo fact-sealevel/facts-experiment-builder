@@ -14,23 +14,24 @@ To run a FACTS 2 experiment, we need more than the abstract information stored i
 
 ## Example
 Warning: it is still rough! 
-With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-metadata.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/test_experiment/experiment-metadata.yml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/test_experiment/experiment-compose.yaml) for examples of files created by the program.
+With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-metadata.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-metadata.yml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-compose.yaml) for examples of files created by the program.
 
 ### Steps to run:
-#### Setup:
+#### 1. Setup
 1. Start from your project root dir. For now, the experiment builder assumes you have an experiments sub-directory in this location. so something like...
 ```shell
 mkdir fresh_facts_project
 cd fresh_facts_project
 mkdir experiments
 ```
-2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and general input data directories
-- `module_specific_inputs` (or whatever it is called on your machine) should have a sub-directory for each FACTS module with the directory name matching the module name. 
-- have a separate `general_input_data` that contains `location.lst` and GRD fingerprint data. 
+2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and general input data directories. See [setup.md](setup.md) for instructions on downloading the data.
+- `module_specific_inputs` should have a sub-directory for each FACTS module with the directory name matching the module name.
+- `general_input_data` contains `location.lst` and GRD fingerprint data.
 
 - Example of input data directories:
 ![general input data](imgs/general_inputs_screenshot.png)
 ![module specific input data](imgs/module_specific_inputs_screenshot.png)
+
 
 #### 2. Create an experiment via CLI
 - at a minimum, this entails specifying:
@@ -40,6 +41,9 @@ mkdir experiments
      - `framework-modules` (currently, this is just `facts-total` -- this will probably change)
      - `extremesealevel-modules` (ie. `extremesealevel-pointsoverthreshold`)
      - For full features list, see help section below.
+
+>[!NOTE]
+> You can see which modules are available to use in an experiment by running `uv run list-experiments`.
 
 Example:
 ```shell
@@ -59,18 +63,20 @@ Once completed, the program:
      - `experiment-metadata.yml` is pre-populated based on the arguments you supply and the modules you specified
 ![rest of experiment setup](imgs/toy_experiment_rest_of_setup_new_exp.png)
 
-#### 3. Review and manually complete any empty fields in the top section of the experiment metadata file. 
+#### 3. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
 > [!NOTE]
-> If you copy and paste the `setup-new-experiment` command above, complete the `module-specific-inputs` and `general-inputs` fields in the `experiment-metdata.yaml` that is created.
+> If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--general-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-metadata.yaml` that is created.
 
 - If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
 
-#### 3. Generate docker compose file via CLI
+#### 4. Generate docker compose file via CLI
 Example:
-`git+https://github.com/fact-sealevel/facts-experiment-builder@main generate-compose \
---experiment-name toy_experiment`
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main generate-compose \
+--experiment-name toy_experiment
+```
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - this is the docker implementation of the abstract experiment specified by `experiment-metadata.yml`
 
@@ -78,7 +84,7 @@ Example:
 
 Then,
 - Inspect the compose file
-- run experiment like (assuming from project root) `docker compose -f experiments/toy_experiment/experiment-compose.yaml up`
+- Run experiment like (assuming from project root) `docker compose -f experiments/toy_experiment/experiment-compose.yaml up`
 
 **Not yet implemented: async-flow equivalent of `generate-compose`.**
 
