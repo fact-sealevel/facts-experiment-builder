@@ -18,11 +18,10 @@ With the example experiment provided below, you should be able to run the two st
 
 ### Steps to run:
 #### 1. Setup
-1. Start from your project root dir. For now, the experiment builder assumes you have an experiments sub-directory in this location. so something like...
+1. Start from your project root dir. For now, the experiment builder assumes you have an `experiments` sub-directory in this location. so something like...
 ```shell
-mkdir fresh_facts_project
+mkdir -p fresh_facts_projects/experiments
 cd fresh_facts_project
-mkdir experiments
 ```
 2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and general input data directories. See [setup.md](setup.md) for instructions on downloading the data.
 - `module_specific_inputs` should have a sub-directory for each FACTS module with the directory name matching the module name.
