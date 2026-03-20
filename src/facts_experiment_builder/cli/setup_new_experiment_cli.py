@@ -217,9 +217,7 @@ def main(
             populate_experiment_defaults(experiment, module_name)
 
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
-    console.print(
-        "[primary]Step 5: Writing metadata file using...[/primary]"
-    )
+    console.print("[primary]Step 5: Writing metadata file using...[/primary]")
     metadata_path = experiment_path / "experiment-metadata.yml"
     write_metadata_yaml_jinja2(experiment, metadata_path)
     console.print(
