@@ -12,7 +12,10 @@ from facts_experiment_builder.infra.path_utils import (
 from facts_experiment_builder.adapters.compose_service_writer import (
     build_compose_service_dict,
 )
-from facts_experiment_builder.core.module.facts_module import FactsModule
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleSchema,
+    ModuleContainerImage,
+)
 from facts_experiment_builder.core.source_resolver import (
     resolve_value as resolve_source_value,
 )
@@ -25,14 +28,6 @@ class ScenarioConfig:
 
     scenario_name: str
     description: str
-
-
-@dataclass(frozen=True)
-class ModuleContainerImage:
-    """Container image for a module."""
-
-    image_url: str
-    image_tag: str
 
 
 @dataclass(frozen=True)
@@ -54,20 +49,20 @@ class ModuleServiceSpecComponents:
 class ModuleServiceSpec:
     """Has all information needed to run a module and slot into an experiment implementation (e.g. one compose service).
 
-    Built from a FactsModule (module YAML) plus experiment-specific inputs.
+    Built from a ModuleSchema (module YAML) plus experiment-specific inputs.
     """
 
     def __init__(
         self,
         components: ModuleServiceSpecComponents,
-        module_definition: FactsModule,
+        module_definition: ModuleSchema,
     ):
         """
         Initialize ModuleServiceSpec.
 
         Args:
             components: Experiment-specific inputs (paths, values, image, metadata)
-            module_definition: Module definition from the module YAML file (FactsModule)
+            module_definition: Module definition from the module YAML file (ModuleSchema)
         """
         self.components = components
         self.module_definition = module_definition

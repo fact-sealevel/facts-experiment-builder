@@ -1,18 +1,18 @@
 import yaml
 from pathlib import Path
-from facts_experiment_builder.core.module.facts_module import FactsModule
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 
 
-def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
+def load_facts_module_from_yaml(yaml_path: Path) -> ModuleSchema:
     """
-    Load a FactsModule from a module YAML file.
+    Load a ModuleSchema from a module YAML file.
 
     Args:
         yaml_path: Path to the module YAML file.
 
     Returns:
-        FactsModule with required and optional fields normalized.
+        ModuleSchema with required and optional fields normalized.
     """
     with open(yaml_path, "r") as f:
         data = yaml.safe_load(f) or {}
@@ -36,7 +36,7 @@ def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
     }
     extra = {k: v for k, v in data.items() if k not in known_keys}
 
-    facts_module = FactsModule(
+    facts_module = ModuleSchema(
         module_name=data.get("module_name", ""),
         container_image=data.get("container_image", ""),
         arguments=arguments,
@@ -50,16 +50,16 @@ def load_facts_module_from_yaml(yaml_path: Path) -> FactsModule:
     return facts_module
 
 
-def load_facts_module_by_name(module_name: str, project_root: Path) -> FactsModule:
+def load_facts_module_by_name(module_name: str, project_root: Path) -> ModuleSchema:
     """
-    Load a FactsModule by module name (resolve path then load).
+    Load a ModuleSchema by module name (resolve path then load).
 
     Args:
         module_name: Module name (e.g. 'fair', 'bamber19-icesheets').
         project_root: Project root directory.
 
     Returns:
-        FactsModule for the module.
+        ModuleSchema for the module.
     """
     yaml_path = find_module_yaml_path(module_name, project_root)
     return load_facts_module_from_yaml(yaml_path)

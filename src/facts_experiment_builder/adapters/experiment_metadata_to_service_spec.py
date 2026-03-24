@@ -18,8 +18,8 @@ from facts_experiment_builder.infra.path_utils import (
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
-    ModuleContainerImage,
 )
+from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
 from facts_experiment_builder.core.typed_path import HostPath, ContainerPath
 from facts_experiment_builder.infra.module_loader import (
     load_facts_module_from_yaml,

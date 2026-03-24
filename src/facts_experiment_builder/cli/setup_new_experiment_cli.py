@@ -12,6 +12,9 @@ from facts_experiment_builder.application.setup_new_experiment import (
     init_new_experiment,
     populate_experiment_defaults,
 )
+from facts_experiment_builder.core.experiment.exceptions import (
+    ExperimentAlreadyExistsError,
+)
 from facts_experiment_builder.infra.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )  # TODO move this eventually
@@ -145,9 +148,12 @@ def main(
     _validate_modules_list_experiment(total_modules_list)
 
     # Step 2: Create experiment directory and sub-directories
-    experiment_path = setup_new_experiment_fs(
-        experiment_name=experiment_name, module_names=total_modules_list
-    )
+    try:
+        experiment_path = setup_new_experiment_fs(
+            experiment_name=experiment_name, module_names=total_modules_list
+        )
+    except ExperimentAlreadyExistsError as e:
+        raise click.UsageError(str(e))
     # Print step 2 info
     print_step2_info(
         experiment_name=experiment_name,
