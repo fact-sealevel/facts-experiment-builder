@@ -51,7 +51,7 @@ def general_inputs_path():
 
 @pytest.fixture
 def module_specific_inputs_path():
-    input = ("--module-specific-iputs", "/path/to/module_specific/inputs")
+    input = ("--module-specific-inputs", "/path/to/module_specific/inputs")
     return input
 
 
@@ -62,6 +62,8 @@ def setup_args(
     sealevel_modules,
     framework_module,
     extremesealevel_module,
+    module_specific_inputs_path,
+    general_inputs_path,
 ):
     input = [
         "--experiment-name",
@@ -91,9 +93,9 @@ def setup_args(
         "--extremesealevel-module",
         extremesealevel_module,
         "--module-specific-inputs",
-        module_specific_inputs_path,
+        module_specific_inputs_path[1],
         "--general-inputs",
-        general_inputs_path,
+        general_inputs_path[1],
     ]
     return input
 

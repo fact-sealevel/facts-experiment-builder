@@ -6,6 +6,9 @@ from typing import Dict, Any, List, Optional, Callable, Union
 from facts_experiment_builder.core.workflow.workflow import (
     Workflow,
 )
+from facts_experiment_builder.core.module.module_experiment_spec import (
+    ModuleExperimentSpec,
+)
 
 
 # Keys that appear in experiment-metadata.yml (for parsing and round-trip)
@@ -243,7 +246,6 @@ class FactsExperiment:
         location_file: Optional[str] = None,
         fingerprint_dir: Optional[str] = None,
         create_metadata_bundle: Callable[[str, Any], Dict[str, Any]],
-        format_module_from_definition: Callable[[Any], Dict[str, Any]],
         load_facts_module_by_name: Callable[[str, Path], Any],
         top_level_param_clues: Dict[str, str],
     ) -> "FactsExperiment":
@@ -318,21 +320,21 @@ class FactsExperiment:
         if temperature_module and temperature_module.upper() != "NONE":
             try:
                 mod_def = load_facts_module_by_name(temperature_module, project_root)
-                metadata[temperature_module] = format_module_from_definition(mod_def)
+                metadata[temperature_module] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
             except Exception:
                 pass
         # Same for sealevel modules
         for mod in sealevel_modules:
             try:
                 mod_def = load_facts_module_by_name(mod, project_root)
-                metadata[mod] = format_module_from_definition(mod_def)
+                metadata[mod] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
             except Exception:
                 pass
         if framework_modules:
             for mod in framework_modules:
                 try:
                     mod_def = load_facts_module_by_name(mod, project_root)
-                    metadata[mod] = format_module_from_definition(mod_def)
+                    metadata[mod] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
                 except Exception:
                     pass
         extremesealevel_list = (
@@ -342,7 +344,7 @@ class FactsExperiment:
             for mod in extremesealevel_list:
                 try:
                     mod_def = load_facts_module_by_name(mod, project_root)
-                    metadata[mod] = format_module_from_definition(mod_def)
+                    metadata[mod] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
                 except Exception:
                     pass
         if workflow_dict:
@@ -368,150 +370,18 @@ class FactsExperiment:
         module_name: str,
         defaults_yml: Dict[str, Any],
         module_def: Optional[Any],
-        *,
-        create_metadata_bundle: Callable[[str, Any], Dict[str, Any]],
-        get_clue_from_module_yaml: Callable[[Any, str, str], str],
-        is_metadata_value: Callable[[Any], bool],
     ) -> None:
         """
         Merge defaults from defaults_yml into this experiment's module section.
 
-        Updates the experiment's in-memory module section for the given module
-        with values from the module's defaults file. Handles ``inputs``,
-        ``options``, and ``image`` sections; keys are matched with flexible
-        naming (snake_case, kebab-case). I/O and module loading stay in the
-        application layer; this method only mutates in-memory state.
-
-        Parameters
-        ----------
-        module_name : str
-            Name of the module whose section to update (e.g. ``"fair-temperature"``).
-        defaults_yml : dict
-            Parsed contents of the module's defaults YAML (e.g. from
-            ``defaults_<module>.yml``). May contain ``inputs``, ``options``,
-            and ``image`` keys.
-        module_def : object or None
-            Loaded module definition (e.g. FactsModule) used to look up
-            clue/help text for keys; can be None if not available.
-        create_metadata_bundle : callable
-            Function (clue, value) -> dict used to build clue/value entries
-            for the metadata.
-        get_clue_from_module_yaml : callable
-            Function (module_def, section_key, key) -> str used to get
-            help text from the module YAML for a given key.
-        is_metadata_value : callable
-            Function (value) -> bool used to detect existing clue/value
-            dicts so only the ``value`` is updated in place.
-
-        Returns
-        -------
-        None
-            This method mutates ``self._module_sections[module_name]``
-            in place and returns nothing.
-
-        Notes
-        -----
-        I/O and module loading are the responsibility of the application
-        layer; this method assumes ``defaults_yml`` and ``module_def``
-        are already loaded.
+        Delegates to ModuleExperimentSpec.merge_defaults(). I/O and module
+        loading are the responsibility of the application layer; this method
+        assumes defaults_yml and module_def are already loaded.
         """
         if not defaults_yml:
             return
         if module_name not in self._module_sections:
             self._module_sections[module_name] = {}
-        section = self._module_sections[module_name]
-        for section_key, section_defaults in defaults_yml.items():
-            if section_key not in section:
-                if section_key in ("inputs", "options"):
-                    section[section_key] = {}
-                elif section_key == "image":
-                    section[section_key] = ""
-                else:
-                    continue
-            current_section = section[section_key]
-            if isinstance(section_defaults, dict) and isinstance(current_section, dict):
-                comment_keys = {
-                    k: v
-                    for k, v in current_section.items()
-                    if isinstance(k, str) and k.startswith("#")
-                }
-                for nested_key, nested_default in section_defaults.items():
-                    matching_key = None
-                    if nested_key in current_section:
-                        matching_key = nested_key
-                    else:
-                        snake = nested_key.replace("-", "_")
-                        if snake in current_section:
-                            matching_key = snake
-                        else:
-                            kebab = nested_key.replace("_", "-")
-                            if kebab in current_section:
-                                matching_key = kebab
-                    if matching_key:
-                        nested_current = current_section[matching_key]
-                        if is_metadata_value(nested_current):
-                            nested_current["value"] = nested_default
-                        elif nested_current is None or nested_current == "":
-                            clue = None
-                            if module_def and section_key in ("inputs", "options"):
-                                clue = get_clue_from_module_yaml(
-                                    module_def, section_key, matching_key
-                                )
-                            current_section[matching_key] = create_metadata_bundle(
-                                clue or f"add your {matching_key} here", nested_default
-                            )
-                        else:
-                            current_section[matching_key] = create_metadata_bundle(
-                                f"add your {matching_key} here", nested_default
-                            )
-                    else:
-                        snake_case_key = nested_key.replace("-", "_")
-                        kebab_case_key = (
-                            nested_key.replace("_", "-")
-                            if "_" in nested_key
-                            else nested_key
-                        )
-                        if snake_case_key in current_section:
-                            nc = current_section[snake_case_key]
-                            if is_metadata_value(nc):
-                                nc["value"] = nested_default
-                            else:
-                                current_section[snake_case_key] = (
-                                    create_metadata_bundle(
-                                        f"add your {snake_case_key} here",
-                                        nested_default,
-                                    )
-                                )
-                        elif (
-                            kebab_case_key in current_section
-                            and kebab_case_key != nested_key
-                        ):
-                            nc = current_section[kebab_case_key]
-                            if is_metadata_value(nc):
-                                nc["value"] = nested_default
-                            else:
-                                current_section[kebab_case_key] = (
-                                    create_metadata_bundle(
-                                        f"add your {kebab_case_key} here",
-                                        nested_default,
-                                    )
-                                )
-                        else:
-                            clue = None
-                            if module_def and section_key in ("inputs", "options"):
-                                clue = get_clue_from_module_yaml(
-                                    module_def, section_key, snake_case_key
-                                ) or get_clue_from_module_yaml(
-                                    module_def, section_key, nested_key
-                                )
-                            current_section[snake_case_key] = create_metadata_bundle(
-                                clue or f"add your {snake_case_key} here",
-                                nested_default,
-                            )
-                for ck, cv in comment_keys.items():
-                    if ck not in current_section:
-                        current_section[ck] = cv
-            elif section_key == "image" and isinstance(section_defaults, dict):
-                image_url = section_defaults.get("image_url")
-                if image_url:
-                    section[section_key] = image_url
+        spec = ModuleExperimentSpec.from_dict(module_name, self._module_sections[module_name])
+        spec.merge_defaults(defaults_yml, module_def)
+        self._module_sections[module_name] = spec.to_dict()

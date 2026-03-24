@@ -60,23 +60,12 @@ class ModuleExperimentSpec:
             kebab_field_name = snake_field_name.replace("_", "-")
             logger.info("snake %s", snake_field_name)
 
-            try:
-                clue = get_clue_from_module_yaml(
-                    module_schema=module_schema,
-                    arg_type="inputs",
-                    field_name=kebab_field_name,
-                )
-            except Exception as e:
-                print(f"Clue not created correctly for {kebab_field_name}: ", e)
-            logger.info(clue)
-            if snake_field_name == "climate_data_file1":
-                module_inputs[snake_field_name] = create_metadata_bundle(
-                    clue,
-                    "fair-temperature/climate.nc",  # TODO fix this - should not be needed here. + not true for all modules
-                )
-            else:
-                logger.info("field name: %s", snake_field_name)
-                module_inputs[snake_field_name] = create_metadata_bundle(clue)
+            clue = get_clue_from_module_yaml(
+                module_schema=module_schema,
+                arg_type="inputs",
+                field_name=kebab_field_name,
+            )
+            module_inputs[snake_field_name] = create_metadata_bundle(clue)
 
         # options
         module_options: Dict[str, Any] = {}
