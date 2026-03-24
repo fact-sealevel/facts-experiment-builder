@@ -320,21 +320,27 @@ class FactsExperiment:
         if temperature_module and temperature_module.upper() != "NONE":
             try:
                 mod_def = load_facts_module_by_name(temperature_module, project_root)
-                metadata[temperature_module] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
+                metadata[temperature_module] = ModuleExperimentSpec.from_module_schema(
+                    mod_def
+                ).to_dict()
             except Exception:
                 pass
         # Same for sealevel modules
         for mod in sealevel_modules:
             try:
                 mod_def = load_facts_module_by_name(mod, project_root)
-                metadata[mod] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
+                metadata[mod] = ModuleExperimentSpec.from_module_schema(
+                    mod_def
+                ).to_dict()
             except Exception:
                 pass
         if framework_modules:
             for mod in framework_modules:
                 try:
                     mod_def = load_facts_module_by_name(mod, project_root)
-                    metadata[mod] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
+                    metadata[mod] = ModuleExperimentSpec.from_module_schema(
+                        mod_def
+                    ).to_dict()
                 except Exception:
                     pass
         extremesealevel_list = (
@@ -344,7 +350,9 @@ class FactsExperiment:
             for mod in extremesealevel_list:
                 try:
                     mod_def = load_facts_module_by_name(mod, project_root)
-                    metadata[mod] = ModuleExperimentSpec.from_module_schema(mod_def).to_dict()
+                    metadata[mod] = ModuleExperimentSpec.from_module_schema(
+                        mod_def
+                    ).to_dict()
                 except Exception:
                     pass
         if workflow_dict:
@@ -382,6 +390,8 @@ class FactsExperiment:
             return
         if module_name not in self._module_sections:
             self._module_sections[module_name] = {}
-        spec = ModuleExperimentSpec.from_dict(module_name, self._module_sections[module_name])
+        spec = ModuleExperimentSpec.from_dict(
+            module_name, self._module_sections[module_name]
+        )
         spec.merge_defaults(defaults_yml, module_def)
         self._module_sections[module_name] = spec.to_dict()
