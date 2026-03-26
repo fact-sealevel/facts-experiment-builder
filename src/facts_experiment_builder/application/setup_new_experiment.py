@@ -1,4 +1,4 @@
-from pathlib import Path
+from typing import List, Optional
 
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
@@ -7,6 +7,15 @@ from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentAlreadyExistsError,
 )
 from facts_experiment_builder.core.experiment import FactsExperiment
+from facts_experiment_builder.core.experiment.experiment_skeleton import (
+    ExperimentSkeleton,
+)
+from facts_experiment_builder.core.steps import (
+    ClimateStep,
+    SealevelStep,
+    TotalingStep,
+    ExtremeSealevelStep,
+)
 from facts_experiment_builder.infra.module_loader import (
     load_facts_module_by_name,
 )
@@ -19,7 +28,6 @@ from facts_experiment_builder.infra.experiment_manager import (
     create_experiment_directory,
     create_experiment_directory_files,
 )
-from typing import List, Dict
 
 
 # Mapping of top-level param keys to their clue/help text
@@ -45,10 +53,57 @@ FINGERPRINT_PARAM_CLUES = {
 }
 
 
+def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
+    """Load module YAMLs from an ExperimentSkeleton and return the four hydrated steps.
+
+    Errors from unknown module names propagate immediately — no silent failures.
+    """
+    # Climate step
+    if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
+        climate_schema = load_facts_module_by_name(skeleton.climate_module)
+        climate_step = ClimateStep.from_module_schema(climate_schema)
+    else:
+        climate_step = ClimateStep.none_step(
+            alternate_climate_data=skeleton.climate_data
+        )
+
+    # Sealevel step
+    if skeleton.sealevel_modules:
+        sealevel_schemas = [
+            load_facts_module_by_name(m) for m in skeleton.sealevel_modules
+        ]
+        sealevel_step = SealevelStep.from_module_schemas(sealevel_schemas)
+        if skeleton.climate_data:
+            for spec, schema in zip(sealevel_step.module_specs_list, sealevel_schemas):
+                if schema.uses_climate_file:
+                    spec.merge_defaults(
+                        {"inputs": {"climate_data_file": skeleton.climate_data}}, schema
+                    )
+    else:
+        sealevel_step = SealevelStep(alternate_sealevel_data=skeleton.sealevel_data)
+
+    # Totaling step
+    if skeleton.totaling_module:
+        totaling_schema = load_facts_module_by_name(skeleton.totaling_module)
+        totaling_step = TotalingStep.from_module_schema(totaling_schema)
+    else:
+        totaling_step = TotalingStep.none_step()
+
+    # Extreme sealevel step
+    if skeleton.extremesealevel_module:
+        esl_schema = load_facts_module_by_name(skeleton.extremesealevel_module)
+        extreme_sealevel_step = ExtremeSealevelStep.from_module_schema(esl_schema)
+    else:
+        extreme_sealevel_step = ExtremeSealevelStep.none_step()
+
+    return climate_step, sealevel_step, totaling_step, extreme_sealevel_step
+
+
 def setup_new_experiment_fs(
     experiment_name: str,
-    module_names: List[str],
 ):
+    """Given an experiment name, resolves path to the sub-directory for that experiment.
+    Raises an error if the sub-directory already exists."""
     # Resolve the experiment directory path
     experiment_path = resolve_experiment_directory_path(experiment_name)
     # Raise error if it already exists
@@ -56,63 +111,108 @@ def setup_new_experiment_fs(
         raise ExperimentAlreadyExistsError(
             path=experiment_path, experiment_name=experiment_name
         )
+    return experiment_path
 
+
+def populate_experiment_directory(experiment_path: str, module_names: List[str]):
+    """Creates sub-directory in experiments/ for this experiment.
+    Also prepopulates with _____"""
     # Create the experiment directory
     create_experiment_directory(experiment_path)
     # Create the experiment directory files
     create_experiment_directory_files(experiment_path, module_names)
 
-    return experiment_path
+    return
 
 
-def init_new_experiment(
+def experimentSkeleton_to_factsExperiment(
     experiment_name: str,
-    temperature_module: str,
-    sealevel_modules: List[str],
-    framework_modules: List[str] = None,
-    extremesealevel_module: str = None,
-    experiment_path: Path = None,
-    pipeline_id: str = None,
-    scenario: str = None,
-    baseyear: int = None,
-    pyear_start: int = None,
-    pyear_end: int = None,
-    pyear_step: int = None,
-    nsamps: int = None,
-    seed: int = None,
-    location_file: str = None,
-    fingerprint_dir: str = None,
-    workflow_dict: Dict[str, str] = None,
-    module_specific_inputs: str = None,
-    general_inputs: str = None,
+    skeleton: ExperimentSkeleton,
+    pipeline_id: Optional[str] = None,
+    scenario: Optional[str] = None,
+    baseyear: Optional[int] = None,
+    pyear_start: Optional[int] = None,
+    pyear_end: Optional[int] = None,
+    pyear_step: Optional[int] = None,
+    nsamps: Optional[int] = None,
+    seed: Optional[int] = None,
+    location_file: Optional[str] = None,
+    fingerprint_dir: Optional[str] = None,
+    module_specific_inputs: Optional[str] = None,
+    experiment_specific_inputs: Optional[str] = None,
+    general_inputs: Optional[str] = None,
 ) -> FactsExperiment:
     """
-    Create a new FactsExperiment from CLI inputs
-    Uses FactsExperiment.create_new_experiment_obj with dependencies from this module.
+    Load module YAMLs from a skeleton and assemble a fully-formed FactsExperiment.
+
+    Unknown module names raise FileNotFoundError — no silent failures.
     """
-    return FactsExperiment.create_new_experiment_obj(
+    climate_step, sealevel_step, totaling_step, extreme_sealevel_step = (
+        hydrate_experiment(skeleton)
+    )
+
+    top_level_params = {
+        "pipeline-id": create_metadata_bundle(
+            TOP_LEVEL_PARAM_CLUES["pipeline-id"], pipeline_id
+        ),
+        "scenario": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["scenario"], scenario),
+        "baseyear": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["baseyear"], baseyear),
+        "pyear_start": create_metadata_bundle(
+            TOP_LEVEL_PARAM_CLUES["pyear_start"], pyear_start
+        ),
+        "pyear_end": create_metadata_bundle(
+            TOP_LEVEL_PARAM_CLUES["pyear_end"], pyear_end
+        ),
+        "pyear_step": create_metadata_bundle(
+            TOP_LEVEL_PARAM_CLUES["pyear_step"], pyear_step
+        ),
+        "nsamps": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["nsamps"], nsamps),
+        "seed": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["seed"], seed),
+    }
+    paths = {
+        "module-specific-input-data": create_metadata_bundle(
+            "Module-specific input data", module_specific_inputs
+        ),
+        "general-input-data": create_metadata_bundle(
+            "General input data", general_inputs
+        ),
+        "experiment-specific-input-data": create_metadata_bundle(
+            "Experiment-specific input data (eg. alternative FAIR data)",
+            experiment_specific_inputs,
+        ),
+        "location-file": create_metadata_bundle("Location file", location_file),
+        "output-data-location": create_metadata_bundle(
+            TOP_LEVEL_PARAM_CLUES["output-data-location"],
+            f"./experiments/{experiment_name}/data/output",
+        ),
+        **(
+            {
+                "sealevel-step-data": create_metadata_bundle(
+                    "Sealevel step data path (replaces running sealevel modules)",
+                    skeleton.sealevel_data,
+                )
+            }
+            if skeleton.sealevel_data
+            else {}
+        ),
+    }
+    fingerprint_params = {
+        "fingerprint-dir": create_metadata_bundle(
+            "Fingerprint directory", fingerprint_dir
+        ),
+        "location-file": create_metadata_bundle("Location file", location_file),
+    }
+
+    return FactsExperiment(
         experiment_name=experiment_name,
-        temperature_module=temperature_module,
-        sealevel_modules=sealevel_modules,
-        framework_modules=framework_modules,
-        extremesealevel_module=extremesealevel_module,
-        experiment_path=experiment_path,
-        pipeline_id=pipeline_id,
-        scenario=scenario,
-        baseyear=baseyear,
-        pyear_start=pyear_start,
-        pyear_end=pyear_end,
-        pyear_step=pyear_step,
-        nsamps=nsamps,
-        seed=seed,
-        location_file=location_file,
-        fingerprint_dir=fingerprint_dir,
-        workflow_dict=workflow_dict,
-        module_specific_input_data=module_specific_inputs,
-        general_input_data=general_inputs,
-        create_metadata_bundle=create_metadata_bundle,
-        load_facts_module_by_name=load_facts_module_by_name,
-        top_level_param_clues=TOP_LEVEL_PARAM_CLUES,
+        top_level_params=top_level_params,
+        climate_step=climate_step,
+        sealevel_step=sealevel_step,
+        totaling_step=totaling_step,
+        extreme_sealevel_step=extreme_sealevel_step,
+        paths=paths,
+        fingerprint_params=fingerprint_params,
+        workflows=skeleton.workflows,
     )
 
 
@@ -125,8 +225,7 @@ def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) 
     if not defaults_yml:
         return
     try:
-        project_root = Path.cwd()
-        module_def = load_facts_module_by_name(module_name, project_root)
+        module_def = load_facts_module_by_name(module_name)
     except FileNotFoundError as e:
         raise ValueError(f"Could not load module definition for '{module_name}") from e
 

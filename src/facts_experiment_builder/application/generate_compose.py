@@ -27,27 +27,26 @@ from facts_experiment_builder.core.workflow.workflow import (
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.path_utils import expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
+from facts_experiment_builder.infra.module_loader import load_facts_module_from_yaml
 
 
-def _module_requires_climate_file(module_name: str, experiment_dir: Path) -> bool:
+def _module_requires_climate_file(module_name: str) -> bool:
     """
     Check if a module requires a climate file by loading its module YAML configuration.
 
     Args:
         module_name: Name of the module (e.g., 'bamber19-icesheets')
-        experiment_dir: Path to experiment directory (used to find project root)
 
     Returns:
         True if climate_file_required is True in module YAML, False otherwise
     """
-    try:
-        project_root = Path.cwd()
-        module_yaml_path = find_module_yaml_path(module_name, project_root)
-        with open(module_yaml_path, "r") as f:
-            module_config = yaml.safe_load(f) or {}
-        return module_config.get("climate_file_required", True)
-    except FileNotFoundError:
-        return True
+
+    # Get path
+    module_yaml_path = find_module_yaml_path(module_name)
+    # Load module yaml
+    module_yaml = load_facts_module_from_yaml(yaml_path=module_yaml_path)
+    # Return uses climate file attr
+    return module_yaml.uses_climate_file
 
 
 def _validate_climate_file_inputs(
@@ -69,7 +68,7 @@ def _validate_climate_file_inputs(
 
     for module_name in sealevel_modules:
         # Check if this module requires a climate file
-        if not _module_requires_climate_file(module_name, experiment_dir):
+        if not _module_requires_climate_file(module_name):
             continue
 
         module_metadata = metadata.get(module_name, {})
@@ -140,8 +139,7 @@ def _collect_workflow_output_paths_by_type(
 def _module_is_per_workflow(module_name: str) -> bool:
     """Return True if the module YAML declares per_workflow: true."""
     try:
-        project_root = Path.cwd()
-        module_yaml_path = find_module_yaml_path(module_name, project_root)
+        module_yaml_path = find_module_yaml_path(module_name)
         with open(module_yaml_path) as f:
             cfg = yaml.safe_load(f) or {}
         return bool(cfg.get("per_workflow"))
@@ -328,6 +326,15 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         and not modules["framework_modules"]
         and not modules["esl_modules"]
     ):
+        has_step_data = bool(
+            metadata.get("sealevel-step-data")
+            or metadata.get("experiment-specific-input-data")
+        )
+        if has_step_data:
+            print(
+                "ℹ All experiment steps use pre-existing data. No Docker services to generate."
+            )
+            return {"services": {}}
         raise ValueError(
             "No modules could be created from metadata. "
             "Please ensure at least one module is specified and has valid configuration."
@@ -357,14 +364,13 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     # Add one facts-total service per workflow (after sealevel services)
     if workflows:
-        project_root = Path.cwd()
         per_workflow_fw = [
             m
             for m in manifest.get("framework_modules", [])
             if _module_is_per_workflow(m)
         ]
         facts_total_name = per_workflow_fw[0] if per_workflow_fw else "facts-total"
-        facts_total_yaml_path = find_module_yaml_path(facts_total_name, project_root)
+        facts_total_yaml_path = find_module_yaml_path(facts_total_name)
         with open(facts_total_yaml_path, "r") as f:
             facts_total_config = yaml.safe_load(f) or {}
         facts_total_image = facts_total_config.get(
@@ -405,7 +411,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         if esl_module_names:
             for esl_module_name in esl_module_names:
                 try:
-                    esl_yaml_path = find_module_yaml_path(esl_module_name, project_root)
+                    esl_yaml_path = find_module_yaml_path(esl_module_name)
                 except FileNotFoundError:
                     print(
                         f"⚠ Warning: ESL module YAML not found for '{esl_module_name}', skipping per-workflow ESL"
