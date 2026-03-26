@@ -53,21 +53,7 @@ FINGERPRINT_PARAM_CLUES = {
 }
 
 
-def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
-    """Load module YAMLs from an ExperimentSkeleton and return the four hydrated steps.
-
-    Errors from unknown module names propagate immediately — no silent failures.
-    """
-    # Climate step
-    if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
-        climate_schema = load_facts_module_by_name(skeleton.climate_module)
-        climate_step = ClimateStep.from_module_schema(climate_schema)
-    else:
-        climate_step = ClimateStep.none_step(
-            alternate_climate_data=skeleton.climate_data
-        )
-
-    # Sealevel step
+def hydrate_sealevel_step(skeleton) -> SealevelStep:
     if skeleton.sealevel_modules:
         sealevel_schemas = [
             load_facts_module_by_name(m) for m in skeleton.sealevel_modules
@@ -81,18 +67,36 @@ def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
                     )
     else:
         sealevel_step = SealevelStep(alternate_sealevel_data=skeleton.sealevel_data)
+    return sealevel_step
 
-    # Totaling step
+
+def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
+    """Load module YAMLs from an ExperimentSkeleton and return the four hydrated steps.
+
+    Errors from unknown module names propagate immediately — no silent failures.
+    """
+    if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
+        climate_step = ClimateStep.from_module_schema(
+            load_facts_module_by_name(skeleton.climate_module)
+        )
+    else:
+        climate_step = ClimateStep.none_step(
+            alternate_climate_data=skeleton.climate_data
+        )
+
+    sealevel_step = hydrate_sealevel_step(skeleton)
+
     if skeleton.totaling_module:
-        totaling_schema = load_facts_module_by_name(skeleton.totaling_module)
-        totaling_step = TotalingStep.from_module_schema(totaling_schema)
+        totaling_step = TotalingStep.from_module_schema(
+            load_facts_module_by_name(skeleton.totaling_module)
+        )
     else:
         totaling_step = TotalingStep.none_step()
 
-    # Extreme sealevel step
     if skeleton.extremesealevel_module:
-        esl_schema = load_facts_module_by_name(skeleton.extremesealevel_module)
-        extreme_sealevel_step = ExtremeSealevelStep.from_module_schema(esl_schema)
+        extreme_sealevel_step = ExtremeSealevelStep.from_module_schema(
+            load_facts_module_by_name(skeleton.extremesealevel_module)
+        )
     else:
         extreme_sealevel_step = ExtremeSealevelStep.none_step()
 
