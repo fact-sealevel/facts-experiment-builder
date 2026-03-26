@@ -13,8 +13,8 @@ except ImportError:
 # Jinja2 template for experiment metadata YAML
 YAML_TEMPLATE = """
 ### Experiment metadata YAML file ###
-# This is the main configuration file that describes the specified FACTS experiment. 
-# It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`. 
+# This is the main configuration file that describes the specified FACTS experiment.
+# It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`.
 # The values included here are defaults based on the default values for each module specified in /modules/module_name/defaults.yml.
 
 # **How to use this file:**
@@ -292,6 +292,10 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
         inputs.append("module-specific-input-data")
     if "general-input-data" in experiment.paths:
         inputs.append("general-input-data")
+    if "experiment-specific-input-data" in experiment.paths:
+        inputs.append("experiment-specific-input-data")
+    if "sealevel-step-data" in experiment.paths:
+        inputs.append("sealevel-step-data")
 
     # Outputs section (output-data-location)
     outputs = []
