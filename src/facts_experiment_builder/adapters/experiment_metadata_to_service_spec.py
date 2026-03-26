@@ -20,7 +20,11 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpecComponents,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
-from facts_experiment_builder.core.typed_path import HostPath, ContainerPath
+from facts_experiment_builder.core.typed_path import (
+    HostPath,
+    ContainerPath,
+    ExperimentSpecificInputPath,
+)
 from facts_experiment_builder.infra.module_loader import (
     load_facts_module_from_yaml,
     find_module_yaml_path,
@@ -97,8 +101,7 @@ def build_module_service_spec(
         # this is total module step/ workflows
     else:
         # this is climate + sea level module steps
-        project_root = Path.cwd()
-        resolved_yaml_path = find_module_yaml_path(module_name, project_root)
+        resolved_yaml_path = find_module_yaml_path(module_name)
     module_definition = load_facts_module_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
@@ -114,6 +117,18 @@ def build_module_service_spec(
     # )
 
     experiment_paths = get_experiment_paths(metadata, module_context)
+
+    raw_exp_specific = metadata.get("experiment-specific-input-data")
+    if isinstance(raw_exp_specific, dict):
+        raw_exp_specific = raw_exp_specific.get("value")
+    experiment_specific_input = (
+        expand_path(
+            raw_exp_specific, f"{module_context} (experiment-specific-input-data)"
+        )
+        if raw_exp_specific
+        else None
+    )
+
     general_input_data = expand_path(
         experiment_paths["general_input_data"],
         f"{module_context} (general-input-data)",
@@ -249,6 +264,14 @@ def build_module_service_spec(
                 and ".." not in actual
             ):
                 inputs_dict[key] = actual.strip()  # e.g. "fair-temperature/climate.nc"
+                continue
+            if (
+                key in output_root_relative_inputs
+                and isinstance(actual, str)
+                and actual.strip().startswith("/")
+                and experiment_specific_input
+            ):
+                inputs_dict[key] = ExperimentSpecificInputPath(actual.strip())
                 continue
             try:
                 resolved_path = resolve_input_path(
