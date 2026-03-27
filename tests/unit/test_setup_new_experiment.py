@@ -24,7 +24,7 @@ def make_skeleton(
     climate_module=None,
     climate_data=None,
     sealevel_modules=None,
-    supplied_totaled_sealevel_data=None,
+    supplied_totaled_sealevel_step_data=None,
     totaling_module=None,
     extremesealevel_module=None,
 ) -> ExperimentSkeleton:
@@ -32,7 +32,7 @@ def make_skeleton(
         climate_module=climate_module,
         climate_data=climate_data,
         sealevel_modules=sealevel_modules or [],
-        supplied_totaled_sealevel_data=supplied_totaled_sealevel_data,
+        supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
         totaling_module=totaling_module,
         extremesealevel_module=extremesealevel_module,
     )
@@ -96,8 +96,8 @@ def test_hydrate_experiment_esl_module_produces_module_spec(mock_load):
 # --- hydrate_sealevel_step ---
 
 
-def test_hydrate_sealevel_step_no_modules_uses_supplied_totaled_sealevel_data():
-    skeleton = make_skeleton(supplied_totaled_sealevel_data="/path/to/sealevel")
+def test_hydrate_sealevel_step_no_modules_uses_supplied_totaled_sealevel_step_data():
+    skeleton = make_skeleton(supplied_totaled_sealevel_step_data="/path/to/sealevel")
 
     step = hydrate_sealevel_step(skeleton)
 

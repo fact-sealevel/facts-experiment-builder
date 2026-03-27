@@ -313,8 +313,8 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
         inputs.append("general-input-data")
     if "experiment-specific-input-data" in experiment.paths:
         inputs.append("experiment-specific-input-data")
-    if "supplied-totaled-sealevel-data" in experiment.paths:
-        inputs.append("supplied-totaled-sealevel-data")
+    if "supplied-totaled-sealevel-step-data" in experiment.paths:
+        inputs.append("supplied-totaled-sealevel-step-data")
 
     # Outputs section (output-data-location)
     outputs = []

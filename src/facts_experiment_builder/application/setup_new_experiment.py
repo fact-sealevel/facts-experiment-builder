@@ -84,7 +84,7 @@ def hydrate_sealevel_step(skeleton) -> SealevelStep:
                     )
     else:
         sealevel_step = SealevelStep(
-            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_data
+            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_step_data
         )
     return sealevel_step
 
@@ -98,7 +98,7 @@ def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
         climate_step = ClimateStep.from_module_schema(
             load_facts_module_by_name(skeleton.climate_module)
         )
-    elif skeleton.supplied_totaled_sealevel_data:
+    elif skeleton.supplied_totaled_sealevel_step_data:
         climate_step = ClimateStep.not_needed()
     else:
         climate_step = ClimateStep(alternate_climate_data=skeleton.climate_data)
@@ -210,12 +210,12 @@ def experiment_skeleton_to_facts_experiment(
         ),
         **(
             {
-                "supplied-totaled-sealevel-data": create_metadata_bundle(
+                "supplied-totaled-sealevel-step-data": create_metadata_bundle(
                     "Path to pre-existing totaled sealevel data (replaces running climate and sealevel modules)",
-                    skeleton.supplied_totaled_sealevel_data,
+                    skeleton.supplied_totaled_sealevel_step_data,
                 )
             }
-            if skeleton.supplied_totaled_sealevel_data
+            if skeleton.supplied_totaled_sealevel_step_data
             else {}
         ),
     }
