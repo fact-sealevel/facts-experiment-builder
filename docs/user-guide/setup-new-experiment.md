@@ -14,9 +14,9 @@ setup-new-experiment [OPTIONS]
 |--------|----------|-------------|
 | `--experiment-name TEXT` | Yes | Name of the experiment |
 | `--climate-step TEXT` | No | Climate module name (e.g. `fair-temperature`) |
-| `--climate-step-data PATH` | No | Path to pre-existing climate data — runs no climate module |
+| `--supplied-climate-step-data PATH` | No | Path to pre-existing climate data — runs no climate module |
 | `--sealevel-step TEXT` | No | Comma-separated list of sea-level module names |
-| `--supplied-totaled-sealevel-data PATH` | No | Path to pre-existing totaled sealevel data — skips climate, sealevel, and totaling steps |
+| `--supplied-totaled-sealevel-step-data PATH` | No | Path to pre-existing totaled sealevel data — skips climate, sealevel, and totaling steps |
 | `--totaling-step TEXT` | No | Totaling module name, or `NONE` (default: `facts-total`) |
 | `--extremesealevel-step TEXT` | No | Extreme sea-level module name, or `NONE` |
 | `--pipeline-id TEXT` | No | Pipeline ID |
@@ -64,7 +64,7 @@ setup-new-experiment \
 
 ### Supply pre-existing climate data (skip climate step)
 
-Use `--climate-step-data` to provide the path to an existing climate output file (e.g. a FAIR run you already have). The sealevel modules that require climate input will automatically receive this path, and no climate service will be added to the compose file.
+Use `--supplied-climate-step-data` to provide the path to an existing climate output file (e.g. a FAIR run you already have). The sealevel modules that require climate input will automatically receive this path, and no climate service will be added to the compose file.
 
 ```shell
 setup-new-experiment \
@@ -72,7 +72,7 @@ setup-new-experiment \
   --scenario ssp585 \
   --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
   --baseyear 2005 --seed 1234 --nsamps 1000 \
-  --climate-step-data /path/to/climate_data.nc \
+  --supplied-climate-step-data /path/to/climate_data.nc \
   --sealevel-step bamber19-icesheets,tlm-sterodynamics \
   --totaling-step facts-total \
   --extremesealevel-step extremesealevel-pointsoverthreshold
@@ -80,7 +80,7 @@ setup-new-experiment \
 
 ### Supply pre-existing totaled sealevel data (skip climate, sealevel, and totaling steps)
 
-Use `--supplied-totaled-sealevel-data` to provide the path to already-computed totaled sea level output. This skips the climate and sealevel steps entirely. The totaling step is also automatically omitted (since there is nothing to total).
+Use `--supplied-totaled-sealevel-step-data` to provide the path to already-computed totaled sea level output. This skips the climate and sealevel steps entirely. The totaling step is also automatically omitted (since there is nothing to total).
 
 ```shell
 setup-new-experiment \
@@ -88,7 +88,7 @@ setup-new-experiment \
   --scenario ssp585 \
   --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
   --baseyear 2005 --seed 1234 --nsamps 1000 \
-  --supplied-totaled-sealevel-data /path/to/totaled_sealevel.nc \
+  --supplied-totaled-sealevel-step-data /path/to/totaled_sealevel.nc \
   --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 

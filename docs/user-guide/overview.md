@@ -19,14 +19,14 @@ An experiment is organized into four sequential **steps**. Each step can either 
 
 | Step | CLI option | Data bypass option |
 |------|-----------|-------------------|
-| **Climate** | `--climate-step <module>` | `--climate-step-data <path>` |
-| **Sea Level** | `--sealevel-step <modules>` | `--supplied-totaled-sealevel-data <path>` |
+| **Climate** | `--climate-step <module>` | `--supplied-climate-step-data <path>` |
+| **Sea Level** | `--sealevel-step <modules>` | `--supplied-totaled-sealevel-step-data <path>` |
 | **Totaling** | `--totaling-step <module>` (default: `facts-total`) | *(auto-skipped when totaled sealevel data is supplied)* |
 | **Extreme Sea Level** | `--extremesealevel-step <module>` | *(omit the flag entirely)* |
 
-When `--climate-step-data` is used, the supplied path is automatically wired into any sealevel modules that require climate input — no climate service is added to the compose file.
+When `--supplied-climate-step-data` is used, the supplied path is automatically wired into any sealevel modules that require climate input — no climate service is added to the compose file.
 
-When `--supplied-totaled-sealevel-data` is used, both the climate and sealevel steps are skipped, and the totaling step is automatically omitted.
+When `--supplied-totaled-sealevel-step-data` is used, both the climate and sealevel steps are skipped, and the totaling step is automatically omitted.
 
 ### Experiment
 

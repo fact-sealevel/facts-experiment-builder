@@ -74,7 +74,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
   --experiment-name toy_experiment_with_climate_data \
   --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
   --baseyear 2005 --seed 1234 --nsamps 1000 \
-  --climate-step-data /path/to/climate_data.nc \
+  --supplied-climate-step-data /path/to/climate_data.nc \
   --sealevel-step bamber19-icesheets,tlm-sterodynamics \
   --totaling-step facts-total \
   --extremesealevel-step extremesealevel-pointsoverthreshold
@@ -89,7 +89,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
   --experiment-name toy_experiment_esl_only \
   --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
   --baseyear 2005 --seed 1234 --nsamps 1000 \
-  --supplied-totaled-sealevel-data /path/to/totaled_sealevel.nc \
+  --supplied-totaled-sealevel-step-data /path/to/totaled_sealevel.nc \
   --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 

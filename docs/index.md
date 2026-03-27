@@ -20,8 +20,8 @@ An experiment is organized into four sequential steps. Each step can either run 
 
 | Step | Run a module | Supply data instead |
 |------|-------------|---------------------|
-| **Climate** | `--climate-step <module>` | `--climate-step-data <path>` |
-| **Sea Level** | `--sealevel-step <modules>` | `--supplied-totaled-sealevel-data <path>` |
+| **Climate** | `--climate-step <module>` | `--supplied-climate-step-data <path>` |
+| **Sea Level** | `--sealevel-step <modules>` | `--supplied-totaled-sealevel-step-data <path>` |
 | **Totaling** | `--totaling-step <module>` (default: `facts-total`) | *(auto-skipped when totaled sealevel data is supplied)* |
 | **Extreme Sea Level** | `--extremesealevel-step <module>` | *(omit the flag)* |
 

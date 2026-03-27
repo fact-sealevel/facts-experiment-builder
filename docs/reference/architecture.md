@@ -13,7 +13,7 @@ CLI → Application → Adapters → Core (domain) → Infrastructure → Resour
 
 ### CLI (`src/facts_experiment_builder/cli/`)
 
-Click commands. `setup-new-experiment` and `generate-compose` are the two main entry points. Both assume they are run from a project root that has an `experiments/` subdirectory. The setup CLI handles interactive workflow definition when `facts-total` is included, and accepts step-level data bypass options (`--climate-step-data`, `--supplied-totaled-sealevel-data`).
+Click commands. `setup-new-experiment` and `generate-compose` are the two main entry points. Both assume they are run from a project root that has an `experiments/` subdirectory. The setup CLI handles interactive workflow definition when `facts-total` is included, and accepts step-level data bypass options (`--supplied-climate-step-data`, `--supplied-totaled-sealevel-step-data`).
 
 ### Application (`application/`)
 
