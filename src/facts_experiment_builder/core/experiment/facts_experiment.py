@@ -145,7 +145,7 @@ class FactsExperiment:
     def from_metadata_dict(cls, metadata: Dict[str, Any]) -> "FactsExperiment":
         """Build a FactsExperiment from the metadata dict shape (e.g. from YAML)."""
 
-        #First extract top-level fields from the metadata object
+        # First extract top-level fields from the metadata object
         experiment_name = metadata.get("experiment_name", "")
 
         top_level_params = {
@@ -155,7 +155,7 @@ class FactsExperiment:
             k: metadata[k] for k in FINGERPRINT_PARAM_KEYS if k in metadata
         }
 
-        #Then, build a manifest of the modules included in the experiment
+        # Then, build a manifest of the modules included in the experiment
         manifest = {
             "temperature_module": metadata.get("temperature_module"),
             "sealevel_modules": metadata.get("sealevel_modules", []),
@@ -184,7 +184,7 @@ class FactsExperiment:
                         value = value["value"]
                     if isinstance(value, str):
                         paths_normalized[primary] = value
-        #Make tuple of the fields that wont' be used to build module_sections
+        # Make tuple of the fields that wont' be used to build module_sections
         excluded = (
             set(TOP_LEVEL_PARAM_KEYS)
             | set(FINGERPRINT_PARAM_KEYS)
