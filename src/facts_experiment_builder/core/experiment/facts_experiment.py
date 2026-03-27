@@ -5,9 +5,6 @@ from typing import Dict, Any, List, Optional
 from facts_experiment_builder.core.workflow.workflow import (
     Workflow,
 )
-from facts_experiment_builder.core.module.module_experiment_spec import (
-    ModuleExperimentSpec,
-)
 from facts_experiment_builder.core.steps import (
     ClimateStep,
     ExperimentStep,
@@ -109,14 +106,6 @@ class FactsExperiment:
     def extreme_sealevel_step(self) -> ExtremeSealevelStep:
         return self._extreme_sealevel_step
 
-    def all_module_specs(self) -> List[ModuleExperimentSpec]:
-        return (
-            self._climate_step.module_specs()
-            + self._sealevel_step.module_specs()
-            + self._totaling_step.module_specs()
-            + self._extreme_sealevel_step.module_specs()
-        )
-
     def list_all_steps(self) -> List[ExperimentStep]:
         """All experiment steps in order: climate → sealevel → totaling → ESL."""
         return [
@@ -155,6 +144,8 @@ class FactsExperiment:
     @classmethod
     def from_metadata_dict(cls, metadata: Dict[str, Any]) -> "FactsExperiment":
         """Build a FactsExperiment from the metadata dict shape (e.g. from YAML)."""
+
+        #First extract top-level fields from the metadata object
         experiment_name = metadata.get("experiment_name", "")
 
         top_level_params = {
@@ -163,6 +154,8 @@ class FactsExperiment:
         fingerprint_params = {
             k: metadata[k] for k in FINGERPRINT_PARAM_KEYS if k in metadata
         }
+
+        #Then, build a manifest of the modules included in the experiment
         manifest = {
             "temperature_module": metadata.get("temperature_module"),
             "sealevel_modules": metadata.get("sealevel_modules", []),
@@ -174,6 +167,7 @@ class FactsExperiment:
         if isinstance(manifest["esl_modules"], str):
             manifest["esl_modules"] = [manifest["esl_modules"]]
 
+        # Normalize the paths that are passed in the inputs and outputs sections
         paths_normalized = {}
         for primary in PATH_KEYS_PRIMARY:
             value = metadata.get(primary)
@@ -190,7 +184,7 @@ class FactsExperiment:
                         value = value["value"]
                     if isinstance(value, str):
                         paths_normalized[primary] = value
-
+        #Make tuple of the fields that wont' be used to build module_sections
         excluded = (
             set(TOP_LEVEL_PARAM_KEYS)
             | set(FINGERPRINT_PARAM_KEYS)
