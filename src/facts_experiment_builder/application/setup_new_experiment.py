@@ -70,7 +70,11 @@ def hydrate_sealevel_step(skeleton) -> SealevelStep:
         ]
         sealevel_step = SealevelStep.from_module_schemas(sealevel_schemas)
         climate_data_file = skeleton.climate_data
-        if not climate_data_file and skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
+        if (
+            not climate_data_file
+            and skeleton.climate_module
+            and skeleton.climate_module.upper() != "NONE"
+        ):
             climate_data_file = _climate_output_file_path(skeleton.climate_module)
         if climate_data_file:
             for spec, schema in zip(sealevel_step.module_specs_list, sealevel_schemas):
