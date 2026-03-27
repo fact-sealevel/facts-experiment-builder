@@ -20,12 +20,13 @@ generate-compose [OPTIONS]
 
 1. Locates `experiments/<experiment-name>/experiment-metadata.yml` from your project root
 2. Loads the metadata and builds a `FactsExperiment` in memory
-3. For each module in the manifest (temperature, sealevel, framework, ESL), builds a fully resolved `ModuleServiceSpec` — resolving input/output paths, command arguments, volumes, and service dependencies
-4. For `facts-total` and ESL modules, generates one service per workflow (e.g. `facts-total-wf1-global`, `facts-total-wf1-local`)
-5. Serializes all services to `experiment-compose.yaml`
+3. For each step that has a module (climate, sealevel, totaling, ESL), builds a fully resolved `ModuleServiceSpec` — resolving input/output paths, command arguments, volumes, and service dependencies
+4. Steps that were configured with pre-existing data (via `--climate-step-data` or `--supplied-totaled-sealevel-data`) produce no Docker services — those steps are skipped entirely
+5. For `facts-total` and ESL modules, generates one service per workflow (e.g. `facts-total-wf1-global`, `facts-total-wf1-local`)
+6. Serializes all services to `experiment-compose.yaml`
 
 !!! warning
-    If the temperature module is `NONE`, `generate-compose` validates that the required climate file inputs are present for each sea-level module before writing the compose file.
+    If the climate step has no module (i.e. `--climate-step-data` was used), `generate-compose` validates that the required climate file inputs are present for each sealevel module before writing the compose file.
 
 ## Example
 

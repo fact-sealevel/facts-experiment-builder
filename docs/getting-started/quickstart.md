@@ -36,7 +36,7 @@ Example layouts:
 
 ## Step 2: Create an experiment
 
-Run `setup-new-experiment` from your project root, specifying the modules you want:
+Run `setup-new-experiment` from your project root, specifying the modules for each step:
 
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
@@ -47,13 +47,13 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
   --baseyear 2005 \
   --seed 1234 \
   --nsamps 1000 \
-  --temperature-module fair-temperature \
-  --sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
-  --framework-module facts-total \
-  --extremesealevel-module extremesealevel-pointsoverthreshold
+  --climate-step fair-temperature \
+  --sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
+  --totaling-step facts-total \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
-If `facts-total` is included as the `--framework-module`, the CLI interactively prompts you to define your workflows:
+If `facts-total` is included as the `--totaling-step`, the CLI interactively prompts you to define your workflows:
 
 ![workflow prompts](../imgs/toy_experiment_workflow_prompts.png)
 
@@ -62,6 +62,36 @@ Once complete, the tool:
 - Writes a pre-populated `experiment-metadata.yml`
 
 ![rest of setup](../imgs/toy_experiment_rest_of_setup_new_exp.png)
+
+### Supplying pre-existing data instead of running a step
+
+You can bypass one or more steps by providing pre-existing data instead of a module name:
+
+**Skip the climate step** — provide a path to existing climate output (e.g. a FAIR output file):
+
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+  --experiment-name toy_experiment_with_climate_data \
+  --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
+  --baseyear 2005 --seed 1234 --nsamps 1000 \
+  --climate-step-data /path/to/climate_data.nc \
+  --sealevel-step bamber19-icesheets,tlm-sterodynamics \
+  --totaling-step facts-total \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
+```
+
+Sealevel modules that need climate data will automatically receive this path. No climate service is added to the compose file.
+
+**Skip the climate and sealevel steps** — provide pre-computed totaled sea level data. The totaling step is automatically omitted too:
+
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+  --experiment-name toy_experiment_esl_only \
+  --scenario ssp585 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
+  --baseyear 2005 --seed 1234 --nsamps 1000 \
+  --supplied-totaled-sealevel-data /path/to/totaled_sealevel.nc \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
+```
 
 ---
 

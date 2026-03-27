@@ -11,8 +11,19 @@ A FACTS v2 experiment consists of running one or more containerized modules from
 
 This package centers around physical artifacts and core in-memory representations:
 
-- An **experiment** is defined as a set of parameters, a collection of modules, and a list of workflows. It is serialized as `experiment-metadata.yml` and represented in-memory by the `FactsExperiment` class.
-- Each containerized module has a corresponding **module YAML** (e.g. `bamber19_icesheets_module.yaml`) and an optional **defaults YAML** (e.g. `defaults_bamber19_icesheets.yml`). In-memory, this is a `FactsModule` object.
+- An **experiment** is defined as a set of parameters, a collection of steps, and a list of workflows. It is serialized as `experiment-metadata.yml` and represented in-memory by the `FactsExperiment` class.
+- Each containerized module has a corresponding **module YAML** (e.g. `bamber19_icesheets_module.yaml`) and an optional **defaults YAML** (e.g. `defaults_bamber19_icesheets.yml`). In-memory, this is a `ModuleSchema` object.
+
+## Experiment steps
+
+An experiment is organized into four sequential steps. Each step can either run a module or receive pre-existing data — letting you skip computation at any step by supplying results directly.
+
+| Step | Run a module | Supply data instead |
+|------|-------------|---------------------|
+| **Climate** | `--climate-step <module>` | `--climate-step-data <path>` |
+| **Sea Level** | `--sealevel-step <modules>` | `--supplied-totaled-sealevel-data <path>` |
+| **Totaling** | `--totaling-step <module>` (default: `facts-total`) | *(auto-skipped when totaled sealevel data is supplied)* |
+| **Extreme Sea Level** | `--extremesealevel-step <module>` | *(omit the flag)* |
 
 ## Two-step workflow
 
@@ -31,10 +42,10 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
   --pipeline-id aaa --scenario ssp585 \
   --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
   --baseyear 2005 --seed 1234 --nsamps 1000 \
-  --temperature-module fair-temperature \
-  --sealevel-modules bamber19-icesheets,tlm-sterodynamics,ipccar5-glaciers \
-  --framework-module facts-total \
-  --extremesealevel-module extremesealevel-pointsoverthreshold
+  --climate-step fair-temperature \
+  --sealevel-step bamber19-icesheets,tlm-sterodynamics,ipccar5-glaciers \
+  --totaling-step facts-total \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
 See [Quickstart](getting-started/quickstart.md) for the full walkthrough.

@@ -13,10 +13,12 @@ setup-new-experiment [OPTIONS]
 | Option | Required | Description |
 |--------|----------|-------------|
 | `--experiment-name TEXT` | Yes | Name of the experiment |
-| `--temperature-module TEXT` | Yes | Temperature module name, or `NONE` |
-| `--sealevel-modules TEXT` | Yes | Comma-separated list of sea-level module names |
-| `--framework-module TEXT` | No | Framework module name, or `NONE` |
-| `--extremesealevel-module TEXT` | No | Extreme sea-level module name, or `NONE` |
+| `--climate-step TEXT` | No | Climate module name (e.g. `fair-temperature`) |
+| `--climate-step-data PATH` | No | Path to pre-existing climate data — runs no climate module |
+| `--sealevel-step TEXT` | No | Comma-separated list of sea-level module names |
+| `--supplied-totaled-sealevel-data PATH` | No | Path to pre-existing totaled sealevel data — skips climate, sealevel, and totaling steps |
+| `--totaling-step TEXT` | No | Totaling module name, or `NONE` (default: `facts-total`) |
+| `--extremesealevel-step TEXT` | No | Extreme sea-level module name, or `NONE` |
 | `--pipeline-id TEXT` | No | Pipeline ID |
 | `--scenario TEXT` | No | Climate scenario (e.g. `ssp585`) |
 | `--baseyear INTEGER` | No | Base year |
@@ -33,7 +35,7 @@ setup-new-experiment [OPTIONS]
 
 ## What it does
 
-Running `setup-new-experiment` performs five steps:
+Running `setup-new-experiment` performs these steps:
 
 1. Creates `experiments/<experiment-name>/` in your project root
 2. Creates standard subdirectories (`data/output/`, per-module subdirs) and placeholder files
@@ -41,9 +43,11 @@ Running `setup-new-experiment` performs five steps:
 4. Merges default values from each module's `defaults_*.yml`
 5. Writes `experiment-metadata.yml` using a Jinja2 template — fields you did not supply are left as commented hints for you to fill in
 
-If `facts-total` is specified as the `--framework-module`, the CLI interactively prompts you to name and configure the experiment's workflows before writing the metadata file.
+If `facts-total` is specified as the `--totaling-step`, the CLI interactively prompts you to name and configure the experiment's workflows before writing the metadata file.
 
-## Example
+## Examples
+
+### Full run — all steps run modules
 
 ```shell
 setup-new-experiment \
@@ -52,10 +56,40 @@ setup-new-experiment \
   --scenario ssp585 \
   --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
   --baseyear 2005 --seed 1234 --nsamps 1000 \
-  --temperature-module fair-temperature \
-  --sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
-  --framework-module facts-total \
-  --extremesealevel-module extremesealevel-pointsoverthreshold
+  --climate-step fair-temperature \
+  --sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
+  --totaling-step facts-total \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
+```
+
+### Supply pre-existing climate data (skip climate step)
+
+Use `--climate-step-data` to provide the path to an existing climate output file (e.g. a FAIR run you already have). The sealevel modules that require climate input will automatically receive this path, and no climate service will be added to the compose file.
+
+```shell
+setup-new-experiment \
+  --experiment-name my_exp_with_climate_data \
+  --scenario ssp585 \
+  --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
+  --baseyear 2005 --seed 1234 --nsamps 1000 \
+  --climate-step-data /path/to/climate_data.nc \
+  --sealevel-step bamber19-icesheets,tlm-sterodynamics \
+  --totaling-step facts-total \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
+```
+
+### Supply pre-existing totaled sealevel data (skip climate, sealevel, and totaling steps)
+
+Use `--supplied-totaled-sealevel-data` to provide the path to already-computed totaled sea level output. This skips the climate and sealevel steps entirely. The totaling step is also automatically omitted (since there is nothing to total).
+
+```shell
+setup-new-experiment \
+  --experiment-name my_exp_esl_only \
+  --scenario ssp585 \
+  --pyear-start 2020 --pyear-end 2100 --pyear-step 10 \
+  --baseyear 2005 --seed 1234 --nsamps 1000 \
+  --supplied-totaled-sealevel-data /path/to/totaled_sealevel.nc \
+  --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
 !!! note

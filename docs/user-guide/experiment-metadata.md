@@ -27,7 +27,7 @@ seed: 1234 # (7)!
 fingerprint-dir: FPRINT # (8)!
 location-file: location.lst # (9)!
 
-temperature_module: fair-temperature # (10)!
+climate_step: fair-temperature # (10)!
 sealevel_modules: # (11)!
   - bamber19-icesheets
   - tlm-sterodynamics
@@ -55,8 +55,8 @@ output-data-location: ./experiments/toy_experiment/data/output # (15)!
 7. Random seed for reproducibility. Passed to every module that uses sampling.
 8. Name of the GRD fingerprint data directory within your `general-input-data` path. Passed to any module that produces spatially-resolved (local) sea-level output.
 9. Name of the location list file within your `general-input-data` path. Lists the lat/lon points for which local sea-level projections are computed.
-10. The temperature / climate forcing module. Set by `--temperature-module`. Use `NONE` if you are providing pre-computed climate files instead of running a climate model.
-11. The full list of sea-level modules in this experiment. Set by `--sealevel-modules`. `generate-compose` creates one Docker service per module listed here.
+10. The climate step module. Set by `--climate-step`. If you provided `--climate-step-data` instead, this field will be `null` and an `alternate_climate_data` field will hold the path you supplied. If you provided `--supplied-totaled-sealevel-data`, this field will also be `null`.
+11. The full list of sea-level modules in this experiment. Set by `--sealevel-step`. `generate-compose` creates one Docker service per module listed here. If you provided `--supplied-totaled-sealevel-data`, this field will be `null` and a `supplied_totaled_sealevel_data` field will hold the path.
 12. Each workflow is a named combination of sea-level modules whose outputs are summed by `facts-total` to produce a total sea-level projection. Entered interactively during `setup-new-experiment` when `facts-total` is the framework module. Add or edit workflows here if you want to change the combinations after setup.
 13. **Required — fill this in before running `generate-compose`.** Absolute path to the directory containing your module-specific input data. Should have one subdirectory per module, named after the module (e.g. `bamber19-icesheets/`).
 14. **Required — fill this in before running `generate-compose`.** Absolute path to the directory containing your general input data — `location.lst` and the GRD fingerprint directory live here.
@@ -121,7 +121,7 @@ bamber19-icesheets:
 3. The comment lists which top-level parameters this module inherits automatically. You do **not** need to re-specify them here — `generate-compose` pulls them directly from the top section.
 4. The container image for this module. Do not change this unless you are intentionally pinning to a different version.
 5. Output paths are auto-generated relative to `output-data-location`. They wire outputs from one module as inputs to the next (e.g. `fair-temperature/climate.nc` becomes `climate_data_file` for downstream modules). Do not modify these.
-6. Automatically set to reference the temperature module's output. If you used `NONE` as your temperature module and are supplying a pre-computed climate file, update this path.
+6. Automatically set to reference the climate step's output. If you used `--climate-step-data`, this is automatically populated with the path you supplied. If you are editing the metadata manually, update this to your climate file path.
 7. A module-specific input file pre-filled from `defaults_bamber19_icesheets.yml`. Verify this filename matches the file in your `module-specific-input-data/bamber19-icesheets/` directory.
 8. Left blank intentionally — resolved at compose-generation time from the top-level `fingerprint-dir` and `location-file` fields. Leave empty.
 9. Module-specific options pre-filled from the defaults file. You can change values (e.g. adjust `chunksize` for performance) but keep the keys exactly as-is.
