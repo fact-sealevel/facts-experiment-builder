@@ -35,9 +35,9 @@ cd fresh_facts_project
 #### 2. Create an experiment via CLI
 - at a minimum, this entails specifying:
      - `--experiment-name`
-     - `--climate-step` OR `--climate-step-data` (module name or path to pre-existing climate data)
-     - `--sealevel-step` OR `--supplied-totaled-sealevel-data` (module name(s) or path to pre-existing sealevel data)
-     - `--totaling-step` defaults to `facts-total`; pass `NONE` to skip (automatically skipped when `--sealevel-step-data` is used)
+     - `--climate-step` OR `--supplied-climate-step-data` (module name or path to pre-existing climate data)
+     - `--sealevel-step` OR `--supplied-totaled-sealevel-step-data` (module name(s) or path to pre-existing sealevel data)
+     - `--totaling-step` defaults to `facts-total`; pass `NONE` to skip (automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
      - `--extremesealevel-step` (ie. `extremesealevel-pointsoverthreshold`)
      - For full features list, see help section below.
 
@@ -60,7 +60,7 @@ Example (using pre-existing climate data instead of running a climate module):
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
 --experiment-name toy_experiment_with_climate_data --scenario ssp585 \
 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
---climate-step-data /path/to/climate_data.nc \
+--supplied-climate-step-data /path/to/climate_data.nc \
 --sealevel-step bamber19-icesheets,tlm-sterodynamics \
 --totaling-step facts-total \
 --extremesealevel-step extremesealevel-pointsoverthreshold
@@ -110,8 +110,8 @@ This is a command line application with two main functions:
 Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-metadata.yml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-metadata.yml` before it is considered complete.
 
 Each step accepts either a module name or a path to pre-existing data:
-- `--climate-step` / `--climate-step-data`: run a climate module or provide climate output directly
-- `--sealevel-step` / `--supplied-totaled-sealevel-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--sealevel-step-data` is used)
+- `--climate-step` / `--supplied-climate-step-data`: run a climate module or provide climate output directly
+- `--sealevel-step` / `--supplied-totaled-sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
 
 ```shell
 uv run setup-new-experiment --help
@@ -122,11 +122,11 @@ Usage: setup-new-experiment [OPTIONS]
 Options:
   --experiment-name TEXT         Name of the experiment  [required]
   --climate-step TEXT            Name of the temperature module
-  --climate-step-data PATH       Path to data to use in place of running a
+  --supplied-climate-step-data PATH       Path to data to use in place of running a
                                  module in the climate step of the experiment.
   --sealevel-step TEXT           Names of the sea level modules, separated by
                                  commas
-  --sealevel-step-data PATH      Path to data to use in place of running
+  --supplied-totaled-sealevel-step-data PATH      Path to data to use in place of running
                                  modules in sea-level step
   --totaling-step TEXT           Name of the totaling step module (use 'NONE'
                                  if you do not want to call the totaling

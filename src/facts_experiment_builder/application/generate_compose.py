@@ -336,7 +336,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         and not modules["esl_modules"]
     ):
         has_step_data = bool(
-            metadata.get("sealevel-step-data")
+            metadata.get("supplied-totaled-sealevel-step-data")
             or metadata.get("experiment-specific-input-data")
         )
         if has_step_data:

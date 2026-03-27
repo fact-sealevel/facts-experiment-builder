@@ -15,7 +15,7 @@ class TypedPath:
       determined by the module YAML mount spec.
     - "container": already a container path; used as-is.
     - "experiment_specific_in": host path for user-supplied experiment data (e.g.
-      climate data passed via --climate-step-data); always routed to
+      climate data passed via --supplied-climate-step-data); always routed to
       /mnt/experiment_specific_in/<filename> with the parent directory volume-mounted.
     """
 

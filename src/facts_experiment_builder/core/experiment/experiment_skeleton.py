@@ -16,7 +16,7 @@ class ExperimentSkeleton:
     climate_module: Optional[str]  # None if data provided
     climate_data: Optional[str]  # None if module provided
     sealevel_modules: List[str]  # [] if data provided
-    supplied_totaled_sealevel_data: Optional[str]  # None if modules provided
+    supplied_totaled_sealevel_step_data: Optional[str]  # None if modules provided
     totaling_module: Optional[str]  # None if no totaling step
     extremesealevel_module: Optional[str]  # None if no ESL step
     workflows: Dict[str, str] = field(default_factory=dict)
@@ -25,9 +25,9 @@ class ExperimentSkeleton:
     def from_cli_inputs(
         cls,
         climate_step: Optional[str],
-        climate_step_data: Optional[str],
+        supplied_climate_step_data: Optional[str],
         sealevel_step: Optional[str],
-        sealevel_step_data: Optional[str],
+        supplied_totaled_sealevel_step_data: Optional[str],
         totaling_step: Optional[str],
         extremesealevel_step: Optional[str],
     ) -> "ExperimentSkeleton":
@@ -43,9 +43,9 @@ class ExperimentSkeleton:
 
         return cls(
             climate_module=climate_modules[0] if climate_modules else None,
-            climate_data=climate_step_data,
+            climate_data=supplied_climate_step_data,
             sealevel_modules=sealevel_modules,
-            supplied_totaled_sealevel_data=sealevel_step_data,
+            supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
             totaling_module=totaling_modules[0] if totaling_modules else None,
             extremesealevel_module=esl_modules[0] if esl_modules else None,
         )
