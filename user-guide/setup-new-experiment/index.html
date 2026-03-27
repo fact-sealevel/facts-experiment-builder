@@ -1291,7 +1291,7 @@
 <td>Climate module name (e.g. <code>fair-temperature</code>)</td>
 </tr>
 <tr>
-<td><code>--climate-step-data PATH</code></td>
+<td><code>--supplied-climate-step-data PATH</code></td>
 <td>No</td>
 <td>Path to pre-existing climate data — runs no climate module</td>
 </tr>
@@ -1301,7 +1301,7 @@
 <td>Comma-separated list of sea-level module names</td>
 </tr>
 <tr>
-<td><code>--supplied-totaled-sealevel-data PATH</code></td>
+<td><code>--supplied-totaled-sealevel-step-data PATH</code></td>
 <td>No</td>
 <td>Path to pre-existing totaled sealevel data — skips climate, sealevel, and totaling steps</td>
 </tr>
@@ -1406,25 +1406,25 @@
 <a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
 </code></pre></div>
 <h3 id="supply-pre-existing-climate-data-skip-climate-step">Supply pre-existing climate data (skip climate step)</h3>
-<p>Use <code>--climate-step-data</code> to provide the path to an existing climate output file (e.g. a FAIR run you already have). The sealevel modules that require climate input will automatically receive this path, and no climate service will be added to the compose file.</p>
+<p>Use <code>--supplied-climate-step-data</code> to provide the path to an existing climate output file (e.g. a FAIR run you already have). The sealevel modules that require climate input will automatically receive this path, and no climate service will be added to the compose file.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>setup-new-experiment<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>my_exp_with_climate_data<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--scenario<span class="w"> </span>ssp585<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--pyear-start<span class="w"> </span><span class="m">2020</span><span class="w"> </span>--pyear-end<span class="w"> </span><span class="m">2100</span><span class="w"> </span>--pyear-step<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--baseyear<span class="w"> </span><span class="m">2005</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">1234</span><span class="w"> </span>--nsamps<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--climate-step-data<span class="w"> </span>/path/to/climate_data.nc<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--supplied-climate-step-data<span class="w"> </span>/path/to/climate_data.nc<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--sealevel-step<span class="w"> </span>bamber19-icesheets,tlm-sterodynamics<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--totaling-step<span class="w"> </span>facts-total<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
 </code></pre></div>
 <h3 id="supply-pre-existing-totaled-sealevel-data-skip-climate-sealevel-and-totaling-steps">Supply pre-existing totaled sealevel data (skip climate, sealevel, and totaling steps)</h3>
-<p>Use <code>--supplied-totaled-sealevel-data</code> to provide the path to already-computed totaled sea level output. This skips the climate and sealevel steps entirely. The totaling step is also automatically omitted (since there is nothing to total).</p>
+<p>Use <code>--supplied-totaled-sealevel-step-data</code> to provide the path to already-computed totaled sea level output. This skips the climate and sealevel steps entirely. The totaling step is also automatically omitted (since there is nothing to total).</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>setup-new-experiment<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>my_exp_esl_only<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--scenario<span class="w"> </span>ssp585<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--pyear-start<span class="w"> </span><span class="m">2020</span><span class="w"> </span>--pyear-end<span class="w"> </span><span class="m">2100</span><span class="w"> </span>--pyear-step<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--baseyear<span class="w"> </span><span class="m">2005</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">1234</span><span class="w"> </span>--nsamps<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--supplied-totaled-sealevel-data<span class="w"> </span>/path/to/totaled_sealevel.nc<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--supplied-totaled-sealevel-step-data<span class="w"> </span>/path/to/totaled_sealevel.nc<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
 </code></pre></div>
 <div class="admonition note">

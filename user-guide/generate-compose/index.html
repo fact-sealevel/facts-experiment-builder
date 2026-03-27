@@ -1224,13 +1224,13 @@
 <li>Locates <code>experiments/&lt;experiment-name&gt;/experiment-metadata.yml</code> from your project root</li>
 <li>Loads the metadata and builds a <code>FactsExperiment</code> in memory</li>
 <li>For each step that has a module (climate, sealevel, totaling, ESL), builds a fully resolved <code>ModuleServiceSpec</code> — resolving input/output paths, command arguments, volumes, and service dependencies</li>
-<li>Steps that were configured with pre-existing data (via <code>--climate-step-data</code> or <code>--supplied-totaled-sealevel-data</code>) produce no Docker services — those steps are skipped entirely</li>
+<li>Steps that were configured with pre-existing data (via <code>--supplied-climate-step-data</code> or <code>--supplied-totaled-sealevel-step-data</code>) produce no Docker services — those steps are skipped entirely</li>
 <li>For <code>facts-total</code> and ESL modules, generates one service per workflow (e.g. <code>facts-total-wf1-global</code>, <code>facts-total-wf1-local</code>)</li>
 <li>Serializes all services to <code>experiment-compose.yaml</code></li>
 </ol>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>If the climate step has no module (i.e. <code>--climate-step-data</code> was used), <code>generate-compose</code> validates that the required climate file inputs are present for each sealevel module before writing the compose file.</p>
+<p>If the climate step has no module (i.e. <code>--supplied-climate-step-data</code> was used), <code>generate-compose</code> validates that the required climate file inputs are present for each sealevel module before writing the compose file.</p>
 </div>
 <h2 id="example">Example</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>generate-compose<span class="w"> </span>--experiment-name<span class="w"> </span>toy_experiment

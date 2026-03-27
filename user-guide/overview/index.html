@@ -1267,12 +1267,12 @@
 <tr>
 <td><strong>Climate</strong></td>
 <td><code>--climate-step &lt;module&gt;</code></td>
-<td><code>--climate-step-data &lt;path&gt;</code></td>
+<td><code>--supplied-climate-step-data &lt;path&gt;</code></td>
 </tr>
 <tr>
 <td><strong>Sea Level</strong></td>
 <td><code>--sealevel-step &lt;modules&gt;</code></td>
-<td><code>--supplied-totaled-sealevel-data &lt;path&gt;</code></td>
+<td><code>--supplied-totaled-sealevel-step-data &lt;path&gt;</code></td>
 </tr>
 <tr>
 <td><strong>Totaling</strong></td>
@@ -1286,8 +1286,8 @@
 </tr>
 </tbody>
 </table>
-<p>When <code>--climate-step-data</code> is used, the supplied path is automatically wired into any sealevel modules that require climate input — no climate service is added to the compose file.</p>
-<p>When <code>--supplied-totaled-sealevel-data</code> is used, both the climate and sealevel steps are skipped, and the totaling step is automatically omitted.</p>
+<p>When <code>--supplied-climate-step-data</code> is used, the supplied path is automatically wired into any sealevel modules that require climate input — no climate service is added to the compose file.</p>
+<p>When <code>--supplied-totaled-sealevel-step-data</code> is used, both the climate and sealevel steps are skipped, and the totaling step is automatically omitted.</p>
 <h3 id="experiment">Experiment</h3>
 <p>An experiment is a named collection of steps, top-level parameters, and workflows. It lives under <code>experiments/&lt;experiment-name&gt;/</code> in your project root.</p>
 <p><strong>Top-level parameters</strong> apply across all modules:</p>
