@@ -36,7 +36,7 @@ cd fresh_facts_project
 - at a minimum, this entails specifying:
      - `--experiment-name`
      - `--climate-step` OR `--climate-step-data` (module name or path to pre-existing climate data)
-     - `--sealevel-step` OR `--sealevel-step-data` (module name(s) or path to pre-existing sealevel data)
+     - `--sealevel-step` OR `--supplied-totaled-sealevel-data` (module name(s) or path to pre-existing sealevel data)
      - `--totaling-step` defaults to `facts-total`; pass `NONE` to skip (automatically skipped when `--sealevel-step-data` is used)
      - `--extremesealevel-step` (ie. `extremesealevel-pointsoverthreshold`)
      - For full features list, see help section below.
