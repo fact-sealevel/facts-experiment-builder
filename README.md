@@ -111,7 +111,7 @@ Initialize a new experiment by calling this command and providing an experiment 
 
 Each step accepts either a module name or a path to pre-existing data:
 - `--climate-step` / `--climate-step-data`: run a climate module or provide climate output directly
-- `--sealevel-step` / `--sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--sealevel-step-data` is used)
+- `--sealevel-step` / `--supplied-totaled-sealevel-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--sealevel-step-data` is used)
 
 ```shell
 uv run setup-new-experiment --help
