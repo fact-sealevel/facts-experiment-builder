@@ -12,6 +12,7 @@ from facts_experiment_builder.core.steps.base import ExperimentStep
 class ClimateStep(ExperimentStep):
     module_spec: Optional[ModuleExperimentSpec] = None
     alternate_climate_data: Optional[str] = None  # used when no climate module passed
+    _not_needed: bool = False  # used when totaled sealevel data bypasses this step
 
     @classmethod
     def from_module_schema(cls, schema: ModuleSchema) -> "ClimateStep":
@@ -20,14 +21,17 @@ class ClimateStep(ExperimentStep):
     @classmethod
     def from_dict(cls, module_name: Optional[str], d: Dict) -> "ClimateStep":
         if not module_name or module_name.upper() == "NONE":
-            return cls.none_step(alternate_climate_data=d.get("alternate_climate_data"))
+            return cls(alternate_climate_data=d.get("alternate_climate_data"))
         return cls(module_spec=ModuleExperimentSpec.from_dict(module_name, d))
 
     @classmethod
-    def none_step(cls, alternate_climate_data: Optional[str] = None) -> "ClimateStep":
-        return cls(module_spec=None, alternate_climate_data=alternate_climate_data)
+    def not_needed(cls) -> "ClimateStep":
+        """Use when totaled sealevel data is provided and no climate step is required."""
+        return cls(module_spec=None, alternate_climate_data=None, _not_needed=True)
 
     def is_configured(self) -> bool:
+        if self._not_needed:
+            return True
         if self.module_spec is not None:
             return self.module_spec.is_configured()
         return self.alternate_climate_data is not None
@@ -43,8 +47,8 @@ class ClimateStep(ExperimentStep):
         return self.module_spec.to_dict() if self.module_spec else {}
 
     @property
-    def is_none_step(self) -> bool:
-        return self.module_spec is None
+    def is_present(self) -> bool:
+        return self.module_spec is not None
 
     @property
     def module_name(self) -> Optional[str]:

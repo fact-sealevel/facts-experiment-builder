@@ -13,17 +13,13 @@ class TotalingStep(ExperimentStep):
     module_spec: Optional[ModuleExperimentSpec] = None
 
     @classmethod
-    def none_step(cls) -> "TotalingStep":
-        return cls(module_spec=None)
-
-    @classmethod
     def from_module_schema(cls, schema: ModuleSchema) -> "TotalingStep":
         return cls(module_spec=ModuleExperimentSpec.from_module_schema(schema))
 
     @classmethod
     def from_dict(cls, module_name: Optional[str], d: Dict[str, Any]) -> "TotalingStep":
         if not module_name:
-            return cls.none_step()
+            return cls()
         return cls(module_spec=ModuleExperimentSpec.from_dict(module_name, d))
 
     def is_configured(self) -> bool:

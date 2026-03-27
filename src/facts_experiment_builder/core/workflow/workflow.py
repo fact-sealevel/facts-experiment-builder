@@ -36,11 +36,6 @@ class Workflow:
         """Value for metadata['workflows'][name] (comma-separated string)."""
         return self.to_module_list_str()
 
-    @property
-    def facts_total_service_name(self) -> str:
-        """Compose service name for this workflow's facts-total service (legacy; one per workflow)."""
-        return f"facts-total-{self.name}"
-
     def facts_total_service_name_for_type(self, output_type: str) -> str:
         """Compose service name for this workflow's facts-total service for a given output type (e.g. facts-total-wf1-global)."""
         return f"facts-total-{self.name}-{output_type}"

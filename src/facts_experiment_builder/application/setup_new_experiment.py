@@ -53,20 +53,35 @@ FINGERPRINT_PARAM_CLUES = {
 }
 
 
+def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
+    """Return the output climate file path for a climate module (e.g. 'fair-temperature/climate.nc')."""
+    schema = load_facts_module_by_name(climate_module_name)
+    for output in schema.arguments.get("outputs", []):
+        if output.get("name") == "output-climate-file":
+            filename = output.get("filename", "climate.nc")
+            return f"{climate_module_name}/{filename}"
+    return None
+
+
 def hydrate_sealevel_step(skeleton) -> SealevelStep:
     if skeleton.sealevel_modules:
         sealevel_schemas = [
             load_facts_module_by_name(m) for m in skeleton.sealevel_modules
         ]
         sealevel_step = SealevelStep.from_module_schemas(sealevel_schemas)
-        if skeleton.climate_data:
+        climate_data_file = skeleton.climate_data
+        if not climate_data_file and skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
+            climate_data_file = _climate_output_file_path(skeleton.climate_module)
+        if climate_data_file:
             for spec, schema in zip(sealevel_step.module_specs_list, sealevel_schemas):
                 if schema.uses_climate_file:
                     spec.merge_defaults(
-                        {"inputs": {"climate_data_file": skeleton.climate_data}}, schema
+                        {"inputs": {"climate_data_file": climate_data_file}}, schema
                     )
     else:
-        sealevel_step = SealevelStep(alternate_sealevel_data=skeleton.sealevel_data)
+        sealevel_step = SealevelStep(
+            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_data
+        )
     return sealevel_step
 
 
@@ -79,10 +94,10 @@ def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
         climate_step = ClimateStep.from_module_schema(
             load_facts_module_by_name(skeleton.climate_module)
         )
+    elif skeleton.supplied_totaled_sealevel_data:
+        climate_step = ClimateStep.not_needed()
     else:
-        climate_step = ClimateStep.none_step(
-            alternate_climate_data=skeleton.climate_data
-        )
+        climate_step = ClimateStep(alternate_climate_data=skeleton.climate_data)
 
     sealevel_step = hydrate_sealevel_step(skeleton)
 
@@ -91,14 +106,14 @@ def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
             load_facts_module_by_name(skeleton.totaling_module)
         )
     else:
-        totaling_step = TotalingStep.none_step()
+        totaling_step = TotalingStep()
 
     if skeleton.extremesealevel_module:
         extreme_sealevel_step = ExtremeSealevelStep.from_module_schema(
             load_facts_module_by_name(skeleton.extremesealevel_module)
         )
     else:
-        extreme_sealevel_step = ExtremeSealevelStep.none_step()
+        extreme_sealevel_step = ExtremeSealevelStep()
 
     return climate_step, sealevel_step, totaling_step, extreme_sealevel_step
 
@@ -129,7 +144,7 @@ def populate_experiment_directory(experiment_path: str, module_names: List[str])
     return
 
 
-def experimentSkeleton_to_factsExperiment(
+def experiment_skeleton_to_facts_experiment(
     experiment_name: str,
     skeleton: ExperimentSkeleton,
     pipeline_id: Optional[str] = None,
@@ -191,12 +206,12 @@ def experimentSkeleton_to_factsExperiment(
         ),
         **(
             {
-                "sealevel-step-data": create_metadata_bundle(
-                    "Sealevel step data path (replaces running sealevel modules)",
-                    skeleton.sealevel_data,
+                "supplied-totaled-sealevel-data": create_metadata_bundle(
+                    "Path to pre-existing totaled sealevel data (replaces running climate and sealevel modules)",
+                    skeleton.supplied_totaled_sealevel_data,
                 )
             }
-            if skeleton.sealevel_data
+            if skeleton.supplied_totaled_sealevel_data
             else {}
         ),
     }

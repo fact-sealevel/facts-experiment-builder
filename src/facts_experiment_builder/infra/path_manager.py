@@ -14,7 +14,6 @@ def find_module_yaml_path(module_name: str) -> Path:
 
     Args:
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets').
-        project_root: Project root (unused; kept for backwards compatibility).
 
     Returns:
         Path to the module YAML file.

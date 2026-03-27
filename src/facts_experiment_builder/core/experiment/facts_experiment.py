@@ -10,6 +10,7 @@ from facts_experiment_builder.core.module.module_experiment_spec import (
 )
 from facts_experiment_builder.core.steps import (
     ClimateStep,
+    ExperimentStep,
     SealevelStep,
     TotalingStep,
     ExtremeSealevelStep,
@@ -116,42 +117,14 @@ class FactsExperiment:
             + self._extreme_sealevel_step.module_specs()
         )
 
-    # ------------------------------------------------------------------ #
-    # Backward-compat shims — keep consumers working during transition     #
-    # ------------------------------------------------------------------ #
-
-    @property
-    def manifest(self) -> Dict[str, Any]:
-        """Manifest of modules in this experiment (backward-compat shim)."""
-        fw = [self._totaling_step.module_name] if self._totaling_step.is_present else []
-        esl = (
-            [self._extreme_sealevel_step.module_name]
-            if self._extreme_sealevel_step.is_present
-            else []
-        )
-        return {
-            "temperature_module": self._climate_step.module_name or "NONE",
-            "sealevel_modules": self._sealevel_step.module_names,
-            "framework_modules": fw,
-            "esl_modules": esl,
-        }
-
-    @property
-    def module_sections(self) -> Dict[str, Dict[str, Any]]:
-        """Module-level config sections keyed by module name (backward-compat shim).
-        Insertion order: temperature → sealevel → totaling → ESL.
-        """
-        sections: Dict[str, Dict[str, Any]] = {}
-        if self._climate_step.module_spec is not None:
-            sections[self._climate_step.module_name] = self._climate_step.to_dict()
-        sections.update(self._sealevel_step.to_dict())
-        if self._totaling_step.is_present:
-            sections[self._totaling_step.module_name] = self._totaling_step.to_dict()
-        if self._extreme_sealevel_step.is_present:
-            sections[self._extreme_sealevel_step.module_name] = (
-                self._extreme_sealevel_step.to_dict()
-            )
-        return sections
+    def list_all_steps(self) -> List[ExperimentStep]:
+        """All experiment steps in order: climate → sealevel → totaling → ESL."""
+        return [
+            self._climate_step,
+            self._sealevel_step,
+            self._totaling_step,
+            self._extreme_sealevel_step,
+        ]
 
     @property
     def paths(self) -> Dict[str, Any]:

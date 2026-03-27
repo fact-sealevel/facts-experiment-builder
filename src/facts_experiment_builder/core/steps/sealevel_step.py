@@ -11,7 +11,7 @@ from facts_experiment_builder.core.steps.base import ExperimentStep
 @dataclass
 class SealevelStep(ExperimentStep):
     module_specs_list: List[ModuleExperimentSpec] = field(default_factory=list)
-    alternate_sealevel_data: Optional[str] = None
+    supplied_totaled_sealevel_data: Optional[str] = None
 
     @classmethod
     def from_module_schemas(cls, schemas: List[ModuleSchema]) -> "SealevelStep":
@@ -32,7 +32,7 @@ class SealevelStep(ExperimentStep):
         return cls(module_specs_list=specs)
 
     def is_configured(self) -> bool:
-        if self.alternate_sealevel_data is not None:
+        if self.supplied_totaled_sealevel_data is not None:
             return True
         return all(s.is_configured() for s in self.module_specs_list)
 

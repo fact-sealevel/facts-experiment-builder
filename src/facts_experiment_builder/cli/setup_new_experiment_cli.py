@@ -10,7 +10,7 @@ from pathlib import Path
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.setup_new_experiment import (
     setup_new_experiment_fs,
-    experimentSkeleton_to_factsExperiment,
+    experiment_skeleton_to_facts_experiment,
     populate_experiment_defaults,
     populate_experiment_directory,
 )
@@ -50,10 +50,10 @@ from facts_experiment_builder.core.registry import ModuleRegistry
     help="Names of the sea level modules, separated by commas",
 )
 @click.option(
-    "--sealevel-step-data",
+    "--supplied-totaled-sealevel-data",
     type=click.Path(exists=True),
     required=False,
-    help="Path to data to use in place of running modules in sea-level step",
+    help="Path to pre-existing totaled sealevel data. Replaces running both the climate and sealevel steps.",
 )
 @click.option(
     "--totaling-step",
@@ -112,7 +112,7 @@ def main(
     climate_step,
     climate_step_data,
     sealevel_step,
-    sealevel_step_data,
+    supplied_totaled_sealevel_data,
     totaling_step,
     extremesealevel_step,
     pipeline_id,
@@ -147,7 +147,7 @@ def main(
         climate_step=climate_step,
         climate_step_data=climate_step_data,
         sealevel_step=sealevel_step,
-        sealevel_step_data=sealevel_step_data,
+        supplied_totaled_sealevel_data=supplied_totaled_sealevel_data,
     )
 
     # Build the skeleton from CLI inputs (parses comma-separated strings, no YAML loading)
@@ -155,19 +155,19 @@ def main(
         climate_step=climate_step,
         climate_step_data=climate_step_data,
         sealevel_step=sealevel_step,
-        sealevel_step_data=sealevel_step_data,
+        sealevel_step_data=supplied_totaled_sealevel_data,
         totaling_step=totaling_step,
         extremesealevel_step=extremesealevel_step,
     )
 
-    # If sealevel data is provided, totaling cannot run (no sealevel outputs to total)
+    # If totaled sealevel data is provided, totaling cannot run (no sealevel outputs to total)
     if (
-        skeleton.sealevel_data
+        skeleton.supplied_totaled_sealevel_data
         and skeleton.totaling_module
         and skeleton.totaling_module.upper() != "NONE"
     ):
         console.print(
-            "[muted]Note: Totaling step is being skipped because --sealevel-step-data was provided.[/muted]"
+            "[muted]Note: Totaling step is being skipped because --supplied-totaled-sealevel-data was provided.[/muted]"
         )
         skeleton = dataclasses.replace(skeleton, totaling_module=None)
 
@@ -213,7 +213,7 @@ def main(
 
     # Step 2: Create FactsExperiment from template
 
-    experiment = experimentSkeleton_to_factsExperiment(
+    experiment = experiment_skeleton_to_facts_experiment(
         experiment_name=experiment_name,
         skeleton=skeleton,
         pipeline_id=pipeline_id,
@@ -282,19 +282,23 @@ def _check_for_required_args(
     climate_step,
     climate_step_data,
     sealevel_step,
-    sealevel_step_data,
+    supplied_totaled_sealevel_data,
 ):
     if not experiment_name:
         raise click.UsageError(
             "Missing required argument 'experiment_name'. You must pass one with --experiment-name"
         )
-    # Check climate step
+    # Climate step is optional when totaled sealevel data is provided (no climate step needed)
+    if not supplied_totaled_sealevel_data:
+        _check_experiment_step(
+            climate_step, climate_step_data, "--climate-step", "--climate-step-data"
+        )
+    # Check sealevel step: either modules, or totaled sealevel data
     _check_experiment_step(
-        climate_step, climate_step_data, "--climate-step", "--climate-step-data"
-    )
-    # Check sealevel step
-    _check_experiment_step(
-        sealevel_step, sealevel_step_data, "--sealevel-step", "--sealevel-step-data"
+        sealevel_step,
+        supplied_totaled_sealevel_data,
+        "--sealevel-step",
+        "--supplied-totaled-sealevel-data",
     )
 
 
@@ -373,7 +377,7 @@ def print_climate_step_info(skeleton: "ExperimentSkeleton"):
 
 
 def print_sealevel_step_info(skeleton: "ExperimentSkeleton"):
-    value = skeleton.sealevel_modules or skeleton.sealevel_data
+    value = skeleton.sealevel_modules or skeleton.supplied_totaled_sealevel_data
     console.print(f"    - Sea level step: [secondary]{value}[/secondary]")
 
 

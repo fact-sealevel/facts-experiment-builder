@@ -60,6 +60,54 @@ def module_specific_inputs_path():
 
 
 @pytest.fixture
+def scenario():
+    input = "ssp585"
+    return input
+
+
+@pytest.fixture
+def pyear_start():
+    input = 2020
+    return input
+
+
+@pytest.fixture
+def pyear_end():
+    input = 2150
+    return input
+
+
+@pytest.fixture
+def pyear_step():
+    input = 10
+    return input
+
+
+@pytest.fixture
+def baseyear():
+    input = 2005
+    return input
+
+
+@pytest.fixture
+def nsamps():
+    input = 100
+    return input
+
+
+@pytest.fixture
+def pipeline_id():
+    input = "aaa"
+    return input
+
+
+@pytest.fixture
+def seed():
+    input = 1234
+    return input
+
+
+@pytest.fixture
 def setup_args(
     experiment_name,
     climate_step,
@@ -68,26 +116,34 @@ def setup_args(
     extremesealevel_step,
     module_specific_inputs_path,
     general_inputs_path,
+    scenario,
+    pyear_start,
+    pyear_end,
+    pyear_step,
+    baseyear,
+    nsamps,
+    pipeline_id,
+    seed,
 ):
     input = [
         "--experiment-name",
         experiment_name,
         "--pipeline-id",
-        "aaa",
+        pipeline_id,
         "--scenario",
-        "ssp585",
+        scenario,
         "--pyear-start",
-        "2020",
+        pyear_start,
         "--pyear-end",
-        "2150",
+        pyear_end,
         "--pyear-step",
-        "10",
+        pyear_step,
         "--baseyear",
-        "2005",
+        baseyear,
         "--seed",
-        "1234",
+        seed,
         "--nsamps",
-        "100",
+        nsamps,
         "--climate-step",
         climate_step,
         "--sealevel-step",

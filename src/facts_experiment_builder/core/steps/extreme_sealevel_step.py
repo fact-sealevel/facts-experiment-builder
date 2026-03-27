@@ -13,10 +13,6 @@ class ExtremeSealevelStep(ExperimentStep):
     module_spec: Optional[ModuleExperimentSpec] = None
 
     @classmethod
-    def none_step(cls) -> "ExtremeSealevelStep":
-        return cls(module_spec=None)
-
-    @classmethod
     def from_module_schema(cls, schema: ModuleSchema) -> "ExtremeSealevelStep":
         return cls(module_spec=ModuleExperimentSpec.from_module_schema(schema))
 
@@ -25,7 +21,7 @@ class ExtremeSealevelStep(ExperimentStep):
         cls, module_name: Optional[str], d: Dict[str, Any]
     ) -> "ExtremeSealevelStep":
         if not module_name:
-            return cls.none_step()
+            return cls()
         return cls(module_spec=ModuleExperimentSpec.from_dict(module_name, d))
 
     def is_configured(self) -> bool:

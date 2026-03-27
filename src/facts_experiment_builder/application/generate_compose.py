@@ -235,9 +235,21 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     experiment_dir = metadata_path.parent
 
-    # Step 2: Build FactsExperiment and get manifest
+    # Step 2: Build FactsExperiment
     experiment = FactsExperiment.from_metadata_dict(metadata)
-    manifest = experiment.manifest
+
+    temperature_module_name = experiment.climate_step.module_name or "NONE"
+    sealevel_module_names = experiment.sealevel_step.module_names
+    framework_module_names = (
+        [experiment.totaling_step.module_name]
+        if experiment.totaling_step.is_present
+        else []
+    )
+    esl_module_names = (
+        [experiment.extreme_sealevel_step.module_name]
+        if experiment.extreme_sealevel_step.is_present
+        else []
+    )
 
     # Step 3: Create ModuleServiceSpec instances using parsers (Adapter layer -> Domain layer)
     # modules = []
@@ -249,7 +261,6 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     }
 
     # Create temperature module if specified (and not "NONE")
-    temperature_module_name = manifest["temperature_module"]
     if temperature_module_name and temperature_module_name.upper() != "NONE":
         try:
             module = create_module_service_spec_from_metadata(
@@ -269,12 +280,10 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         # No temperature module - validate that sealevel modules have climate file inputs
         # Only validate modules that have climate_file_required=True
         print("ℹ No temperature module specified (NONE)")
-        _validate_climate_file_inputs(
-            metadata, manifest["sealevel_modules"], experiment_dir
-        )
+        _validate_climate_file_inputs(metadata, sealevel_module_names, experiment_dir)
 
     # Create sea level modules if specified
-    for module_name in manifest["sealevel_modules"]:
+    for module_name in sealevel_module_names:
         try:
             module = create_module_service_spec_from_metadata(
                 metadata_path,
@@ -290,7 +299,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     # Create framework modules if specified (skip per-workflow modules when workflows exist; we add per-workflow services below)
     workflows = workflows_from_metadata(metadata)
-    for module_name in manifest.get("framework_modules", []):
+    for module_name in framework_module_names:
         if _module_is_per_workflow(module_name) and workflows:
             continue  # per-workflow modules are added once per workflow below
         try:
@@ -306,7 +315,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             print(f"⚠ Warning: Failed to create framework module '{module_name}': {e}")
 
     # Create ESL modules if specified
-    for module_name in manifest.get("esl_modules", []):
+    for module_name in esl_module_names:
         try:
             module = create_module_service_spec_from_metadata(
                 metadata_path,
@@ -365,9 +374,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Add one facts-total service per workflow (after sealevel services)
     if workflows:
         per_workflow_fw = [
-            m
-            for m in manifest.get("framework_modules", [])
-            if _module_is_per_workflow(m)
+            m for m in framework_module_names if _module_is_per_workflow(m)
         ]
         facts_total_name = per_workflow_fw[0] if per_workflow_fw else "facts-total"
         facts_total_yaml_path = find_module_yaml_path(facts_total_name)
@@ -405,9 +412,6 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
                     )
 
         # One ESL service per workflow when both workflows and esl_modules are specified
-        esl_module_names = manifest.get("esl_modules") or []
-        if isinstance(esl_module_names, str):
-            esl_module_names = [esl_module_names]
         if esl_module_names:
             for esl_module_name in esl_module_names:
                 try:
