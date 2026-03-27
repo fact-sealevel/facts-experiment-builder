@@ -1036,6 +1036,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Core (core/)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#experiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other core
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1208,6 +1258,56 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Core (core/)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#experiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#other-core" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Other core
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1278,7 +1378,7 @@
 </code></pre></div>
 <h2 id="layers">Layers</h2>
 <h3 id="cli-srcfacts_experiment_buildercli">CLI (<code>src/facts_experiment_builder/cli/</code>)</h3>
-<p>Click commands. <code>setup-new-experiment</code> and <code>generate-compose</code> are the two main entry points. Both assume they are run from a project root that has an <code>experiments/</code> subdirectory. The setup CLI handles interactive workflow definition when <code>facts-total</code> is included.</p>
+<p>Click commands. <code>setup-new-experiment</code> and <code>generate-compose</code> are the two main entry points. Both assume they are run from a project root that has an <code>experiments/</code> subdirectory. The setup CLI handles interactive workflow definition when <code>facts-total</code> is included, and accepts step-level data bypass options (<code>--climate-step-data</code>, <code>--supplied-totaled-sealevel-data</code>).</p>
 <h3 id="application-application">Application (<code>application/</code>)</h3>
 <p>Orchestrates use cases.</p>
 <table>
@@ -1291,11 +1391,11 @@
 <tbody>
 <tr>
 <td><code>setup_new_experiment.py</code></td>
-<td>5-step flow: creates <code>experiments/&lt;name&gt;/</code>, builds a <code>FactsExperiment</code> from CLI args + module YAMLs, populates defaults, writes <code>experiment-metadata.yml</code> via Jinja2</td>
+<td>Builds a <code>FactsExperiment</code> from an <code>ExperimentSkeleton</code> + module YAMLs, populates defaults, writes <code>experiment-metadata.yml</code> via Jinja2. <code>hydrate_experiment()</code> constructs the four step objects; <code>hydrate_sealevel_step()</code> merges climate data paths into sealevel modules that need it.</td>
 </tr>
 <tr>
 <td><code>generate_compose.py</code></td>
-<td>Loads a completed <code>experiment-metadata.yml</code>, builds <code>FactsExperiment</code>, creates a <code>ModuleServiceSpec</code> per module, produces <code>experiment-compose.yaml</code>. Validates climate file inputs when temperature module is <code>NONE</code>. Per-workflow services are generated for <code>facts-total</code> and ESL modules.</td>
+<td>Loads a completed <code>experiment-metadata.yml</code>, builds <code>FactsExperiment</code>, creates a <code>ModuleServiceSpec</code> per active module, produces <code>experiment-compose.yaml</code>. Steps configured with pre-existing data produce no Docker services. Per-workflow services are generated for <code>facts-total</code> and ESL modules.</td>
 </tr>
 </tbody>
 </table>
@@ -1328,6 +1428,7 @@
 </tbody>
 </table>
 <h3 id="core-core">Core (<code>core/</code>)</h3>
+<h4 id="experiment">Experiment</h4>
 <table>
 <thead>
 <tr>
@@ -1338,16 +1439,77 @@
 <tbody>
 <tr>
 <td><code>FactsExperiment</code></td>
-<td>In-memory representation of <code>experiment-metadata.yml</code>. Two constructors: <code>from_metadata_dict()</code> (parse loaded YAML) and <code>create_new_experiment_obj()</code> (build from CLI inputs). <code>merge_defaults_for_module()</code> merges a defaults YAML into the module section with snake/kebab-case flexibility.</td>
+<td>In-memory representation of <code>experiment-metadata.yml</code>. Two constructors: <code>from_metadata_dict()</code> (parse loaded YAML) and <code>create_new_experiment_obj()</code> (build from CLI inputs). Holds the four step objects.</td>
 </tr>
 <tr>
-<td><code>FactsModule</code></td>
-<td>Dataclass for a module YAML. Fields: <code>module_name</code>, <code>container_image</code>, <code>arguments</code> (with keys <code>top_level</code>, <code>options</code>, <code>inputs</code>, <code>outputs</code>, <code>fingerprint_params</code>), <code>volumes</code>, <code>depends_on</code>, <code>command</code>, <code>uses_climate_file</code>, <code>extra</code>.</td>
+<td><code>ExperimentSkeleton</code></td>
+<td>Captures CLI intent before any YAML loading. Holds step module names and data-bypass paths. Passed to <code>hydrate_experiment()</code> to produce the full <code>FactsExperiment</code>.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="steps">Steps</h4>
+<table>
+<thead>
+<tr>
+<th>Class</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ClimateStep</code></td>
+<td>Holds either a <code>ModuleExperimentSpec</code> (module runs) or <code>alternate_climate_data</code> path (module skipped). <code>not_needed()</code> class method marks the step as satisfied when totaled sealevel data is supplied.</td>
+</tr>
+<tr>
+<td><code>SealevelStep</code></td>
+<td>Holds a list of <code>ModuleExperimentSpec</code> objects, or a <code>supplied_totaled_sealevel_data</code> path. <code>is_configured()</code> returns <code>True</code> if either modules are fully configured or totaled data is present.</td>
+</tr>
+<tr>
+<td><code>TotalingStep</code></td>
+<td>Holds an optional <code>ModuleExperimentSpec</code>. <code>None</code> when the totaling step is skipped.</td>
+</tr>
+<tr>
+<td><code>ExtremeSealevelStep</code></td>
+<td>Holds an optional <code>ModuleExperimentSpec</code>.</td>
+</tr>
+<tr>
+<td><code>steps_from_metadata()</code></td>
+<td>Factory function (<code>core/steps/factories.py</code>) that rebuilds all four step objects from a loaded metadata dict.</td>
+</tr>
+</tbody>
+</table>
+<h4 id="modules">Modules</h4>
+<table>
+<thead>
+<tr>
+<th>Class / Module</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ModuleExperimentSpec</code></td>
+<td>In-memory representation of one module's section in <code>experiment-metadata.yml</code>. <code>from_module_schema()</code> builds an initial spec with clue/value placeholders; <code>from_dict()</code> parses a loaded metadata dict. <code>is_configured()</code> returns <code>True</code> if no unfilled clue/value bundles remain. <code>to_dict()</code> serializes back to YAML shape.</td>
+</tr>
+<tr>
+<td><code>ModuleSchema</code></td>
+<td>Dataclass for a module YAML. Fields: <code>module_name</code>, <code>container_image</code>, <code>arguments</code>, <code>volumes</code>, <code>depends_on</code>, <code>command</code>, <code>uses_climate_file</code>, <code>extra</code>.</td>
 </tr>
 <tr>
 <td><code>ModuleServiceSpec</code></td>
-<td>Fully resolved spec for one Docker Compose service. <code>generate_compose_service()</code> orchestrates <code>_build_command_args()</code>, <code>_build_volumes()</code>, <code>_build_depends_on()</code>. Arguments are processed in YAML order: <code>top_level → fingerprint_params → options → inputs → outputs</code>. Automatically adds depends_on for temperature service when <code>uses_climate_file</code> is true.</td>
+<td>Fully resolved spec for one Docker Compose service. <code>generate_compose_service()</code> orchestrates <code>_build_command_args()</code>, <code>_build_volumes()</code>, <code>_build_depends_on()</code>. Arguments processed in YAML order: <code>top_level → fingerprint_params → options → inputs → outputs</code>. Automatically adds depends_on for the climate service when <code>uses_climate_file</code> is true.</td>
 </tr>
+</tbody>
+</table>
+<h4 id="other-core">Other core</h4>
+<table>
+<thead>
+<tr>
+<th>Class / Module</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
 <tr>
 <td><code>Workflow</code></td>
 <td>Frozen dataclass (<code>name</code> + <code>module_names</code>). Provides service naming and output filename conventions. <code>workflows_from_metadata()</code> / <code>workflows_to_metadata()</code> handle serialization.</td>
@@ -1363,6 +1525,10 @@
 <tr>
 <td><code>typed_path.py</code></td>
 <td><code>TypedPath</code> with <code>HostPath</code>/<code>ContainerPath</code> constructors — used so the compose builder knows whether to rewrite a path to a container path or use it as-is.</td>
+</tr>
+<tr>
+<td><code>components/metadata_bundle.py</code></td>
+<td><code>create_metadata_bundle(clue, value)</code> and <code>is_metadata_value()</code> — produce and detect <code>{clue: ..., value: ...}</code> dicts used as fill-in-the-blank hints in the Jinja2 template.</td>
 </tr>
 </tbody>
 </table>
@@ -1381,11 +1547,11 @@
 </tr>
 <tr>
 <td><code>path_utils.py</code></td>
-<td>Expands <code>~</code> and env vars (<code>expand_path</code>), routes inputs to general vs module-specific base paths (<code>resolve_input_path</code>, <code>is_general_input</code>), resolves output paths (<code>resolve_output_path</code>). <code>find_project_root()</code> walks up from cwd looking for <code>pyproject.toml</code>.</td>
+<td>Expands <code>~</code> and env vars (<code>expand_path</code>), routes inputs to general vs module-specific base paths (<code>resolve_input_path</code>, <code>is_general_input</code>), resolves output paths (<code>resolve_output_path</code>). <code>resolve_experiment_directory_path()</code> uses <code>Path.cwd()</code> as project root.</td>
 </tr>
 <tr>
 <td><code>module_loader.py</code> / <code>module_defaults_loader.py</code></td>
-<td>Load <code>FactsModule</code> and defaults YAMLs from <code>resources/configs/</code>.</td>
+<td>Load <code>ModuleSchema</code> and defaults YAMLs from <code>resources/configs/</code>.</td>
 </tr>
 <tr>
 <td><code>experiment_loader.py</code> / <code>experiment_manager.py</code></td>
@@ -1408,9 +1574,9 @@
 <ul>
 <li><strong>Module naming</strong>: CLI uses kebab-case (e.g. <code>bamber19-icesheets</code>); config filenames use snake_case (e.g. <code>bamber19_icesheets_module.yaml</code>). Conversion with <code>.replace("-", "_")</code> is pervasive.</li>
 <li><strong>Input path routing</strong>: <code>is_general_input()</code> matches field names containing <code>location</code>, <code>fingerprint</code>, or <code>fp</code> and routes them to <code>general-input-data</code>; all other inputs route to <code>module-specific-input-data/&lt;module_name&gt;/</code>.</li>
-<li><strong>Clue/value bundles</strong>: <code>create_metadata_bundle(clue, value)</code> produces <code>{clue: ..., value: ...}</code> dicts. <code>is_metadata_value()</code> detects them. In the Jinja2 template they render as commented hints for fields the user must fill in.</li>
+<li><strong>Clue/value bundles</strong>: <code>create_metadata_bundle(clue, value)</code> produces <code>{clue: ..., value: ...}</code> dicts. <code>is_metadata_value()</code> detects them. Both live in <code>core/components/metadata_bundle.py</code>. In the Jinja2 template they render as commented hints for fields the user must fill in.</li>
 <li><strong>Per-workflow services</strong>: <code>facts-total</code> and ESL modules produce one Compose service per workflow (e.g. <code>facts-total-wf1-global</code>, <code>facts-total-wf1-local</code>), not a single shared service.</li>
-<li><strong><code>find_project_root()</code></strong> is in <code>infra/path_utils.py</code>, not <code>path_manager.py</code>.</li>
+<li><strong>Step bypass</strong>: Steps configured with pre-existing data (<code>alternate_climate_data</code>, <code>supplied_totaled_sealevel_data</code>) produce no Docker services. The <code>is_present</code> property on step objects controls whether a service is generated.</li>
 </ul>
 
 

@@ -421,6 +421,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#experiment-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#two-step-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1119,6 +1130,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#experiment-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#two-step-workflow" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1192,9 +1214,42 @@
 <p>A FACTS v2 experiment consists of running one or more containerized modules from the FACTS v2 ecosystem. It typically has a set of <strong>top-level parameters</strong> shared across all modules (e.g. <code>nsamps</code>, <code>scenario</code>, <code>pyear-start/end/step</code>, <code>baseyear</code>) and one or more <strong>workflows</strong> — combinations of sea-level modules that are summed to produce output distributions of projected future sea-level rise.</p>
 <p>This package centers around physical artifacts and core in-memory representations:</p>
 <ul>
-<li>An <strong>experiment</strong> is defined as a set of parameters, a collection of modules, and a list of workflows. It is serialized as <code>experiment-metadata.yml</code> and represented in-memory by the <code>FactsExperiment</code> class.</li>
-<li>Each containerized module has a corresponding <strong>module YAML</strong> (e.g. <code>bamber19_icesheets_module.yaml</code>) and an optional <strong>defaults YAML</strong> (e.g. <code>defaults_bamber19_icesheets.yml</code>). In-memory, this is a <code>FactsModule</code> object.</li>
+<li>An <strong>experiment</strong> is defined as a set of parameters, a collection of steps, and a list of workflows. It is serialized as <code>experiment-metadata.yml</code> and represented in-memory by the <code>FactsExperiment</code> class.</li>
+<li>Each containerized module has a corresponding <strong>module YAML</strong> (e.g. <code>bamber19_icesheets_module.yaml</code>) and an optional <strong>defaults YAML</strong> (e.g. <code>defaults_bamber19_icesheets.yml</code>). In-memory, this is a <code>ModuleSchema</code> object.</li>
 </ul>
+<h2 id="experiment-steps">Experiment steps</h2>
+<p>An experiment is organized into four sequential steps. Each step can either run a module or receive pre-existing data — letting you skip computation at any step by supplying results directly.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>Run a module</th>
+<th>Supply data instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Climate</strong></td>
+<td><code>--climate-step &lt;module&gt;</code></td>
+<td><code>--climate-step-data &lt;path&gt;</code></td>
+</tr>
+<tr>
+<td><strong>Sea Level</strong></td>
+<td><code>--sealevel-step &lt;modules&gt;</code></td>
+<td><code>--supplied-totaled-sealevel-data &lt;path&gt;</code></td>
+</tr>
+<tr>
+<td><strong>Totaling</strong></td>
+<td><code>--totaling-step &lt;module&gt;</code> (default: <code>facts-total</code>)</td>
+<td><em>(auto-skipped when totaled sealevel data is supplied)</em></td>
+</tr>
+<tr>
+<td><strong>Extreme Sea Level</strong></td>
+<td><code>--extremesealevel-step &lt;module&gt;</code></td>
+<td><em>(omit the flag)</em></td>
+</tr>
+</tbody>
+</table>
 <h2 id="two-step-workflow">Two-step workflow</h2>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>setup-new-experiment  →  (edit experiment-metadata.yml)  →  generate-compose  →  docker compose up
 </code></pre></div>
@@ -1208,10 +1263,10 @@
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--pipeline-id<span class="w"> </span>aaa<span class="w"> </span>--scenario<span class="w"> </span>ssp585<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>--pyear-start<span class="w"> </span><span class="m">2020</span><span class="w"> </span>--pyear-end<span class="w"> </span><span class="m">2100</span><span class="w"> </span>--pyear-step<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>--baseyear<span class="w"> </span><span class="m">2005</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">1234</span><span class="w"> </span>--nsamps<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--temperature-module<span class="w"> </span>fair-temperature<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--sealevel-modules<span class="w"> </span>bamber19-icesheets,tlm-sterodynamics,ipccar5-glaciers<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--framework-module<span class="w"> </span>facts-total<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--extremesealevel-module<span class="w"> </span>extremesealevel-pointsoverthreshold
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--climate-step<span class="w"> </span>fair-temperature<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--sealevel-step<span class="w"> </span>bamber19-icesheets,tlm-sterodynamics,ipccar5-glaciers<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--totaling-step<span class="w"> </span>facts-total<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
 </code></pre></div>
 <p>See <a href="getting-started/quickstart/">Quickstart</a> for the full walkthrough.</p>
 <h2 id="documentation-sections">Documentation sections</h2>

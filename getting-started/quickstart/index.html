@@ -571,6 +571,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Step 2: Create an experiment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supplying-pre-existing-data-instead-of-running-a-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supplying pre-existing data instead of running a step
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1188,6 +1205,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Step 2: Create an experiment">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#supplying-pre-existing-data-instead-of-running-a-step" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Supplying pre-existing data instead of running a step
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1269,7 +1303,7 @@
 <img alt="module specific input data" src="../../imgs/module_specific_inputs_screenshot.png" /></p>
 <hr />
 <h2 id="step-2-create-an-experiment">Step 2: Create an experiment</h2>
-<p>Run <code>setup-new-experiment</code> from your project root, specifying the modules you want:</p>
+<p>Run <code>setup-new-experiment</code> from your project root, specifying the modules for each step:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>uvx<span class="w"> </span>--from<span class="w"> </span>git+https://github.com/fact-sealevel/facts-experiment-builder@main<span class="w"> </span>setup-new-experiment<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>toy_experiment<span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>--pipeline-id<span class="w"> </span>aaa<span class="w"> </span><span class="se">\</span>
@@ -1278,17 +1312,38 @@
 <a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>--baseyear<span class="w"> </span><span class="m">2005</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>--seed<span class="w"> </span><span class="m">1234</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">  </span>--nsamps<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--temperature-module<span class="w"> </span>fair-temperature<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>--sealevel-modules<span class="w"> </span>bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--framework-module<span class="w"> </span>facts-total<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span>--extremesealevel-module<span class="w"> </span>extremesealevel-pointsoverthreshold
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>--climate-step<span class="w"> </span>fair-temperature<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>--sealevel-step<span class="w"> </span>bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>--totaling-step<span class="w"> </span>facts-total<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
 </code></pre></div>
-<p>If <code>facts-total</code> is included as the <code>--framework-module</code>, the CLI interactively prompts you to define your workflows:</p>
+<p>If <code>facts-total</code> is included as the <code>--totaling-step</code>, the CLI interactively prompts you to define your workflows:</p>
 <p><img alt="workflow prompts" src="../../imgs/toy_experiment_workflow_prompts.png" /></p>
 <p>Once complete, the tool:
 - Creates <code>experiments/toy_experiment/</code>
 - Writes a pre-populated <code>experiment-metadata.yml</code></p>
 <p><img alt="rest of setup" src="../../imgs/toy_experiment_rest_of_setup_new_exp.png" /></p>
+<h3 id="supplying-pre-existing-data-instead-of-running-a-step">Supplying pre-existing data instead of running a step</h3>
+<p>You can bypass one or more steps by providing pre-existing data instead of a module name:</p>
+<p><strong>Skip the climate step</strong> — provide a path to existing climate output (e.g. a FAIR output file):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uvx<span class="w"> </span>--from<span class="w"> </span>git+https://github.com/fact-sealevel/facts-experiment-builder@main<span class="w"> </span>setup-new-experiment<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>toy_experiment_with_climate_data<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--scenario<span class="w"> </span>ssp585<span class="w"> </span>--pyear-start<span class="w"> </span><span class="m">2020</span><span class="w"> </span>--pyear-end<span class="w"> </span><span class="m">2100</span><span class="w"> </span>--pyear-step<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>--baseyear<span class="w"> </span><span class="m">2005</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">1234</span><span class="w"> </span>--nsamps<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>--climate-step-data<span class="w"> </span>/path/to/climate_data.nc<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>--sealevel-step<span class="w"> </span>bamber19-icesheets,tlm-sterodynamics<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>--totaling-step<span class="w"> </span>facts-total<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
+</code></pre></div>
+<p>Sealevel modules that need climate data will automatically receive this path. No climate service is added to the compose file.</p>
+<p><strong>Skip the climate and sealevel steps</strong> — provide pre-computed totaled sea level data. The totaling step is automatically omitted too:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>uvx<span class="w"> </span>--from<span class="w"> </span>git+https://github.com/fact-sealevel/facts-experiment-builder@main<span class="w"> </span>setup-new-experiment<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>toy_experiment_esl_only<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>--scenario<span class="w"> </span>ssp585<span class="w"> </span>--pyear-start<span class="w"> </span><span class="m">2020</span><span class="w"> </span>--pyear-end<span class="w"> </span><span class="m">2100</span><span class="w"> </span>--pyear-step<span class="w"> </span><span class="m">10</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>--baseyear<span class="w"> </span><span class="m">2005</span><span class="w"> </span>--seed<span class="w"> </span><span class="m">1234</span><span class="w"> </span>--nsamps<span class="w"> </span><span class="m">1000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>--supplied-totaled-sealevel-data<span class="w"> </span>/path/to/totaled_sealevel.nc<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>--extremesealevel-step<span class="w"> </span>extremesealevel-pointsoverthreshold
+</code></pre></div>
 <hr />
 <h2 id="step-3-complete-the-experiment-metadata">Step 3: Complete the experiment metadata</h2>
 <p>Open <code>experiments/toy_experiment/experiment-metadata.yml</code> and fill in any empty fields, particularly:</p>
@@ -1303,14 +1358,14 @@
 <p>Other top-level fields (<code>scenario</code>, <code>pyear-start</code>, etc.) will already be populated if you passed them as CLI arguments.</p>
 <hr />
 <h2 id="step-4-generate-the-docker-compose-file">Step 4: Generate the Docker Compose file</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>uvx<span class="w"> </span>--from<span class="w"> </span>git+https://github.com/fact-sealevel/facts-experiment-builder@main<span class="w"> </span>generate-compose<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>toy_experiment
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>uvx<span class="w"> </span>--from<span class="w"> </span>git+https://github.com/fact-sealevel/facts-experiment-builder@main<span class="w"> </span>generate-compose<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--experiment-name<span class="w"> </span>toy_experiment
 </code></pre></div>
 <p>This reads <code>experiments/toy_experiment/experiment-metadata.yml</code> and writes <code>experiments/toy_experiment/experiment-compose.yaml</code>.</p>
 <p><img alt="generate-compose output" src="../../imgs/toy_experiment_generate_compose.png" /></p>
 <hr />
 <h2 id="step-5-run-the-experiment">Step 5: Run the experiment</h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>experiments/toy_experiment/experiment-compose.yaml<span class="w"> </span>up
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>experiments/toy_experiment/experiment-compose.yaml<span class="w"> </span>up
 </code></pre></div>
 
 

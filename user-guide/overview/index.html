@@ -636,6 +636,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#experiment-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#experiment" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1153,6 +1164,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#experiment-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Experiment steps
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#experiment" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -1231,8 +1253,43 @@
 <p>The <code>experiment-metadata.yml</code> is the central artifact: it is an abstract, run-environment-agnostic specification of the full experiment. Docker is the first supported execution backend; an Async-Flow backend is planned but not yet implemented.</p>
 <hr />
 <h2 id="key-concepts">Key concepts</h2>
+<h3 id="experiment-steps">Experiment steps</h3>
+<p>An experiment is organized into four sequential <strong>steps</strong>. Each step can either run a module or receive pre-existing data, allowing you to skip computation at any step by supplying the results directly.</p>
+<table>
+<thead>
+<tr>
+<th>Step</th>
+<th>CLI option</th>
+<th>Data bypass option</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Climate</strong></td>
+<td><code>--climate-step &lt;module&gt;</code></td>
+<td><code>--climate-step-data &lt;path&gt;</code></td>
+</tr>
+<tr>
+<td><strong>Sea Level</strong></td>
+<td><code>--sealevel-step &lt;modules&gt;</code></td>
+<td><code>--supplied-totaled-sealevel-data &lt;path&gt;</code></td>
+</tr>
+<tr>
+<td><strong>Totaling</strong></td>
+<td><code>--totaling-step &lt;module&gt;</code> (default: <code>facts-total</code>)</td>
+<td><em>(auto-skipped when totaled sealevel data is supplied)</em></td>
+</tr>
+<tr>
+<td><strong>Extreme Sea Level</strong></td>
+<td><code>--extremesealevel-step &lt;module&gt;</code></td>
+<td><em>(omit the flag entirely)</em></td>
+</tr>
+</tbody>
+</table>
+<p>When <code>--climate-step-data</code> is used, the supplied path is automatically wired into any sealevel modules that require climate input — no climate service is added to the compose file.</p>
+<p>When <code>--supplied-totaled-sealevel-data</code> is used, both the climate and sealevel steps are skipped, and the totaling step is automatically omitted.</p>
 <h3 id="experiment">Experiment</h3>
-<p>An experiment is a named collection of modules, top-level parameters, and workflows. It lives under <code>experiments/&lt;experiment-name&gt;/</code> in your project root.</p>
+<p>An experiment is a named collection of steps, top-level parameters, and workflows. It lives under <code>experiments/&lt;experiment-name&gt;/</code> in your project root.</p>
 <p><strong>Top-level parameters</strong> apply across all modules:</p>
 <table>
 <thead>
@@ -1274,46 +1331,14 @@
 <li>A <strong>module YAML</strong> (e.g. <code>bamber19_icesheets_module.yaml</code>) describing its inputs, outputs, arguments, and container image.</li>
 <li>An optional <strong>defaults YAML</strong> (e.g. <code>defaults_bamber19_icesheets.yml</code>) with default parameter values.</li>
 </ul>
-<p>Modules are organized into four categories:</p>
-<table>
-<thead>
-<tr>
-<th>Category</th>
-<th>CLI flag</th>
-<th>Description</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Temperature</td>
-<td><code>--temperature-module</code></td>
-<td>Provides climate forcing (or <code>NONE</code> to supply pre-computed climate files)</td>
-</tr>
-<tr>
-<td>Sea level</td>
-<td><code>--sealevel-modules</code></td>
-<td>One or more sea-level contribution modules (comma-separated)</td>
-</tr>
-<tr>
-<td>Framework</td>
-<td><code>--framework-module</code></td>
-<td>Aggregation module (currently <code>facts-total</code>)</td>
-</tr>
-<tr>
-<td>Extreme sea level</td>
-<td><code>--extremesealevel-module</code></td>
-<td>ESL module (e.g. <code>extremesealevel-pointsoverthreshold</code>)</td>
-</tr>
-</tbody>
-</table>
 <p>See <a href="../modules/">Available Modules</a> for the full list.</p>
 <h3 id="workflow">Workflow</h3>
 <p>A workflow is a named combination of sea-level modules whose outputs are summed to produce a total sea-level projection. Experiments can contain multiple workflows (e.g. one using <code>bamber19-icesheets</code> and another using <code>larmip-ais</code> for the Antarctic contribution).</p>
-<p>When <code>facts-total</code> is the framework module, the CLI prompts you to define workflows interactively during <code>setup-new-experiment</code>.</p>
+<p>When <code>facts-total</code> is the totaling step module, the CLI prompts you to define workflows interactively during <code>setup-new-experiment</code>.</p>
 <h3 id="experiment-metadatayml">experiment-metadata.yml</h3>
 <p>This is the source of truth for the experiment. It contains:
 - Top-level parameters
-- The module manifest (which modules are included)
+- The step manifest (which modules or data sources are used at each step)
 - Input/output path configuration
 - Per-module argument sections (pre-populated from module YAMLs and defaults)
 - Workflow definitions</p>
