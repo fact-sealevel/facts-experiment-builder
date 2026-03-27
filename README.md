@@ -34,27 +34,39 @@ cd fresh_facts_project
 
 #### 2. Create an experiment via CLI
 - at a minimum, this entails specifying:
-     - `experiment-name`
-     - `temperature-module` (note: will be renamed to climate-step. if using, alternatively can provide fair output or data resembling)
-     - `sealevel-modules`
-     - `framework-modules` (currently, this is just `facts-total` -- this will probably change)
-     - `extremesealevel-modules` (ie. `extremesealevel-pointsoverthreshold`)
+     - `--experiment-name`
+     - `--climate-step` OR `--climate-step-data` (module name or path to pre-existing climate data)
+     - `--sealevel-step` OR `--supplied-totaled-sealevel-data` (module name(s) or path to pre-existing sealevel data)
+     - `--totaling-step` defaults to `facts-total`; pass `NONE` to skip (automatically skipped when `--sealevel-step-data` is used)
+     - `--extremesealevel-step` (ie. `extremesealevel-pointsoverthreshold`)
      - For full features list, see help section below.
 
 >[!NOTE]
-> You can see which modules are available to use in an experiment by running `uv run list-experiments`.
+> You can see which modules are available to use in an experiment by running `uv run list-modules`.
 
-Example:
+Example (standard run with all modules):
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
 --experiment-name toy_experiment --pipeline-id aaa --scenario ssp585 \
 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
---temperature-module fair-temperature \
---sealevel-modules bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
---framework-module facts-total \
---extremesealevel-module extremesealevel-pointsoverthreshold
+--climate-step fair-temperature \
+--sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,nzinsargps-verticallandmotion,kopp14-verticallandmotion \
+--totaling-step facts-total \
+--extremesealevel-step extremesealevel-pointsoverthreshold
 ```
-- If `facts-total` is passed to `--framework-module`, the CLI prompts the user for information about the workflows included in the experiment:
+
+Example (using pre-existing climate data instead of running a climate module):
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+--experiment-name toy_experiment_with_climate_data --scenario ssp585 \
+--pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
+--climate-step-data /path/to/climate_data.nc \
+--sealevel-step bamber19-icesheets,tlm-sterodynamics \
+--totaling-step facts-total \
+--extremesealevel-step extremesealevel-pointsoverthreshold
+```
+
+- If `facts-total` is passed to `--totaling-step`, the CLI prompts the user for information about the workflows included in the experiment:
 ![workflow prompts](imgs/cli_output_workflow_prompts.png)
 Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
@@ -95,24 +107,31 @@ docker compose -f experiments/toy_experiment/experiment-compose.yaml up
 This is a command line application with two main functions:
 
 **`setup-new-experiment`**
-Initialize a new experiment by calling this command and providing an experiment name and the modules that will be included in the experiment. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates a `experiment-metadata.yml` based on the arguments provided by the user. **The user must then enter the remaining fields in `experiment-metadata.yml` before it is considered complete.
+Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-metadata.yml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-metadata.yml` before it is considered complete.
+
+Each step accepts either a module name or a path to pre-existing data:
+- `--climate-step` / `--climate-step-data`: run a climate module or provide climate output directly
+- `--sealevel-step` / `--supplied-totaled-sealevel-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--sealevel-step-data` is used)
 
 ```shell
-uv run setup-new-experiment --help                     
+uv run setup-new-experiment --help
 Usage: setup-new-experiment [OPTIONS]
 
-  Create a new experiment directory with template files using Jinja2
-  templating.
+  Set up a new experiment with setup-new-experiment CLI command.
 
 Options:
   --experiment-name TEXT         Name of the experiment  [required]
-  --temperature-module TEXT      Name of the temperature module (use 'NONE' if
-                                 no temperature module)  [required]
-  --sealevel-modules TEXT        Names of the sea level modules, separated by
-                                 commas  [required]
-  --framework-module TEXT        Name of the framework module (use 'NONE' if
-                                 no framework module)
-  --extremesealevel-module TEXT  Name of the extreme sea level module (use
+  --climate-step TEXT            Name of the temperature module
+  --climate-step-data PATH       Path to data to use in place of running a
+                                 module in the climate step of the experiment.
+  --sealevel-step TEXT           Names of the sea level modules, separated by
+                                 commas
+  --sealevel-step-data PATH      Path to data to use in place of running
+                                 modules in sea-level step
+  --totaling-step TEXT           Name of the totaling step module (use 'NONE'
+                                 if you do not want to call the totaling
+                                 module)  [default: facts-total]
+  --extremesealevel-step TEXT    Name of the extreme sea level module (use
                                  'NONE' if no extreme sea level module)
   --pipeline-id TEXT             Pipeline ID
   --scenario TEXT                Scenario

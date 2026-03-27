@@ -16,13 +16,15 @@ def project_root(tmp_path):
 
 ## setup new experiment fixtures
 @pytest.fixture
-def temperature_module():
+def climate_step():
+    """The module to include in the temperature step of the integration test experiment."""
     input = "fair-temperature"
     return input
 
 
 @pytest.fixture
-def sealevel_modules():
+def sealevel_step():
+    """The module(s) to include in the sea-level step of the integration test experiment."""
     input = (
         "bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,"
         "ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,"
@@ -32,13 +34,15 @@ def sealevel_modules():
 
 
 @pytest.fixture
-def framework_module():
+def totaling_step():
+    """The module to include in the totaling step of the integration test experiment."""
     input = "facts-total"
     return input
 
 
 @pytest.fixture
-def extremesealevel_module():
+def extremesealevel_step():
+    """The module(s) to include in the extremesealevel step of the integration test experiment."""
     input = "extremesealevel-pointsoverthreshold"
     return input
 
@@ -56,42 +60,98 @@ def module_specific_inputs_path():
 
 
 @pytest.fixture
+def scenario():
+    input = "ssp585"
+    return input
+
+
+@pytest.fixture
+def pyear_start():
+    input = 2020
+    return input
+
+
+@pytest.fixture
+def pyear_end():
+    input = 2150
+    return input
+
+
+@pytest.fixture
+def pyear_step():
+    input = 10
+    return input
+
+
+@pytest.fixture
+def baseyear():
+    input = 2005
+    return input
+
+
+@pytest.fixture
+def nsamps():
+    input = 100
+    return input
+
+
+@pytest.fixture
+def pipeline_id():
+    input = "aaa"
+    return input
+
+
+@pytest.fixture
+def seed():
+    input = 1234
+    return input
+
+
+@pytest.fixture
 def setup_args(
     experiment_name,
-    temperature_module,
-    sealevel_modules,
-    framework_module,
-    extremesealevel_module,
+    climate_step,
+    sealevel_step,
+    totaling_step,
+    extremesealevel_step,
     module_specific_inputs_path,
     general_inputs_path,
+    scenario,
+    pyear_start,
+    pyear_end,
+    pyear_step,
+    baseyear,
+    nsamps,
+    pipeline_id,
+    seed,
 ):
     input = [
         "--experiment-name",
         experiment_name,
         "--pipeline-id",
-        "aaa",
+        pipeline_id,
         "--scenario",
-        "ssp585",
+        scenario,
         "--pyear-start",
-        "2020",
+        pyear_start,
         "--pyear-end",
-        "2150",
+        pyear_end,
         "--pyear-step",
-        "10",
+        pyear_step,
         "--baseyear",
-        "2005",
+        baseyear,
         "--seed",
-        "1234",
+        seed,
         "--nsamps",
-        "100",
-        "--temperature-module",
-        temperature_module,
-        "--sealevel-modules",
-        sealevel_modules,
-        "--framework-module",
-        framework_module,
-        "--extremesealevel-module",
-        extremesealevel_module,
+        nsamps,
+        "--climate-step",
+        climate_step,
+        "--sealevel-step",
+        sealevel_step,
+        "--totaling-step",
+        totaling_step,
+        "--extremesealevel-step",
+        extremesealevel_step,
         "--module-specific-inputs",
         module_specific_inputs_path[1],
         "--general-inputs",
