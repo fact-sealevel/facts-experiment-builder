@@ -8,13 +8,12 @@ def get_module_defaults_path(module_name: str) -> Optional[Path]:
     return ModuleRegistry.default().get_module_defaults_path(module_name)
 
 
-def find_module_yaml_path(module_name: str, project_root: Path) -> Path:
+def find_module_yaml_path(module_name: str) -> Path:
     """
     Resolve the path to a module's YAML file by module name.
 
     Args:
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets').
-        project_root: Project root (unused; kept for backwards compatibility).
 
     Returns:
         Path to the module YAML file.

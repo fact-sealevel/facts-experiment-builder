@@ -6,8 +6,10 @@ from facts_experiment_builder.cli.setup_new_experiment_cli import (
     main,
     _validate_modules_list_experiment,
     _validate_modules_list_workflow,
+    _check_experiment_step,
 )
 import pytest
+from contextlib import nullcontext
 
 
 runner = CliRunner()
@@ -16,11 +18,13 @@ runner = CliRunner()
 def test_cli_help_exits_zero():
     """--help runs and exits with 0."""
     result = runner.invoke(main, ["--help"])
+    print("output: ", result.output)
     assert result.exit_code == 0
     assert "experiment-name" in result.output
-    assert "temperature-module" in result.output
-    assert "sealevel-modules" in result.output
-    assert "framework-module" in result.output
+    assert "climate-step" in result.output
+    assert "sealevel-step" in result.output
+    assert "totaling-step" in result.output
+    assert "extremesealevel-step" in result.output
 
 
 def test_cli_fails_without_required_args():
@@ -40,9 +44,9 @@ def test_setup_new_experiment_fails_with_invalid_module_name():
         [
             "--experiment-name",
             "test-exp",
-            "--temperature-module",
+            "--climate-step",
             "fair-temperature",
-            "--sealevel-modules",
+            "--sealevel-step",
             "ipccar5-icesheets,ipccar5-glaciers,invalid-module-name",
         ],
     )
@@ -87,3 +91,17 @@ def test_validate_modules_list_workflow_fails_for_invalid():
     ]
     with pytest.raises(click.UsageError):
         _validate_modules_list_workflow(workflow_modules_list, experiment_modules_list)
+
+
+@pytest.mark.parametrize(
+    "step_module, step_data, expectation",
+    [
+        ("a-module", None, nullcontext()),
+        (None, "/path/to/data", nullcontext()),
+        ("a-module", "/path/to/data", pytest.raises(click.UsageError)),
+        (None, None, pytest.raises(click.UsageError)),
+    ],
+)
+def test_check_experiment_step(step_module, step_data, expectation):
+    with expectation:
+        _check_experiment_step(step_module, step_data, "--step-module", "--step-data")

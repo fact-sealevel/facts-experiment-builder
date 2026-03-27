@@ -1,7 +1,7 @@
 # facts-experiment-builder
 
 > [!CAUTION]
-> This is a prototype. It is likely to change in breaking ways. It might delete all your data. Don't use it in production.
+> This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases.
 
 ## Overview
 This is a prototype of a package for configuring and managing FACTS 2 experiments. A FACTS 2 experiment consists of running one or more modules from the FACTS 2 ecosystem. It usually has a set of specified 'top-level parameters' that apply across all of the modules in the experiment. These can include parameters such as `nsamps`, `pyear-start`, `pyear-step`, `pyear-end`, `baseyear`, and `scenario`. Within an experiment, one can define multiple 'workflows', these represent different combinations of sea-level modules to be summed to produce output distributions of projected future sea level rise.
@@ -55,35 +55,38 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main ge
 To pin to a specific version or branch, replace `@main` with a tag or branch name, e.g. `@v0.2.0`.
 
 ## Example
-Warning: it is still rough!
-With the example experiment provided below, you should be able to run the two steps, `setup-new-experiment` and `generate-compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-metadata.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/test_experiment/experiment-metadata.yml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/test_experiment/experiment-compose.yaml) for examples of files created by the program.
+Warning: it is still rough! 
+With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate-compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-metadata.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-metadata.yml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-compose.yaml) for examples of files created by the program.
 
 ### Steps to run:
-#### Setup:
-1. Start from your project root dir. For now, the experiment builder assumes you have an experiments sub-directory in this location. so something like...
+#### 1. Setup
+1. Start from your project root dir. For now, the experiment builder assumes you have an `experiments` sub-directory in this location. so something like...
 ```shell
-mkdir fresh_facts_project
+mkdir -p fresh_facts_projects/experiments
 cd fresh_facts_project
-mkdir experiments
 ```
-2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and general input data directories
-- `module_specific_inputs` (or whatever it is called on your machine) should have a sub-directory for each FACTS module with the directory name matching the module name.
-- have a separate `general_input_data` that contains `location.lst` and GRD fingerprint data.
+2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and general input data directories. See [setup.md](setup.md) for instructions on downloading the data.
+- `module_specific_inputs` should have a sub-directory for each FACTS module with the directory name matching the module name.
+- `general_input_data` contains `location.lst` and GRD fingerprint data.
 
 - Example of input data directories:
 ![general input data](imgs/general_inputs_screenshot.png)
 ![module specific input data](imgs/module_specific_inputs_screenshot.png)
 
+
 #### 2. Create an experiment via CLI
 - at a minimum, this entails specifying:
-     - `experiment-name`
-     - one of: `--climate-step <module>`, `--climate-step-data <path>`, or `--supplied-totaled-sealevel-data <path>`
-     - `--sealevel-step` (unless bypassing with `--supplied-totaled-sealevel-data`)
-     - `--totaling-step` (defaults to `facts-total`; omit with `NONE`)
+     - `--experiment-name`
+     - `--climate-step` OR `--climate-step-data` (module name or path to pre-existing climate data)
+     - `--sealevel-step` OR `--supplied-totaled-sealevel-data` (module name(s) or path to pre-existing sealevel data)
+     - `--totaling-step` defaults to `facts-total`; pass `NONE` to skip (automatically skipped when `--sealevel-step-data` is used)
      - `--extremesealevel-step` (ie. `extremesealevel-pointsoverthreshold`)
      - For full features list, see help section below.
 
-Example (full run with all steps):
+>[!NOTE]
+> You can see which modules are available to use in an experiment by running `uv run list-modules`.
+
+Example (standard run with all modules):
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
 --experiment-name toy_experiment --pipeline-id aaa --scenario ssp585 \
@@ -93,36 +96,52 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --totaling-step facts-total \
 --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
+
+Example (using pre-existing climate data instead of running a climate module):
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+--experiment-name toy_experiment_with_climate_data --scenario ssp585 \
+--pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
+--climate-step-data /path/to/climate_data.nc \
+--sealevel-step bamber19-icesheets,tlm-sterodynamics \
+--totaling-step facts-total \
+--extremesealevel-step extremesealevel-pointsoverthreshold
+```
+
 - If `facts-total` is passed to `--totaling-step`, the CLI prompts the user for information about the workflows included in the experiment:
-![workflow prompts](imgs/toy_experiment_workflow_prompts.png)
+![workflow prompts](imgs/cli_output_workflow_prompts.png)
 Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name`
      - Creates and partially pre-populates an `experiment-metadata.yml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
      - `experiment-metadata.yml` is pre-populated based on the arguments you supply and the modules you specified
-![rest of experiment setup](imgs/toy_experiment_rest_of_setup_new_exp.png)
+You will see the following output in your terminal window:
+![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.png)
 
 #### 3. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
 > [!NOTE]
-> If you copy and paste the `setup-new-experiment` command above, complete the `module-specific-inputs` and `general-inputs` fields in the `experiment-metadata.yaml` that is created.
+> If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--general-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-metadata.yaml` that is created.
 
 - If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
 
-#### 3. Generate docker compose file via CLI
+#### 4. Generate docker compose file via CLI
 Example:
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main generate-compose \
 --experiment-name toy_experiment
 ```
-- Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory.
+- Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - this is the docker implementation of the abstract experiment specified by `experiment-metadata.yml`
 
-![generate-compose](imgs/toy_experiment_generate_compose.png)
+![generate-compose](imgs/cli_output_generate_compose.png)
 
 Then,
 - Inspect the compose file
-- run experiment like (assuming from project root) `docker compose -f experiments/toy_experiment/experiment-compose.yaml up`
+- Run experiment like (assuming from project root):
+```shell
+docker compose -f experiments/toy_experiment/experiment-compose.yaml up
+```
 
 **Not yet implemented: async-flow equivalent of `generate-compose`.**
 
@@ -130,49 +149,48 @@ Then,
 This is a command line application with two main functions:
 
 **`setup-new-experiment`**
-Initialize a new experiment by calling this command and providing an experiment name and the step configuration. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates a `experiment-metadata.yml` based on the arguments provided by the user. **The user must then enter the remaining fields in `experiment-metadata.yml` before it is considered complete.**
+Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-metadata.yml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-metadata.yml` before it is considered complete.
+
+Each step accepts either a module name or a path to pre-existing data:
+- `--climate-step` / `--climate-step-data`: run a climate module or provide climate output directly
+- `--sealevel-step` / `--supplied-totaled-sealevel-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--sealevel-step-data` is used)
 
 ```shell
 uv run setup-new-experiment --help
-
 Usage: setup-new-experiment [OPTIONS]
 
-  Set up a new experiment.
+  Set up a new experiment with setup-new-experiment CLI command.
 
 Options:
-  --experiment-name TEXT                Name of the experiment  [required]
-  --climate-step TEXT                   Name of the temperature module
-  --climate-step-data PATH              Path to data to use in place of
-                                        running a module in the climate step
-                                        of the experiment.
-  --sealevel-step TEXT                  Names of the sea level modules,
-                                        separated by commas
-  --supplied-totaled-sealevel-data PATH
-                                        Path to pre-existing totaled sealevel
-                                        data. Replaces running both the
-                                        climate and sealevel steps.
-  --totaling-step TEXT                  Name of the totaling step module (use
-                                        'NONE' if you do not want to call the
-                                        totaling module)  [default: facts-total]
-  --extremesealevel-step TEXT           Name of the extreme sea level module
-                                        (use 'NONE' if no extreme sea level
-                                        module)
-  --pipeline-id TEXT                    Pipeline ID
-  --scenario TEXT                       Scenario
-  --baseyear INTEGER                    Base year
-  --pyear-start INTEGER                 Projection year start
-  --pyear-end INTEGER                   Projection year end
-  --pyear-step INTEGER                  Projection year step
-  --nsamps INTEGER                      Number of samples
-  --seed INTEGER                        Random seed to use for sampling
-  --location-file TEXT                  Location file name
-  --fingerprint-dir TEXT                Name of directory holding GRD
-                                        fingerprint data
-  --module-specific-inputs TEXT         Path to module-specific input data
-                                        (written to experiment metadata)
-  --general-inputs TEXT                 Path to general input data (written to
-                                        experiment metadata)
-  -h, --help                            Show this message and exit.
+  --experiment-name TEXT         Name of the experiment  [required]
+  --climate-step TEXT            Name of the temperature module
+  --climate-step-data PATH       Path to data to use in place of running a
+                                 module in the climate step of the experiment.
+  --sealevel-step TEXT           Names of the sea level modules, separated by
+                                 commas
+  --sealevel-step-data PATH      Path to data to use in place of running
+                                 modules in sea-level step
+  --totaling-step TEXT           Name of the totaling step module (use 'NONE'
+                                 if you do not want to call the totaling
+                                 module)  [default: facts-total]
+  --extremesealevel-step TEXT    Name of the extreme sea level module (use
+                                 'NONE' if no extreme sea level module)
+  --pipeline-id TEXT             Pipeline ID
+  --scenario TEXT                Scenario
+  --baseyear INTEGER             Base year
+  --pyear-start INTEGER          Projection year start
+  --pyear-end INTEGER            Projection year end
+  --pyear-step INTEGER           Projection year step
+  --nsamps INTEGER               Number of samples
+  --seed INTEGER                 Random seed to use for sampling
+  --location-file TEXT           Location file name
+  --fingerprint-dir TEXT         Name of directory holding GRD fingerprint
+                                 data
+  --module-specific-inputs TEXT  Path to module-specific input data (written
+                                 to experiment metadata)
+  --general-inputs TEXT          Path to general input data (written to
+                                 experiment metadata)
+  -h, --help                     Show this message and exit.
 ```
 
 **`generate-compose`**

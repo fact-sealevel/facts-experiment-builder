@@ -1,6 +1,6 @@
 from pathlib import Path
 from facts_experiment_builder.core.experiment import FactsExperiment
-from facts_experiment_builder.adapters.adapter_utils import is_metadata_value
+from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 from typing import Any, List, Dict
 from jinja2 import Environment, BaseLoader
 
@@ -13,8 +13,8 @@ except ImportError:
 # Jinja2 template for experiment metadata YAML
 YAML_TEMPLATE = """
 ### Experiment metadata YAML file ###
-# This is the main configuration file that describes the specified FACTS experiment. 
-# It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`. 
+# This is the main configuration file that describes the specified FACTS experiment.
+# It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`.
 # The values included here are defaults based on the default values for each module specified in /modules/module_name/defaults.yml.
 
 # **How to use this file:**
@@ -49,9 +49,9 @@ experiment_name:
 
 ##----- Modules included in experiment -----##
 {% for module_key in included_modules %}
-{% if module_key in experiment.manifest %}
+{% if module_key in manifest %}
 {{ module_key }}:
-{{ format_value(experiment.manifest[module_key]) }}
+{{ format_value(manifest[module_key]) }}
 {% endif %}
 {% endfor %}
 
@@ -82,7 +82,7 @@ workflows:
 ##----- Module-specific inputs, options, and outputs -----##
 {% for module_key in module_keys %}
 {{ module_key }}:
-{{ format_module(module_key, experiment.module_sections[module_key]) }}
+{{ format_module(module_key, module_sections[module_key]) }}
 {% endfor %}
 """
 
@@ -271,19 +271,38 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
         "seed",
     ]
     fingerprint_params = ["fingerprint-dir", "location-file"]
+    # Build manifest and module_sections from steps
+    fw = (
+        [experiment.totaling_step.module_name]
+        if experiment.totaling_step.is_present
+        else []
+    )
+    esl = (
+        [experiment.extreme_sealevel_step.module_name]
+        if experiment.extreme_sealevel_step.is_present
+        else []
+    )
+    manifest = {
+        "temperature_module": experiment.climate_step.module_name or "NONE",
+        "sealevel_modules": experiment.sealevel_step.module_names,
+        "framework_modules": fw,
+        "esl_modules": esl,
+    }
+    module_sections: Dict[str, Any] = {}
+    for step in experiment.list_all_steps():
+        for spec in step.module_specs():
+            module_sections[spec.module_name] = spec.to_dict()
+
     # Included modules (temperature_module, sealevel_modules, framework_modules, esl_modules)
     # These are the keys that appear in the "Modules included in experiment" section
     included_modules = []
-    if "temperature_module" in experiment.manifest:
+    if "temperature_module" in manifest:
         included_modules.append("temperature_module")
-    if "sealevel_modules" in experiment.manifest:
+    if "sealevel_modules" in manifest:
         included_modules.append("sealevel_modules")
-    if (
-        "framework_modules" in experiment.manifest
-        and experiment.manifest["framework_modules"]
-    ):
+    if "framework_modules" in manifest and manifest["framework_modules"]:
         included_modules.append("framework_modules")
-    if "esl_modules" in experiment.manifest and experiment.manifest["esl_modules"]:
+    if "esl_modules" in manifest and manifest["esl_modules"]:
         included_modules.append("esl_modules")
 
     # Inputs section (module-specific-input-data, general-input-data, location-file-name)
@@ -292,6 +311,10 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
         inputs.append("module-specific-input-data")
     if "general-input-data" in experiment.paths:
         inputs.append("general-input-data")
+    if "experiment-specific-input-data" in experiment.paths:
+        inputs.append("experiment-specific-input-data")
+    if "supplied-totaled-sealevel-data" in experiment.paths:
+        inputs.append("supplied-totaled-sealevel-data")
 
     # Outputs section (output-data-location)
     outputs = []
@@ -310,22 +333,20 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
     )
     module_keys = [
         key
-        for key in experiment.module_sections.keys()
-        if key not in excluded_keys
-        and isinstance(experiment.module_sections[key], dict)
+        for key in module_sections.keys()
+        if key not in excluded_keys and isinstance(module_sections[key], dict)
     ]
 
     # Sort module_keys so temperature_module appears first if it exists
-    if "temperature_module" in experiment.manifest:
-        temperature_module_name = experiment.manifest.get("temperature_module")
-        if (
-            temperature_module_name
-            and isinstance(temperature_module_name, str)
-            and temperature_module_name.upper() != "NONE"
-        ):
-            if temperature_module_name in module_keys:
-                module_keys.remove(temperature_module_name)
-                module_keys.insert(0, temperature_module_name)
+    temperature_module_name = manifest.get("temperature_module")
+    if (
+        temperature_module_name
+        and isinstance(temperature_module_name, str)
+        and temperature_module_name.upper() != "NONE"
+    ):
+        if temperature_module_name in module_keys:
+            module_keys.remove(temperature_module_name)
+            module_keys.insert(0, temperature_module_name)
 
     # Create Jinja2 environment
     env = Environment(
@@ -356,6 +377,8 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
     try:
         rendered = template.render(
             experiment=experiment,
+            manifest=manifest,
+            module_sections=module_sections,
             top_level_params=top_level_params,
             fingerprint_params=fingerprint_params,
             included_modules=included_modules,

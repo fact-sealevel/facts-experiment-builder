@@ -9,19 +9,6 @@ __all__ = [
 ]
 
 
-def is_metadata_value(obj: Any) -> bool:
-    """
-    Check if an object is a metadata value dict (has 'clue' key, 'value' is optional).
-
-    Args:
-        obj: Object to check
-
-    Returns:
-        True if obj is a metadata value dict, False otherwise
-    """
-    return isinstance(obj, dict) and "clue" in obj
-
-
 def get_required_field(
     metadata: Dict[str, Any], field_name: str, context: str = ""
 ) -> Any:

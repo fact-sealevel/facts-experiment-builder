@@ -12,7 +12,10 @@ from facts_experiment_builder.infra.path_utils import (
 from facts_experiment_builder.adapters.compose_service_writer import (
     build_compose_service_dict,
 )
-from facts_experiment_builder.core.module.facts_module import FactsModule
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleSchema,
+    ModuleContainerImage,
+)
 from facts_experiment_builder.core.source_resolver import (
     resolve_value as resolve_source_value,
 )
@@ -25,14 +28,6 @@ class ScenarioConfig:
 
     scenario_name: str
     description: str
-
-
-@dataclass(frozen=True)
-class ModuleContainerImage:
-    """Container image for a module."""
-
-    image_url: str
-    image_tag: str
 
 
 @dataclass(frozen=True)
@@ -54,20 +49,20 @@ class ModuleServiceSpecComponents:
 class ModuleServiceSpec:
     """Has all information needed to run a module and slot into an experiment implementation (e.g. one compose service).
 
-    Built from a FactsModule (module YAML) plus experiment-specific inputs.
+    Built from a ModuleSchema (module YAML) plus experiment-specific inputs.
     """
 
     def __init__(
         self,
         components: ModuleServiceSpecComponents,
-        module_definition: FactsModule,
+        module_definition: ModuleSchema,
     ):
         """
         Initialize ModuleServiceSpec.
 
         Args:
             components: Experiment-specific inputs (paths, values, image, metadata)
-            module_definition: Module definition from the module YAML file (FactsModule)
+            module_definition: Module definition from the module YAML file (ModuleSchema)
         """
         self.components = components
         self.module_definition = module_definition
@@ -86,6 +81,7 @@ class ModuleServiceSpec:
     @property
     def input_paths(self) -> ModuleInputPaths:
         """Return input paths (module-specific and general dirs)."""
+        print("input paths: ", self.components.input_paths)
         return self.components.input_paths
 
     @property
@@ -228,10 +224,12 @@ class ModuleServiceSpec:
             ):
                 value = Path(value).name
 
-        # Typed paths: container pass-through, host rewrite. Single rule for all path inputs.
+        # Typed paths: routing by kind.
         if mount and isinstance(value, TypedPath):
             if value.kind == "container":
                 return value.path
+            if value.kind == "experiment_specific_in":
+                return f"/mnt/experiment_specific_in/{Path(value.path).name}"
             return self._host_path_to_container(value.path, arg_spec)
         if mount and isinstance(value, list) and len(value) > 0:
             if all(isinstance(v, TypedPath) for v in value):
@@ -360,6 +358,15 @@ class ModuleServiceSpec:
             container_path = volume_spec.get("container_path", "")
             if host_path and container_path:
                 volumes.append(f"{host_path}:{container_path}")
+
+        for inp_value in self.components.inputs.values():
+            if (
+                isinstance(inp_value, TypedPath)
+                and inp_value.kind == "experiment_specific_in"
+            ):
+                host_dir = str(Path(inp_value.path).parent.resolve())
+                volumes.append(f"{host_dir}:/mnt/experiment_specific_in")
+                break
 
         return volumes
 
