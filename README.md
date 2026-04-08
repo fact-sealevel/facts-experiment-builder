@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/fact-sealevel/facts-experiment-builder/branch/main/graph/badge.svg)](https://codecov.io/gh/fact-sealevel/facts-experiment-builder)
+
 # facts-experiment-builder
 
 > [!CAUTION]
