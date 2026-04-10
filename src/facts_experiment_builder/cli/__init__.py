@@ -4,6 +4,8 @@ from facts_experiment_builder.cli.setup_new_experiment_cli import (
 from facts_experiment_builder.cli.generate_compose_cli import (
     main as generate_compose_group,
 )
+from facts_experiment_builder.cli.list_modules_cli import (
+     main as list_modules_group
 import click
 
 
@@ -12,5 +14,6 @@ def main():
     pass
 
 
-main.add_command(setup_new_experiment_group, name="setup")
-main.add_command(generate_compose_group, name="generate")
+main.add_command(setup_new_experiment_group, name="setup-experiment")
+main.add_command(generate_compose_group, name="generate-compose")
+main.add_command(list_modules_group, name="list-modules")
