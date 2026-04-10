@@ -43,7 +43,6 @@ TOP_LEVEL_PARAM_CLUES = {
     "seed": "Random seed to use for sampling",
     "module-specific-input-data": "Module-specific input data",
     "general-input-data": "General input data",
-    # "location-file-name": "Location file name",
     "output-data-location": "Output path",
 }
 
