@@ -12,5 +12,5 @@ def main():
     pass
 
 
-main.add_command(setup_new_experiment_group, name="setup-new-experiment")
-main.add_command(generate_compose_group, name="generate-compose")
+main.add_command(setup_new_experiment_group, name="setup")
+main.add_command(generate_compose_group, name="generate")
