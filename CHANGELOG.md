@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- The experiment builder now can handle facts-total (categorized as a 'framework module' for now) and extremesealevel modules (currently just extremesealevel-pointsoverthreshold) ([PR 10](https://github.com/fact-sealevel/facts-experiment-builder/pull/10), [@e-marshall](https://github.com/e-marshall))
+### Changed
+- Containers associated with all modules in module registry now point to 'latest' tag, previously some pointed at specific versions ([PR 43](https://github.com/fact-sealevel/facts-experiment-builder/pull/43), [@e-marshall](https://github.com/e-marshall))
 
+## [0.1.0]
 
+- Initial release
+
+[Unreleased]: https://github.com/fact-sealevel/facts-experiment-builder/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/fact-sealevel/facts-experiment-builder/tag/v0.1.0
