@@ -8,15 +8,15 @@
 ## Overview
 This is a prototype of a package for configuring and managing FACTS 2 experiments. A FACTS 2 experiment consists of running one or more modules from the FACTS 2 ecosystem. It usually has a set of specified 'top-level parameters' that apply across all of the modules in the experiment. These can include parameters such as `nsamps`, `pyear-start`, `pyear-step`, `pyear-end`, `baseyear`, and `scenario`. Within an experiment, one can define multiple 'workflows`, these represent different combinations of sea-level modules to be summed to produce output distributions of projected future sea level rise. 
 
-This package centers around physical artifacts, YAML files, and core in-memory representations of the artifacts. For example, an experiment is abstractly defined as a set of parameters, a collection of modules, and a list of workflows. This is serialized as an `experiment-metadata.yml` file and represented in-memory by the `FactsExperiment` class. 
+This package centers around physical artifacts, YAML files, and core in-memory representations of the artifacts. For example, an experiment is abstractly defined as a set of parameters, a collection of modules, and a list of workflows. This is serialized as an `experiment-config.yaml` file and represented in-memory by the `FactsExperiment` class. 
 
-Each containerized module application has a corresponding module yaml file (ie. `bamber19_icesheets_module.yaml` or `tlm_sterodynamics_module.yaml`) and a defaults yaml file (ie. `defaults_bamber19_icesheets.yml` or `defaults_tlm_sterodynamics.yml`). *Note: These yaml files are currently located in this repo, eventually they will be stored in the module repos.* The module yaml represents all of the inputs, outputs, and parameters used to specify that module as well as other critical metadata. In memory, this is stored as an object of the `FactsModule` class. The defaults file contains default values for any parameters in the module. 
+Each containerized module application has a corresponding module yaml file (ie. `bamber19_icesheets_module.yaml` or `tlm_sterodynamics_module.yaml`) and a defaults yaml file (ie. `defaults_bamber19_icesheets.yml` or `defaults_tlm_sterodynamics.yml`). *Note: These yaml files are currently located in this repo, eventually they will be stored in the module repos.* The module yaml represents all of the inputs, outputs, and parameters used to specify that module as well as other critical metadata. In memory, this is stored as an object of the `ModuleSchema` class. The defaults file contains default values for any parameters in the module. 
 
-To run a FACTS 2 experiment, we need more than the abstract information stored in an `experiment-metadata.yml`. `facts-experiment-builder` plans to offer implementations for multiple execution environments, with an experiment's `experiment-metadata.yml` remainining the underlying source of 'truth' about the experiment. From here, run files can be generated for specific execution environments such as Docker (`experiment-compose.yml`) and Async-Flow (`async-flow-experiment.py`, **not yet implemented**).
+To run a FACTS 2 experiment, we need more than the abstract information stored in an `experiment-config.yaml`. `facts-experiment-builder` plans to offer implementations for multiple execution environments, with an experiment's `experiment-config.yaml` remainining the underlying source of 'truth' about the experiment. From here, run files can be generated for specific execution environments such as Docker (`experiment-compose.yml`) and Async-Flow (`async-flow-experiment.py`, **not yet implemented**).
 
 ## Example
 Warning: it is still rough! 
-With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate-compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-metadata.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-metadata.yml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-compose.yaml) for examples of files created by the program.
+With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate-compose`, and then successfully execute the docker compose file to run the experiment. See toy_experiment's [experiment-config.yaml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-config.yaml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/toy_experiment/experiment-compose.yaml) for examples of files created by the program.
 
 ### Steps to run:
 #### 1. Setup
@@ -25,12 +25,12 @@ With the example experiment provided below, you should be able to run the two st
 mkdir -p fresh_facts_projects/experiments
 cd fresh_facts_project
 ```
-2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and general input data directories. See [setup.md](setup.md) for instructions on downloading the data.
+2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and shared input data directories. See [setup.md](setup.md) for instructions on downloading the data.
 - `module_specific_inputs` should have a sub-directory for each FACTS module with the directory name matching the module name.
-- `general_input_data` contains `location.lst` and GRD fingerprint data.
+- `shared_input_data` contains `location.lst` and GRD fingerprint data.
 
 - Example of input data directories:
-![general input data](imgs/general_inputs_screenshot.png)
+![shared input data](imgs/shared_inputs_screenshot.png)
 ![module specific input data](imgs/module_specific_inputs_screenshot.png)
 
 
@@ -72,15 +72,15 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 ![workflow prompts](imgs/cli_output_workflow_prompts.png)
 Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
-     - Creates and partially pre-populates an `experiment-metadata.yml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
-     - `experiment-metadata.yml` is pre-populated based on the arguments you supply and the modules you specified
+     - Creates and partially pre-populates an `experiment-config.yaml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
+     - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified
 You will see the following output in your terminal window:
 ![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.png)
 
 #### 3. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
 > [!NOTE]
-> If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--general-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-metadata.yaml` that is created.
+> If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--shared-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-config.yaml` that is created.
 
 - If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
@@ -92,7 +92,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main ge
 --experiment-name toy_experiment
 ```
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
-- this is the docker implementation of the abstract experiment specified by `experiment-metadata.yml`
+- this is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
 
 ![generate-compose](imgs/cli_output_generate_compose.png)
 
@@ -109,7 +109,7 @@ docker compose -f experiments/toy_experiment/experiment-compose.yaml up
 This is a command line application with two main functions:
 
 **`setup-new-experiment`**
-Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-metadata.yml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-metadata.yml` before it is considered complete.
+Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
 
 Each step accepts either a module name or a path to pre-existing data:
 - `--climate-step` / `--supplied-climate-step-data`: run a climate module or provide climate output directly
@@ -148,13 +148,13 @@ Options:
                                  data
   --module-specific-inputs TEXT  Path to module-specific input data (written
                                  to experiment metadata)
-  --general-inputs TEXT          Path to general input data (written to
+  --shared-inputs TEXT          Path to shared input data (written to
                                  experiment metadata)
   -h, --help                     Show this message and exit.
 ```
 
 **`generate-compose`**
-From a completed `experiment-metadata.yml`, this command generates a Docker compose script that executes the experiment defined in the experiment metadata file. 
+From a completed `experiment-config.yaml`, this command generates a Docker compose script that executes the experiment defined in the experiment metadata file. 
 
 ```shell
  uv run generate-compose --help                          

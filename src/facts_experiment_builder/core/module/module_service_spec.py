@@ -131,8 +131,10 @@ class ModuleServiceSpec:
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
 
-        # Process inputs
+        # Process inputs (skip args that are handled via environment variable)
         for arg_spec in arguments_config.get("inputs", []):
+            if arg_spec.get("envvar"):
+                continue
             value = self._process_argument(arg_spec)
             if value is not None:
                 # Handle multiple inputs (e.g., --item can be specified multiple times)
@@ -146,7 +148,7 @@ class ModuleServiceSpec:
                     command_args.append(f"--{arg_spec['name']}={value}")
 
         # Process outputs
-        for arg_spec in arguments_config.get("outputs", []):
+        for arg_spec in self.module_definition.get_outputs_list():
             value = self._process_output_argument(arg_spec)
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
@@ -420,6 +422,23 @@ class ModuleServiceSpec:
 
         return depends_on
 
+    def _build_environment(self) -> Dict[str, str]:
+        """Build environment variable dict for args declared with envvar in the module YAML.
+
+        For each input arg that has an `envvar` key, the resolved container-path value (if any)
+        is added to the environment dict under the declared variable name.  Args with no
+        resolvable value are omitted — the container's own defaults or host environment handle them.
+        """
+        environment: Dict[str, str] = {}
+        for arg_spec in self.module_definition.arguments.get("inputs", []):
+            envvar = arg_spec.get("envvar")
+            if not envvar:
+                continue
+            value = self._process_argument(arg_spec)
+            if value is not None:
+                environment[envvar] = str(value)
+        return environment
+
     def generate_compose_service(
         self, temperature_service_name: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -440,11 +459,13 @@ class ModuleServiceSpec:
         depends_on = self._build_depends_on(
             temperature_service_name=temperature_service_name
         )
+        environment = self._build_environment()
         return build_compose_service_dict(
             image_str=image_str,
             command=command,
             volumes=volumes,
             depends_on=depends_on,
+            environment=environment,
         )
 
     def generate_asyncflow_config(self) -> Dict[str, Any]:

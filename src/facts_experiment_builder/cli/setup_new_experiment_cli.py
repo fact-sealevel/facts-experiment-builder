@@ -101,11 +101,11 @@ from facts_experiment_builder.core.registry import ModuleRegistry
     help="Path to module-specific input data (written to experiment metadata)",
 )
 @click.option(
-    "--general-inputs",
+    "--shared-inputs",
     type=str,
     required=False,
     default=None,
-    help="Path to general input data (written to experiment metadata)",
+    help="Path to shared input data (written to experiment metadata)",
 )
 def main(
     experiment_name,
@@ -126,7 +126,7 @@ def main(
     location_file,
     fingerprint_dir,
     module_specific_inputs,
-    general_inputs,
+    shared_inputs,
 ):
     """Set up a new experiment with setup-new-experiment CLI command.
     This function includes a number of steps:
@@ -206,10 +206,10 @@ def main(
         location_file=location_file,
         fingerprint_dir=fingerprint_dir,
         module_specific_inputs=module_specific_inputs,
-        general_inputs=general_inputs,
+        shared_inputs=shared_inputs,
     )
 
-    console.rule(style="rule", title="Generating experiment-metadata.yml")
+    console.rule(style="rule", title="Generating experiment-config.yaml")
 
     # Step 2: Create FactsExperiment from template
 
@@ -228,7 +228,7 @@ def main(
         fingerprint_dir=fingerprint_dir,
         module_specific_inputs=module_specific_inputs,
         experiment_specific_inputs=supplied_climate_step_data,
-        general_inputs=general_inputs,
+        shared_inputs=shared_inputs,
     )
 
     # Step 3: Populate experiment with defaults from defaults.yml files
@@ -245,10 +245,10 @@ def main(
 
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
-    metadata_path = experiment_path / "experiment-metadata.yml"
+    metadata_path = experiment_path / "experiment-config.yaml"
     write_metadata_yaml_jinja2(experiment, metadata_path)
     console.print(
-        f"[success]✓ Created experiment-metadata.yml at[/success] [secondary]{metadata_path}[/secondary]"
+        f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
     )
 
     # Summary
@@ -408,7 +408,7 @@ def print_global_params_info(
     location_file: str,
     fingerprint_dir: str,
     module_specific_inputs: str,
-    general_inputs: str,
+    shared_inputs: str,
 ):
     """Prints some CLI info about the global parameters provided."""
     # Print some CLI info
@@ -425,7 +425,7 @@ def print_global_params_info(
             location_file,
             fingerprint_dir,
             module_specific_inputs,
-            general_inputs,
+            shared_inputs,
         ]
     ):
         console.print(

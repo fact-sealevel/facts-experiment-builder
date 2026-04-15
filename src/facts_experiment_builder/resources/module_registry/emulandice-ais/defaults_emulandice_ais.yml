@@ -7,7 +7,6 @@
 options:
   chunksize: 50
 
-inputs:
+fingerprint_params:
   fprint-wais-file: "fprint_wais.nc"
   fprint-eais-file: "fprint_eais.nc"
-  

@@ -42,7 +42,7 @@ TOP_LEVEL_PARAM_CLUES = {
     "nsamps": "Number of samples",
     "seed": "Random seed to use for sampling",
     "module-specific-input-data": "Module-specific input data",
-    "general-input-data": "General input data",
+    "shared-input-data": "Shared input data",
     "output-data-location": "Output path",
 }
 
@@ -55,7 +55,7 @@ FINGERPRINT_PARAM_CLUES = {
 def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
     """Return the output climate file path for a climate module (e.g. 'fair-temperature/climate.nc')."""
     schema = load_facts_module_by_name(climate_module_name)
-    for output in schema.arguments.get("outputs", []):
+    for output in schema.get_file_outputs():
         if output.get("name") == "output-climate-file":
             filename = output.get("filename", "climate.nc")
             return f"{climate_module_name}/{filename}"
@@ -78,8 +78,16 @@ def hydrate_sealevel_step(skeleton) -> SealevelStep:
         if climate_data_file:
             for spec, schema in zip(sealevel_step.module_specs_list, sealevel_schemas):
                 if schema.uses_climate_file:
+                    output_vol_keys = schema.get_output_volume_input_keys()
+                    # get_output_volume_input_keys() returns both kebab YAML arg names and
+                    # snake_case source-derived keys; only the snake_case ones are metadata keys
+                    climate_keys = {k for k in output_vol_keys if "-" not in k}
+                    if not climate_keys:
+                        climate_keys = {
+                            "climate_data_file"
+                        }  # fallback for schemas without volume spec
                     spec.merge_defaults(
-                        {"inputs": {"climate_data_file": climate_data_file}}, schema
+                        {"inputs": {k: climate_data_file for k in climate_keys}}, schema
                     )
     else:
         sealevel_step = SealevelStep(
@@ -162,7 +170,7 @@ def experiment_skeleton_to_facts_experiment(
     fingerprint_dir: Optional[str] = None,
     module_specific_inputs: Optional[str] = None,
     experiment_specific_inputs: Optional[str] = None,
-    general_inputs: Optional[str] = None,
+    shared_inputs: Optional[str] = None,
 ) -> FactsExperiment:
     """
     Load module YAMLs from a skeleton and assemble a fully-formed FactsExperiment.
@@ -195,9 +203,7 @@ def experiment_skeleton_to_facts_experiment(
         "module-specific-input-data": create_metadata_bundle(
             "Module-specific input data", module_specific_inputs
         ),
-        "general-input-data": create_metadata_bundle(
-            "General input data", general_inputs
-        ),
+        "shared-input-data": create_metadata_bundle("Shared input data", shared_inputs),
         "experiment-specific-input-data": create_metadata_bundle(
             "Experiment-specific input data (eg. alternative FAIR data)",
             experiment_specific_inputs,

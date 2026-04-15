@@ -28,7 +28,7 @@ class ExperimentRegistry:
     def get_experiment_metadata_path(self, experiment_name: str) -> Path:
         """Return path to the experiment metadata file."""
         # raise NotImplementedError("Not implemented")
-        return self._registry_dir / experiment_name / "experiment-metadata.yml"
+        return self._registry_dir / experiment_name / "experiment-config.yaml"
 
     def get_experiment_compose_path(self, experiment_name: str) -> Path:
         """Return path to the experiment compose file."""

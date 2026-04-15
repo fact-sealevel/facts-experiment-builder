@@ -81,7 +81,7 @@ class ModuleInputPaths:
 
     input_dir: str
     module_specific_input_dir: str
-    general_input_dir: str
+    shared_input_dir: str
 
 
 @dataclass(frozen=True)
@@ -95,7 +95,7 @@ class ModuleOutputPaths:
 def build_module_input_paths(
     *,
     module_specific_input_dir: str = "",
-    general_input_dir: str = "",
+    shared_input_dir: str = "",
     module_name: str = "",
 ) -> ModuleInputPaths:
     """Build and validate ModuleInputPaths. Raises ValueError if invalid."""
@@ -109,21 +109,21 @@ def build_module_input_paths(
         raise ValueError(
             f"module_specific_input_dir has invalid type for {module_name}: expected str, got {type(module_specific_input_dir)}"
         )
-    if general_input_dir is None:
+    if shared_input_dir is None:
         raise ValueError(
-            f"general_input_dir is None when building paths for {module_name}."
+            f"shared_input_dir is None when building paths for {module_name}."
         )
-    if general_input_dir != "" and not isinstance(general_input_dir, str):
+    if shared_input_dir != "" and not isinstance(shared_input_dir, str):
         raise ValueError(
-            f"general_input_dir has invalid type for {module_name}: expected str, got {type(general_input_dir)}"
+            f"shared_input_dir has invalid type for {module_name}: expected str, got {type(shared_input_dir)}"
         )
     ms = module_specific_input_dir or ""
-    gen = general_input_dir or ""
+    gen = shared_input_dir or ""
     input_dir = _resolve_module_input_dir(ms, module_name)
     return ModuleInputPaths(
         input_dir=input_dir,
         module_specific_input_dir=ms,
-        general_input_dir=gen,
+        shared_input_dir=gen,
     )
 
 
@@ -143,18 +143,18 @@ def build_module_output_paths(
     return ModuleOutputPaths(output_dir=output_dir, output_type=output_type)
 
 
-def is_general_input(field_name: str) -> bool:
+def is_shared_input(field_name: str) -> bool:
     """
-    Determine if an input field is a general input (shared across modules).
+    Determine if an input field is a shared input (shared across modules).
 
-    General inputs include location files and fingerprint directories.
-    These should be resolved using 'general-input-data' base path.
+    Shared inputs include location files and fingerprint directories.
+    These should be resolved using 'shared-input-data' base path.
 
     Args:
         field_name: Name of the input field
 
     Returns:
-        True if field is a general input, False if module-specific
+        True if field is a shared input, False if module-specific
     """
     field_lower = field_name.lower()
     general_patterns = ["location", "fingerprint", "fp"]
@@ -164,7 +164,7 @@ def is_general_input(field_name: str) -> bool:
 def resolve_input_path(
     field_name: str,
     field_value: Any,
-    general_input_data: str,
+    shared_input_data: str,
     module_specific_input_data: str,
     module_name: str = "",
     context: str = "",
@@ -172,13 +172,13 @@ def resolve_input_path(
     """
     Resolve an input file path based on whether it's a general or module-specific input.
 
-    General inputs (location_file, fingerprint_dir, etc.) use 'general-input-data'.
+    Shared inputs (location_file, fingerprint_dir, etc.) use 'shared-input-data'.
     Module-specific inputs use 'module-specific-input-data/{module_name}/{file_name}'.
 
     Args:
         field_name: Name of the input field
         field_value: Value from metadata (can be string path or dict with 'value' key)
-        general_input_data: Base path for general inputs
+        shared_input_data: Base path for shared inputs
         module_specific_input_data: Base path for module-specific inputs
         module_name: Name of the module (required for module-specific inputs)
         context: Optional context for error messages
@@ -207,16 +207,16 @@ def resolve_input_path(
             f"Empty or missing value for input field '{field_name}'{context_msg}"
         )
 
-    is_general = is_general_input(field_name)
+    is_general = is_shared_input(field_name)
 
     if os.path.isabs(actual_value):
         return actual_value
 
-    if general_input_data is None:
+    if shared_input_data is None:
         context_msg = f" in {context}" if context else ""
         raise ValueError(
-            f"general_input_data is None when resolving input path for '{field_name}'{context_msg}. "
-            f"This usually means 'general-input-data' path is None in metadata."
+            f"shared_input_data is None when resolving input path for '{field_name}'{context_msg}. "
+            f"This usually means 'shared-input-data' path is None in metadata."
         )
     if module_specific_input_data is None:
         context_msg = f" in {context}" if context else ""
@@ -226,7 +226,7 @@ def resolve_input_path(
         )
 
     if is_general:
-        base_path = general_input_data
+        base_path = shared_input_data
         resolved_path = os.path.join(base_path, actual_value)
     else:
         if not module_name:
