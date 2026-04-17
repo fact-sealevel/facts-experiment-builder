@@ -17,7 +17,7 @@ services:
       - --output-gsat-file=/mnt/out/fair-temperature/gsat.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/fair-temperature:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/larmip_exp/data/output:/mnt/out
       restart: 'no'
    deconto21-ais:
@@ -49,7 +49,7 @@ services:
       - --output-wais-lslr-file=/mnt/out/deconto21-ais/wais-lslr.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/deconto21-ais:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/larmip_exp/data/output:/mnt/out
       restart: 'no'
    larmip-ais:
@@ -82,7 +82,7 @@ services:
       - --ais-local-output-file=/mnt/out/larmip-ais/ais_local_output.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/larmip-ais:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/larmip_exp/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -114,7 +114,7 @@ services:
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/larmip_exp/data/output:/mnt/out
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/fittedismip-gris:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       restart: 'no'
       depends_on:
          fair-temperature:
@@ -238,7 +238,7 @@ services:
       - --gesla-dir=/mnt/module_specific_in/gesla_data
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/larmip_exp/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -269,7 +269,7 @@ services:
       - --gesla-dir=/mnt/module_specific_in/gesla_data
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/larmip_exp/data/output:/mnt/out
       restart: 'no'
       depends_on:

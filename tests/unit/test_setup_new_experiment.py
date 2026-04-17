@@ -14,7 +14,7 @@ def make_module_schema(name="test-module", uses_climate_file=False) -> ModuleSch
     return ModuleSchema(
         module_name=name,
         container_image="test/image:latest",
-        arguments={"inputs": [], "options": [], "outputs": [], "top_level": []},
+        arguments={"inputs": [], "options": [], "outputs": {}, "top_level": []},
         volumes={},
         uses_climate_file=uses_climate_file,
     )
@@ -157,7 +157,9 @@ def test_hydrate_sealevel_step_merges_climate_module_output_into_uses_climate_fi
         arguments={
             "inputs": [],
             "options": [],
-            "outputs": [{"name": "output-climate-file", "filename": "climate.nc"}],
+            "outputs": {
+                "files": [{"name": "output-climate-file", "filename": "climate.nc"}]
+            },
             "top_level": [],
         },
         volumes={},
@@ -179,6 +181,52 @@ def test_hydrate_sealevel_step_merges_climate_module_output_into_uses_climate_fi
     climate_field = inputs.get("climate_data_file")
     assert climate_field is not None
     assert climate_field["value"] == "fair-temperature/climate.nc"
+
+
+@patch(
+    "facts_experiment_builder.application.setup_new_experiment.load_facts_module_by_name"
+)
+def test_hydrate_sealevel_step_merges_climate_data_using_module_specific_input_key(
+    mock_load,
+):
+    """Modules with a non-standard climate input name (e.g. input-data-file) get the
+    climate file path merged under the correct key, not climate_data_file."""
+    schema = ModuleSchema(
+        module_name="emulandice-ais",
+        container_image="test/image:latest",
+        arguments={
+            "inputs": [
+                {
+                    "name": "input-data-file",
+                    "source": "module_inputs.inputs.input_data_file",
+                    "mount": {"volume": "output", "container_path": "/mnt/out"},
+                }
+            ],
+            "options": [],
+            "outputs": {},
+            "top_level": [],
+        },
+        volumes={
+            "output": {
+                "host_path": "module_inputs.output_paths.output_dir",
+                "container_path": "/mnt/out",
+            }
+        },
+        uses_climate_file=True,
+    )
+    mock_load.side_effect = [schema]
+    skeleton = make_skeleton(
+        sealevel_modules=["emulandice-ais"],
+        climate_data="fair-temperature/climate.nc",
+    )
+
+    step = hydrate_sealevel_step(skeleton)
+
+    inputs = step.module_specs_list[0].to_dict().get("inputs", {})
+    assert (
+        inputs.get("input_data_file", {}).get("value") == "fair-temperature/climate.nc"
+    )
+    assert "climate_data_file" not in inputs
 
 
 @patch(

@@ -1,4 +1,4 @@
-"""In-memory representation of an experiment (analogous to experiment-metadata.yml)."""
+"""In-memory representation of an experiment (analogous to experiment-config.yaml)."""
 
 from typing import Dict, Any, List, Optional
 
@@ -15,7 +15,7 @@ from facts_experiment_builder.core.steps import (
 )
 
 
-# Keys that appear in experiment-metadata.yml (for parsing and round-trip)
+# Keys that appear in experiment-config.yaml (for parsing and round-trip)
 TOP_LEVEL_PARAM_KEYS = [
     "pipeline-id",
     "scenario",
@@ -33,13 +33,13 @@ MANIFEST_KEYS = [
     "esl_modules",
 ]
 PATH_KEYS_PRIMARY = [
-    "general-input-data",
+    "shared-input-data",
     "module-specific-input-data",
     "output-data-location",
     "location-file",
 ]
 PATH_KEYS_ALTERNATIVES = {
-    "general-input-data": ["general_input_data"],
+    "shared-input-data": ["shared_input_data"],
     "module-specific-input-data": ["module_specific_input_data"],
     "output-data-location": ["output_data_location", "output-path", "output_path"],
     "location-file": ["location_file"],
@@ -49,9 +49,9 @@ FINGERPRINT_PARAM_KEYS = ["fingerprint-dir", "location-file"]
 
 class FactsExperiment:
     """
-    In-memory representation of an experiment (analoguous to experiment-metadata.yml).
+    In-memory representation of an experiment (analoguous to experiment-config.yaml).
     Used to generate run-environment artifacts (e.g. experiment-compose.yaml).
-    Loaded from or written to experiment-metadata.yml.
+    Loaded from or written to experiment-config.yaml.
     """
 
     def __init__(

@@ -17,7 +17,7 @@ services:
       - --output-gsat-file=/mnt/out/fair-temperature/gsat.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/fair-temperature:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
    bamber19-icesheets:
@@ -47,7 +47,7 @@ services:
       - --output-GIS-lslr-file=/mnt/out/bamber19-icesheets/GIS-lslr.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/bamber19-icesheets:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -82,7 +82,7 @@ services:
       - --output-wais-lslr-file=/mnt/out/deconto21-ais/wais-lslr.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/deconto21-ais:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
    fittedismip-gris:
@@ -111,7 +111,7 @@ services:
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/fittedismip-gris:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       restart: 'no'
       depends_on:
          fair-temperature:
@@ -146,7 +146,7 @@ services:
       - --ais-local-output-file=/mnt/out/larmip-ais/ais_local_output.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/larmip-ais:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -178,7 +178,7 @@ services:
       - --local-output-file=/mnt/out/ipccar5-glaciers/local-output.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/ipccar5:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -214,7 +214,7 @@ services:
       - --local-eais-output-file=/mnt/out/ipccar5-icesheets/local-eais-output.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/ipccar5:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -242,7 +242,7 @@ services:
       - --output-lslr-file=/mnt/out/tlm-sterodynamics/lslr.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/tlm-sterodynamics:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -265,7 +265,7 @@ services:
       - --output-lslr-file=/mnt/out/nzinsargps-verticallandmotion/lslr.nc
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/nzinsargps-verticallandmotion:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
    kopp14-verticallandmotion:
@@ -285,7 +285,7 @@ services:
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/kopp14-verticallandmotion:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       restart: 'no'
    facts-total-wf1-global:
       image: ghcr.io/fact-sealevel/facts-total:0.1.3
@@ -470,7 +470,7 @@ services:
       - --gesla-dir=/mnt/module_specific_in/gesla_data
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:
@@ -501,7 +501,7 @@ services:
       - --gesla-dir=/mnt/module_specific_in/gesla_data
       volumes:
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/module-specific-inputs/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
-      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/general-inputs:/mnt/general_in
+      - /Users/emmamarshall/Desktop/facts_work/facts_v2/data/shared-inputs:/mnt/general_in
       - /Users/emmamarshall/Desktop/facts_work/facts_v2/facts-experiment-builder/experiments/toy_experiment/data/output:/mnt/out
       restart: 'no'
       depends_on:

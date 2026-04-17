@@ -1,6 +1,6 @@
 # EMULANDICE AIS (Antarctic Ice Sheet) MODULE CONFIGURATION
 # This YAML file describes the arguments and configuration needed to run the module.
-# It is used to generate FactsModule objects.
+# It is used to generate ModuleSchema objects.
 # Based on https://github.com/fact-sealevel/emulandice/blob/main/src/emulandice/cli.py (ais command).
 
 module_name: "emulandice-ais"
@@ -36,31 +36,31 @@ arguments:
     #  source: "module_inputs.fingerprint_params.fingerprint_dir"
     #  help: "Path to directory containing fingerprint files"
     #  mount:
-    #    volume: "general_input"
+    #    volume: "shared_input"
     #    container_path: "/mnt/general_in"
     - name: "location-file"
       type: "str"
       source: "metadata.location-file"
       help: "File containing name, id, lat, and lon of points for localization"
       mount:
-        volume: "general_input"
+        volume: "shared_input"
         container_path: "/mnt/general_in"
     - name: "fprint-wais-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_wais_file"
       help: "File containing WAIS fingerprint data"
       mount:
-        volume: "general_input"
+        volume: "shared_input"
         container_path: "/mnt/general_in"
     - name: "fprint-eais-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_eais_file"
       help: "File containing EAIS fingerprint data"
       mount:
-        volume: "general_input"
+        volume: "shared_input"
         container_path: "/mnt/general_in"
 
-#These names need to exactly match names of cli arguments
+  #These names need to exactly match names of cli arguments
   inputs:
     - name: "input-data-file"
       type: "file"
@@ -74,87 +74,89 @@ arguments:
     - name: "forcing-head-path"
       type: "file"
       source: "module_inputs.inputs.forcing_head_path"
-      help: "Path to the climate forcing head CSV file"
+      envvar: "EMULANDICE_FORCING_HEAD_PATH"
+      optional: true
+      help: "Path to the climate forcing head CSV file (supplied via EMULANDICE_FORCING_HEAD_PATH env var by the container)"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
 
-#These names need to exactly match names of cli arguments
+  #These names need to exactly match names of cli arguments
   outputs:
-    - name: "output-gslr-file"
-      type: "file"
-      source: "module_inputs.outputs.output_gslr_file"
-      filename: "output-gslr.nc"
-      help: "Path to write output global SLR file"
-      output_type: "global"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-    - name: "output-gslr-wais-file"
-      type: "file"
-      source: "module_inputs.outputs.output_gslr_wais_file"
-      filename: "output-gslr-wais.nc"
-      help: "Path to write output global SLR file"
-      output_type: "global"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-    - name: "output-gslr-eais-file"
-      type: "file"
-      source: "module_inputs.outputs.output_gslr_eais_file"
-      filename: "output-gslr-eais.nc"
-      help: "Path to write output global SLR EAIS file"
-      output_type: "global"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-      optional: true
-    - name: "output-gslr-pen-file"
-      type: "file"
-      source: "module_inputs.outputs.output_gslr_pen_file"
-      filename: "output-gslr-pen.nc"
-      help: "Path to write output global SLR PEN file"
-      output_type: "global"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-    - name: "output-lslr-file"
-      type: "file"
-      source: "module_inputs.outputs.output_lslr_file"
-      filename: "output-lslr.nc"
-      help: "Path to write output local SLR file"
-      output_type: "local"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-    - name: "output-lslr-eais-file"
-      type: "file"
-      source: "module_inputs.outputs.output_lslr_eais_file"
-      filename: "output-lslr-eais.nc"
-      help: "Path to write output local SLR EAIS file"
-      output_type: "local"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-      optional: true
-    - name: "output-lslr-wais-file"
-      type: "file"
-      source: "module_inputs.outputs.output_lslr_wais_file"
-      filename: "output-lslr-wais.nc"
-      help: "Path to write output local SLR WAIS file"
-      output_type: "local"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-      optional: true
-   
+    files:
+      - name: "output-gslr-file"
+        type: "file"
+        source: "module_inputs.outputs.output_gslr_file"
+        filename: "output-gslr.nc"
+        help: "Path to write output global SLR file"
+        output_type: "global"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+      - name: "output-gslr-wais-file"
+        type: "file"
+        source: "module_inputs.outputs.output_gslr_wais_file"
+        filename: "output-gslr-wais.nc"
+        help: "Path to write output global SLR file"
+        output_type: "global"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+      - name: "output-gslr-eais-file"
+        type: "file"
+        source: "module_inputs.outputs.output_gslr_eais_file"
+        filename: "output-gslr-eais.nc"
+        help: "Path to write output global SLR EAIS file"
+        output_type: "global"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+        optional: true
+      - name: "output-gslr-pen-file"
+        type: "file"
+        source: "module_inputs.outputs.output_gslr_pen_file"
+        filename: "output-gslr-pen.nc"
+        help: "Path to write output global SLR PEN file"
+        output_type: "global"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+      - name: "output-lslr-file"
+        type: "file"
+        source: "module_inputs.outputs.output_lslr_file"
+        filename: "output-lslr.nc"
+        help: "Path to write output local SLR file"
+        output_type: "local"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+      - name: "output-lslr-eais-file"
+        type: "file"
+        source: "module_inputs.outputs.output_lslr_eais_file"
+        filename: "output-lslr-eais.nc"
+        help: "Path to write output local SLR EAIS file"
+        output_type: "local"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+        optional: true
+      - name: "output-lslr-wais-file"
+        type: "file"
+        source: "module_inputs.outputs.output_lslr_wais_file"
+        filename: "output-lslr-wais.nc"
+        help: "Path to write output local SLR WAIS file"
+        output_type: "local"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+        optional: true
 
 # Volume specifications
 volumes:
@@ -162,9 +164,9 @@ volumes:
     host_path: "module_inputs.input_paths.module_specific_input_dir"
     help: "Module-specific input directory"
     container_path: "/mnt/module_specific_in"
-  general_input:
-    host_path: "module_inputs.input_paths.general_input_dir"
-    help: "General input directory (fingerprints, location file)"
+  shared_input:
+    host_path: "module_inputs.input_paths.shared_input_dir"
+    help: "Shared input directory (fingerprints, location file)"
     container_path: "/mnt/general_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"

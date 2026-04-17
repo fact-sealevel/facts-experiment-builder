@@ -257,7 +257,7 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
 
     Args:
         experiment: FactsExperiment
-        output_path: Path to output YAML file (typically experiment-metadata.yml)
+        output_path: Path to output YAML file (typically experiment-config.yaml)
     """
     # Define sections
     top_level_params = [
@@ -305,12 +305,12 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
     if "esl_modules" in manifest and manifest["esl_modules"]:
         included_modules.append("esl_modules")
 
-    # Inputs section (module-specific-input-data, general-input-data, location-file-name)
+    # Inputs section (module-specific-input-data, shared-input-data, location-file-name)
     inputs = []
     if "module-specific-input-data" in experiment.paths:
         inputs.append("module-specific-input-data")
-    if "general-input-data" in experiment.paths:
-        inputs.append("general-input-data")
+    if "shared-input-data" in experiment.paths:
+        inputs.append("shared-input-data")
     if "experiment-specific-input-data" in experiment.paths:
         inputs.append("experiment-specific-input-data")
     if "supplied-totaled-sealevel-step-data" in experiment.paths:

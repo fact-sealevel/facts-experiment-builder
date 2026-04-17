@@ -48,8 +48,8 @@ def extremesealevel_step():
 
 
 @pytest.fixture
-def general_inputs_path():
-    input = ("--general-inputs", "/path/to/general/inputs")
+def shared_inputs_path():
+    input = ("--shared-inputs", "/path/to/general/inputs")
     return input
 
 
@@ -115,7 +115,7 @@ def setup_args(
     totaling_step,
     extremesealevel_step,
     module_specific_inputs_path,
-    general_inputs_path,
+    shared_inputs_path,
     scenario,
     pyear_start,
     pyear_end,
@@ -154,8 +154,8 @@ def setup_args(
         extremesealevel_step,
         "--module-specific-inputs",
         module_specific_inputs_path[1],
-        "--general-inputs",
-        general_inputs_path[1],
+        "--shared-inputs",
+        shared_inputs_path[1],
     ]
     return input
 

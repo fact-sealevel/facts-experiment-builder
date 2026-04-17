@@ -7,6 +7,6 @@
 options:
   chunksize: 50
 
-inputs:
+fingerprint_params:
   fprint-glacier-dir: "fprint_glacier"
   fprint-map-file: "fprint_map.csv"

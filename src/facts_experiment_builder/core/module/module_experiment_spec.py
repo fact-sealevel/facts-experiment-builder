@@ -31,7 +31,7 @@ def get_clue_from_module_yaml(
 @dataclass
 class ModuleExperimentSpec:
     """
-    In-memory representation of one module's section in experiment-metadata.yml.
+    In-memory representation of one module's section in experiment-config.yaml.
     Fields mirror the dict shape used in the YAML:
         inputs:  {field_name: clue/value-bundle-or-plain-value}
         options: {field_name: clue/value-bundle-or-plain-value}
@@ -43,6 +43,7 @@ class ModuleExperimentSpec:
     inputs: Dict[str, Any] = field(default_factory=dict)
     options: Dict[str, Any] = field(default_factory=dict)
     outputs: Dict[str, Any] = field(default_factory=dict)
+    fingerprint_params: Dict[str, Any] = field(default_factory=dict)
     image: str = ""
 
     # Constructors
@@ -87,9 +88,19 @@ class ModuleExperimentSpec:
             )
             module_options[snake_field_name] = create_metadata_bundle(clue)
 
+        # fingerprint_params (module-specific only — entries sourced from module_inputs.fingerprint_params.*)
+        module_fingerprint_params: Dict[str, Any] = {}
+        for arg_spec in module_schema.arguments.get("fingerprint_params", []):
+            source = arg_spec.get("source", "")
+            if not source.startswith("module_inputs.fingerprint_params."):
+                continue
+            snake_field_name = source.split(".")[-1]
+            clue = arg_spec.get("help", f"add your {snake_field_name} here")
+            module_fingerprint_params[snake_field_name] = create_metadata_bundle(clue)
+
         # outputs
         module_outputs: Dict[str, Any] = {}
-        for arg_spec in module_schema.arguments.get("outputs", []):
+        for arg_spec in module_schema.get_file_outputs():
             arg_name = arg_spec.get("name", "")
             if not arg_name:
                 continue
@@ -109,11 +120,17 @@ class ModuleExperimentSpec:
                 "value": f"{module_schema.module_name}/{filename}",
                 "output_type": output_type,
             }
+        for arg_spec in module_schema.get_other_outputs():
+            arg_name = arg_spec.get("name", "")
+            if not arg_name:
+                continue
+            module_outputs[arg_name] = {"value": module_schema.module_name}
         return cls(
             module_name=module_schema.module_name,
             inputs=module_inputs,
             options=module_options,
             outputs=module_outputs,
+            fingerprint_params=module_fingerprint_params,
             image=module_schema.container_image,
         )
 
@@ -124,6 +141,7 @@ class ModuleExperimentSpec:
             inputs=dict(d.get("inputs") or {}),
             options=dict(d.get("options") or {}),
             outputs=dict(d.get("outputs") or {}),
+            fingerprint_params=dict(d.get("fingerprint_params") or {}),
             image=d.get("image", ""),
         )
 
@@ -131,13 +149,16 @@ class ModuleExperimentSpec:
     # Serialization
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize back to raw dict used in experiment-metadata.yml"""
-        return {
+        """Serialize back to raw dict used in experiment-config.yaml"""
+        d: Dict[str, Any] = {
             "inputs": dict(self.inputs),
             "options": dict(self.options),
             "image": self.image,
             "outputs": dict(self.outputs),
         }
+        if self.fingerprint_params:
+            d["fingerprint_params"] = dict(self.fingerprint_params)
+        return d
 
     # Mutation
     def merge_defaults(
@@ -152,6 +173,7 @@ class ModuleExperimentSpec:
         section_map = {
             "inputs": self.inputs,
             "options": self.options,
+            "fingerprint_params": self.fingerprint_params,
         }
 
         for section_key, section_defaults in defaults_yml.items():
