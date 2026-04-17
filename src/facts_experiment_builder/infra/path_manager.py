@@ -33,7 +33,7 @@ def find_experiment_metadata_file(experiment_name: str):
         raise FileNotFoundError(f"Experiment directory not found: {experiment_dir}")
 
     # Resolve absolute path to file
-    metadata_file = experiment_dir / "experiment-metadata.yml"
+    metadata_file = experiment_dir / "experiment-config.yaml"
     if not metadata_file.exists():
         raise FileNotFoundError(f"Experiment metadata file not found: {metadata_file}")
 

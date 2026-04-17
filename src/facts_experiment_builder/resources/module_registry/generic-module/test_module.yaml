@@ -34,7 +34,7 @@ arguments:
   # Input file arguments 
   inputs: []
   # Output file arguments
-  outputs: []
+  outputs: {}
 
 # Volume specifications
 volumes:
@@ -42,8 +42,8 @@ volumes:
     host_path: "module_inputs.input_paths.module_specific_input_dir"
     container_path: ""
     help: ""
-  general_input:
-    host_path: "module_inputs.input_paths.general_input_dir"
+  shared_input:
+    host_path: "module_inputs.input_paths.shared_input_dir"
     container_path: ""
     help: ""
   output:
