@@ -26,6 +26,13 @@ arguments:
     - name: "pyear-step"
       type: "int"
       source: "metadata.pyear_step"
+    #- name: "location-file"
+    #  type: "str"
+    #  source: "metadata.location-file"
+    #  optional: true
+    #  help: "File containing name, id, lat, and lon of points for localization"
+    #  mount:
+    #    container_path: "/mnt/shared_in"
 
   # Module-specific options
   options:
@@ -41,14 +48,7 @@ arguments:
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "input"
-        container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "str"
-      source: "module_inputs.fingerprint_params.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
+        container_path: "/mnt/shared_in"
 
   # Input file arguments
   inputs:
@@ -75,6 +75,9 @@ arguments:
 
 # Volume specifications
 volumes:
+  shared_input:
+    host_path: "module_inputs.input_paths.shared_input_dir"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     container_path: "/mnt/total_out"

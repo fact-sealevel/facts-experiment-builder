@@ -132,7 +132,7 @@ def collect_metadata_param_keys(
         for arg_spec in schema.arguments.get(section, []):
             source = arg_spec.get("source", "")
             if source.startswith("metadata."):
-                key_name = source[len("metadata."):]
+                key_name = source[len("metadata.") :]
                 if key_name not in result:
                     result[key_name] = arg_spec.get("help", f"Enter {key_name}")
     return result

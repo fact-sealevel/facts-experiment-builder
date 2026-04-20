@@ -53,6 +53,13 @@ arguments:
       source: "metadata.pyear_step"
       optional: true
       help: "Projection year step"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   # Module-specific options
   options:
@@ -82,15 +89,6 @@ arguments:
       optional: true
       help: "TO DO ADD HELP TEXT"
 
-  fingerprint_params:
-    - name: "location-file"
-      type: "str"
-      source: "module_inputs.fingerprint_params.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
-
   # Input file arguments
   inputs:
     - name: "climate-data-file"
@@ -102,13 +100,6 @@ arguments:
         container_path: "/mnt/out"
         transform: "filename"
       external_volume: true # Indicates this comes from an external module
-    - name: "location-file"
-      type: "file"
-      source: "module_inputs.inputs.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
     - name: "model-dir"
       type: "str"
       source: "module_inputs.inputs.model_dir"
@@ -164,7 +155,7 @@ volumes:
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
     help: "TO DO ADD HELP TEXT"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     help: "TO DO ADD HELP TEXT"

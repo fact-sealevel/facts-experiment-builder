@@ -12,7 +12,8 @@ options:
   pyear_step: 10
   baseyear: 2005
   chunksize: 50
-
+fingerprint_params:
+  fingerprint-dir: FPRINT
 inputs:
   gris_parm_file: "FittedParms_GrIS_ALL.csv"
   wais_parm_file: "FittedParms_AIS_WAIS.csv"

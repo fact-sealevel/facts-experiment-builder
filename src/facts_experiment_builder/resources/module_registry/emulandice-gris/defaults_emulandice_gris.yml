@@ -6,6 +6,7 @@
 # Module-specific options
 options:
   chunksize: 50
-
+inputs:
+  input-data-file: "fair-temperature/gsat.nc"
 fingerprint_params:
-  fprint-gis-file: "fprint_gis.nc"
+  fprint-gis-file: "FPRINT/fprint_gis.nc"

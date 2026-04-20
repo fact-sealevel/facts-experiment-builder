@@ -171,7 +171,8 @@ class FactsExperiment:
             _top_level_keys = top_level_keys
         else:
             _top_level_keys = {
-                k for k, v in metadata.items()
+                k
+                for k, v in metadata.items()
                 if k not in _STRUCTURAL_KEYS and _is_top_level_param_value(v)
             }
         _fp_keys = fingerprint_keys if fingerprint_keys is not None else set()

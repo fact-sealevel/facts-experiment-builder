@@ -31,7 +31,9 @@ from facts_experiment_builder.infra.module_loader import (
     load_facts_module_from_yaml,
     load_facts_module_by_name,
 )
-from facts_experiment_builder.core.module.module_schema import collect_metadata_param_keys
+from facts_experiment_builder.core.module.module_schema import (
+    collect_metadata_param_keys,
+)
 
 
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:

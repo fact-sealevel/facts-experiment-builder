@@ -121,9 +121,9 @@ volumes:
   module_specific_in:
     host_path: "module_inputs.input_paths.module_specific_input_dir"
     container_path: "/mnt/module_specific_in"
-  general_in:
+  shared_in:
     host_path: "module_inputs.input_paths.shared_input_dir"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     container_path: "/mnt/out"

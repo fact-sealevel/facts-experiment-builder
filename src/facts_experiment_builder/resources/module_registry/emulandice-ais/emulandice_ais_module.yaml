@@ -22,6 +22,13 @@ arguments:
       source: "metadata.baseyear"
       optional: true
       help: "Base year to which projections should be referenced"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   options:
     - name: "chunksize"
@@ -37,28 +44,21 @@ arguments:
     #  help: "Path to directory containing fingerprint files"
     #  mount:
     #    volume: "shared_input"
-    #    container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "str"
-      source: "metadata.location-file"
-      help: "File containing name, id, lat, and lon of points for localization"
-      mount:
-        volume: "shared_input"
-        container_path: "/mnt/general_in"
+    #    container_path: "/mnt/shared_in"
     - name: "fprint-wais-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_wais_file"
       help: "File containing WAIS fingerprint data"
       mount:
         volume: "shared_input"
-        container_path: "/mnt/general_in"
+        container_path: "/mnt/shared_in"
     - name: "fprint-eais-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_eais_file"
       help: "File containing EAIS fingerprint data"
       mount:
         volume: "shared_input"
-        container_path: "/mnt/general_in"
+        container_path: "/mnt/shared_in"
 
   #These names need to exactly match names of cli arguments
   inputs:
@@ -80,7 +80,6 @@ arguments:
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
-
   #These names need to exactly match names of cli arguments
   outputs:
     files:
@@ -167,7 +166,7 @@ volumes:
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
     help: "Shared input directory (fingerprints, location file)"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     help: "Output directory for SLR files"

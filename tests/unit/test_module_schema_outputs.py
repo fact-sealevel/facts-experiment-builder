@@ -112,7 +112,7 @@ OTHER_VOLUMES = {
     },
     "shared_input": {
         "host_path": "module_inputs.input_paths.shared_input_dir",
-        "container_path": "/mnt/general_in",
+        "container_path": "/mnt/shared_in",
     },
 }
 
@@ -182,7 +182,7 @@ def test_get_output_volume_input_keys_handles_multiple_inputs():
         {
             "name": "location-file",
             "source": "module_inputs.inputs.location_file",
-            "mount": {"volume": "shared_input", "container_path": "/mnt/general_in"},
+            "mount": {"volume": "shared_input", "container_path": "/mnt/shared_in"},
         },
     ]
     schema = _schema_with_inputs(inputs)
@@ -258,7 +258,7 @@ FP_SPEC_MODULE_SPECIFIC = {
     "type": "str",
     "source": "module_inputs.fingerprint_params.fprint_gis_file",
     "help": "File containing GIS fingerprint data",
-    "mount": {"volume": "shared_input", "container_path": "/mnt/general_in"},
+    "mount": {"volume": "shared_input", "container_path": "/mnt/shared_in"},
 }
 
 FP_SPEC_TOP_LEVEL = {
@@ -266,7 +266,7 @@ FP_SPEC_TOP_LEVEL = {
     "type": "str",
     "source": "metadata.location-file",
     "help": "Location file",
-    "mount": {"volume": "shared_input", "container_path": "/mnt/general_in"},
+    "mount": {"volume": "shared_input", "container_path": "/mnt/shared_in"},
 }
 
 

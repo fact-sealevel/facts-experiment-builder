@@ -148,7 +148,7 @@ def experiment_skeleton_to_facts_experiment(
     nsamps: Optional[int] = None,
     seed: Optional[int] = None,
     location_file: Optional[str] = None,
-    #fingerprint_dir: Optional[str] = None,
+    # fingerprint_dir: Optional[str] = None,
     module_specific_inputs: Optional[str] = None,
     experiment_specific_inputs: Optional[str] = None,
     shared_inputs: Optional[str] = None,
@@ -167,15 +167,20 @@ def experiment_skeleton_to_facts_experiment(
 
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
     cli_values: Dict[str, object] = {
-        "pipeline-id": pipeline_id, "pipeline_id": pipeline_id,
+        "pipeline-id": pipeline_id,
+        "pipeline_id": pipeline_id,
         "scenario": scenario,
         "baseyear": baseyear,
-        "pyear_start": pyear_start, "pyear-start": pyear_start,
-        "pyear_end": pyear_end, "pyear-end": pyear_end,
-        "pyear_step": pyear_step, "pyear-step": pyear_step,
+        "pyear_start": pyear_start,
+        "pyear-start": pyear_start,
+        "pyear_end": pyear_end,
+        "pyear-end": pyear_end,
+        "pyear_step": pyear_step,
+        "pyear-step": pyear_step,
         "nsamps": nsamps,
         "seed": seed,
-        "location-file": location_file, "location_file": location_file,
+        "location-file": location_file,
+        "location_file": location_file,
     }
 
     top_level_keys = collect_metadata_param_keys(schemas, "top_level")
