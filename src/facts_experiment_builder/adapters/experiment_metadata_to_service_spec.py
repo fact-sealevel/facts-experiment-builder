@@ -391,9 +391,8 @@ def build_module_service_spec(
     )
 
     fingerprint_params = {
-        "fingerprint_dir": metadata.get("fingerprint-dir", "FPRINT"),
-        "location_file": metadata.get("location-file", "location.lst"),
-    }
+          "location_file": metadata.get("location-file"),
+      }
     # Merge module-specific fingerprint params (e.g. fprint_gis_file for emulandice-gris)
     module_fp_section = module_metadata.get("fingerprint_params") or {}
     if isinstance(module_fp_section, dict):
