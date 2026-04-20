@@ -1,7 +1,10 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
+)
+from facts_experiment_builder.core.module.module_schema import (
+    collect_metadata_param_keys,
 )
 from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentAlreadyExistsError,
@@ -28,28 +31,6 @@ from facts_experiment_builder.infra.experiment_manager import (
     create_experiment_directory,
     create_experiment_directory_files,
 )
-
-
-# Mapping of top-level param keys to their clue/help text
-# TODO ultimately want to move this to be in each module yaml file (i think)
-TOP_LEVEL_PARAM_CLUES = {
-    "pipeline-id": "Pipeline ID",
-    "scenario": "Emissions scenario name",
-    "baseyear": "Base year",
-    "pyear_start": "Projection year start",
-    "pyear_end": "Projection year end",
-    "pyear_step": "Projection year step",
-    "nsamps": "Number of samples",
-    "seed": "Random seed to use for sampling",
-    "module-specific-input-data": "Module-specific input data",
-    "shared-input-data": "Shared input data",
-    "output-data-location": "Output path",
-}
-
-FINGERPRINT_PARAM_CLUES = {
-    "fingerprint-dir": "Name of directory holding GRD fingerprint data",
-    "location-file": "Location file name",
-}
 
 
 def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
@@ -167,7 +148,7 @@ def experiment_skeleton_to_facts_experiment(
     nsamps: Optional[int] = None,
     seed: Optional[int] = None,
     location_file: Optional[str] = None,
-    fingerprint_dir: Optional[str] = None,
+    #fingerprint_dir: Optional[str] = None,
     module_specific_inputs: Optional[str] = None,
     experiment_specific_inputs: Optional[str] = None,
     shared_inputs: Optional[str] = None,
@@ -181,24 +162,28 @@ def experiment_skeleton_to_facts_experiment(
         hydrate_experiment(skeleton)
     )
 
-    top_level_params = {
-        "pipeline-id": create_metadata_bundle(
-            TOP_LEVEL_PARAM_CLUES["pipeline-id"], pipeline_id
-        ),
-        "scenario": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["scenario"], scenario),
-        "baseyear": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["baseyear"], baseyear),
-        "pyear_start": create_metadata_bundle(
-            TOP_LEVEL_PARAM_CLUES["pyear_start"], pyear_start
-        ),
-        "pyear_end": create_metadata_bundle(
-            TOP_LEVEL_PARAM_CLUES["pyear_end"], pyear_end
-        ),
-        "pyear_step": create_metadata_bundle(
-            TOP_LEVEL_PARAM_CLUES["pyear_step"], pyear_step
-        ),
-        "nsamps": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["nsamps"], nsamps),
-        "seed": create_metadata_bundle(TOP_LEVEL_PARAM_CLUES["seed"], seed),
+    # Load schemas to derive which top-level and fingerprint keys this experiment needs
+    schemas = [load_facts_module_by_name(m) for m in skeleton.all_module_names]
+
+    # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
+    cli_values: Dict[str, object] = {
+        "pipeline-id": pipeline_id, "pipeline_id": pipeline_id,
+        "scenario": scenario,
+        "baseyear": baseyear,
+        "pyear_start": pyear_start, "pyear-start": pyear_start,
+        "pyear_end": pyear_end, "pyear-end": pyear_end,
+        "pyear_step": pyear_step, "pyear-step": pyear_step,
+        "nsamps": nsamps,
+        "seed": seed,
+        "location-file": location_file, "location_file": location_file,
     }
+
+    top_level_keys = collect_metadata_param_keys(schemas, "top_level")
+    top_level_params = {
+        key: create_metadata_bundle(help_text, cli_values.get(key))
+        for key, help_text in top_level_keys.items()
+    }
+
     paths = {
         "module-specific-input-data": create_metadata_bundle(
             "Module-specific input data", module_specific_inputs
@@ -208,9 +193,8 @@ def experiment_skeleton_to_facts_experiment(
             "Experiment-specific input data (eg. alternative FAIR data)",
             experiment_specific_inputs,
         ),
-        "location-file": create_metadata_bundle("Location file", location_file),
         "output-data-location": create_metadata_bundle(
-            TOP_LEVEL_PARAM_CLUES["output-data-location"],
+            "Output path",
             f"./experiments/{experiment_name}/data/output",
         ),
         **(
@@ -224,11 +208,11 @@ def experiment_skeleton_to_facts_experiment(
             else {}
         ),
     }
+
+    fp_keys = collect_metadata_param_keys(schemas, "fingerprint_params")
     fingerprint_params = {
-        "fingerprint-dir": create_metadata_bundle(
-            "Fingerprint directory", fingerprint_dir
-        ),
-        "location-file": create_metadata_bundle("Location file", location_file),
+        key: create_metadata_bundle(help_text, cli_values.get(key))
+        for key, help_text in fp_keys.items()
     }
 
     return FactsExperiment(
