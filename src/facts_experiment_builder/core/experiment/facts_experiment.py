@@ -1,6 +1,6 @@
 """In-memory representation of an experiment (analogous to experiment-config.yaml)."""
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Set
 
 from facts_experiment_builder.core.workflow.workflow import (
     Workflow,
@@ -13,19 +13,11 @@ from facts_experiment_builder.core.steps import (
     ExtremeSealevelStep,
     steps_from_metadata,
 )
+from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 
 
-# Keys that appear in experiment-config.yaml (for parsing and round-trip)
-TOP_LEVEL_PARAM_KEYS = [
-    "pipeline-id",
-    "scenario",
-    "baseyear",
-    "pyear_start",
-    "pyear_end",
-    "pyear_step",
-    "nsamps",
-    "seed",
-]
+# Framework-level structural keys — these describe the experiment config format,
+# not any particular module's parameters.
 MANIFEST_KEYS = [
     "temperature_module",
     "sealevel_modules",
@@ -35,16 +27,31 @@ MANIFEST_KEYS = [
 PATH_KEYS_PRIMARY = [
     "shared-input-data",
     "module-specific-input-data",
+    "experiment-specific-input-data",
+    "supplied-totaled-sealevel-step-data",
     "output-data-location",
-    "location-file",
 ]
 PATH_KEYS_ALTERNATIVES = {
     "shared-input-data": ["shared_input_data"],
     "module-specific-input-data": ["module_specific_input_data"],
     "output-data-location": ["output_data_location", "output-path", "output_path"],
-    "location-file": ["location_file"],
 }
-FINGERPRINT_PARAM_KEYS = ["fingerprint-dir", "location-file"]
+
+_STRUCTURAL_KEYS: Set[str] = (
+    set(MANIFEST_KEYS)
+    | set(PATH_KEYS_PRIMARY)
+    | {k for alts in PATH_KEYS_ALTERNATIVES.values() for k in alts}
+    | {"experiment_name", "workflows"}
+)
+
+
+def _is_top_level_param_value(value: Any) -> bool:
+    """True if value looks like a top-level param (scalar, None, or clue/value bundle)."""
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return True
+    if isinstance(value, dict):
+        return is_metadata_value(value)
+    return False
 
 
 class FactsExperiment:
@@ -142,18 +149,35 @@ class FactsExperiment:
         }
 
     @classmethod
-    def from_metadata_dict(cls, metadata: Dict[str, Any]) -> "FactsExperiment":
-        """Build a FactsExperiment from the metadata dict shape (e.g. from YAML)."""
+    def from_metadata_dict(
+        cls,
+        metadata: Dict[str, Any],
+        top_level_keys: Optional[Set[str]] = None,
+        fingerprint_keys: Optional[Set[str]] = None,
+    ) -> "FactsExperiment":
+        """Build a FactsExperiment from the metadata dict shape (e.g. from YAML).
 
-        # First extract top-level fields from the metadata object
+        Args:
+            metadata: Raw dict loaded from experiment-config.yaml.
+            top_level_keys: Set of top-level param key names derived from module schemas.
+                When omitted, infers by treating any non-structural, non-dict key as a
+                top-level param (scalars, None, and clue/value bundles).
+            fingerprint_keys: Set of fingerprint param key names derived from module schemas.
+                When omitted, defaults to an empty set.
+        """
         experiment_name = metadata.get("experiment_name", "")
 
-        top_level_params = {
-            k: metadata[k] for k in TOP_LEVEL_PARAM_KEYS if k in metadata
-        }
-        fingerprint_params = {
-            k: metadata[k] for k in FINGERPRINT_PARAM_KEYS if k in metadata
-        }
+        if top_level_keys is not None:
+            _top_level_keys = top_level_keys
+        else:
+            _top_level_keys = {
+                k for k, v in metadata.items()
+                if k not in _STRUCTURAL_KEYS and _is_top_level_param_value(v)
+            }
+        _fp_keys = fingerprint_keys if fingerprint_keys is not None else set()
+
+        top_level_params = {k: metadata[k] for k in _top_level_keys if k in metadata}
+        fingerprint_params = {k: metadata[k] for k in _fp_keys if k in metadata}
 
         # Then, build a manifest of the modules included in the experiment
         manifest = {
@@ -184,18 +208,7 @@ class FactsExperiment:
                         value = value["value"]
                     if isinstance(value, str):
                         paths_normalized[primary] = value
-        # Make tuple of the fields that wont' be used to build module_sections
-        excluded = (
-            set(TOP_LEVEL_PARAM_KEYS)
-            | set(FINGERPRINT_PARAM_KEYS)
-            | set(MANIFEST_KEYS)
-            | set(PATH_KEYS_PRIMARY)
-        )
-        excluded |= set().union(
-            *(PATH_KEYS_ALTERNATIVES.get(k, []) for k in PATH_KEYS_PRIMARY)
-        )
-        excluded.add("experiment_name")
-        excluded.add("workflows")
+        excluded = _top_level_keys | _fp_keys | _STRUCTURAL_KEYS
 
         workflows = metadata.get("workflows")
         if not isinstance(workflows, dict):
