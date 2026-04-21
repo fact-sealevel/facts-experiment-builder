@@ -23,6 +23,13 @@ arguments:
       source: "metadata.baseyear"
       optional: true
       help: "Year from which to start integrating temperature"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   options:
     - name: "chunksize"
@@ -32,20 +39,13 @@ arguments:
       help: "Number of locations to process at a time"
 
   fingerprint_params:
-    - name: "location-file"
-      type: "str"
-      source: "metadata.location-file"
-      help: "File containing name, id, lat, and lon of points for localization"
-      mount:
-        volume: "shared_input"
-        container_path: "/mnt/general_in"
     - name: "fprint-gis-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_gis_file"
       help: "File containing GIS fingerprint data"
       mount:
         volume: "shared_input"
-        container_path: "/mnt/general_in"
+        container_path: "/mnt/shared_in"
 
   inputs:
     - name: "input-data-file"
@@ -66,7 +66,6 @@ arguments:
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
-
   outputs:
     files:
       - name: "output-gslr-file"
@@ -100,7 +99,7 @@ volumes:
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
     help: "Shared input directory (fingerprints, location file)"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     help: "Output directory for SLR files"

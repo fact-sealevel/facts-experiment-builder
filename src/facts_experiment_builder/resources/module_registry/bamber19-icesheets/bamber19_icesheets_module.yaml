@@ -38,6 +38,13 @@ arguments:
     - name: "baseyear"
       type: "int"
       source: "metadata.baseyear"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   # Module-specific options
   options:
@@ -56,14 +63,7 @@ arguments:
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "input"
-        container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "str"
-      source: "module_inputs.fingerprint_params.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
+        container_path: "/mnt/shared_in"
 
   # Input file arguments
   inputs:
@@ -81,18 +81,6 @@ arguments:
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
-    - name: "fingerprint-dir"
-      type: "str"
-      source: "module_inputs.inputs.fingerprint_dir"
-      mount:
-        volume: "shared_input"
-        container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "file"
-      source: "module_inputs.inputs.location_file"
-      mount:
-        volume: "shared_input"
-        container_path: "/mnt/general_in"
 
   # Output file arguments
   outputs:
@@ -177,7 +165,7 @@ volumes:
     container_path: "/mnt/module_specific_in"
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     container_path: "/mnt/out"

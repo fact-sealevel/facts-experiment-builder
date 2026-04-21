@@ -27,7 +27,31 @@ from facts_experiment_builder.core.workflow.workflow import (
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.path_utils import expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
-from facts_experiment_builder.infra.module_loader import load_facts_module_from_yaml
+from facts_experiment_builder.infra.module_loader import (
+    load_facts_module_from_yaml,
+    load_facts_module_by_name,
+)
+from facts_experiment_builder.core.module.module_schema import (
+    collect_metadata_param_keys,
+)
+
+
+def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
+    """Extract a flat list of all module names from the experiment manifest keys."""
+    names: List[str] = []
+    temp = metadata.get("temperature_module")
+    if temp and str(temp).upper() != "NONE":
+        names.append(str(temp))
+    for m in metadata.get("sealevel_modules") or []:
+        if isinstance(m, str):
+            names.append(m)
+    for m in metadata.get("framework_modules") or []:
+        if isinstance(m, str):
+            names.append(m)
+    for m in metadata.get("esl_modules") or []:
+        if isinstance(m, str):
+            names.append(m)
+    return names
 
 
 def _module_requires_climate_file(module_name: str) -> bool:
@@ -233,8 +257,16 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     experiment_dir = metadata_path.parent
 
-    # Step 2: Build FactsExperiment
-    experiment = FactsExperiment.from_metadata_dict(metadata)
+    # Step 2: Build FactsExperiment — derive key sets from module schemas
+    _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
+    _schemas = [load_facts_module_by_name(m) for m in _manifest_module_names]
+    _top_level_keys = set(collect_metadata_param_keys(_schemas, "top_level"))
+    _fp_keys = set(collect_metadata_param_keys(_schemas, "fingerprint_params"))
+    experiment = FactsExperiment.from_metadata_dict(
+        metadata,
+        top_level_keys=_top_level_keys,
+        fingerprint_keys=_fp_keys,
+    )
 
     temperature_module_name = experiment.climate_step.module_name or "NONE"
     sealevel_module_names = experiment.sealevel_step.module_names

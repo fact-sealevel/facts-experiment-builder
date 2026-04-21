@@ -6,7 +6,8 @@
 # Module-specific options
 options:
   chunksize: 50
-
+inputs:
+  input-data-file: "fair-temperature/gsat.nc"
 fingerprint_params:
-  fprint-glacier-dir: "fprint_glacier"
-  fprint-map-file: "fprint_map.csv"
+  fprint-glacier-dir: "FPRINT"
+  fprint-map-file: "fingerprint_region_map.csv"

@@ -110,6 +110,34 @@ class ModuleSchema:
         )
 
 
+def collect_metadata_param_keys(
+    schemas: List["ModuleSchema"], section: str
+) -> Dict[str, str]:
+    """Return {key_name: help_text} for args in `section` sourced from metadata.*.
+
+    Iterates over all schemas and collects argument specs in the given section
+    (e.g. "top_level" or "fingerprint_params") whose source starts with "metadata.".
+    The key name is the part after "metadata." (e.g. "pipeline-id", "location-file").
+    Deduplicates across schemas — first help text seen wins.
+
+    Args:
+        schemas: Loaded module schemas for the experiment.
+        section: Argument section name in the module YAML ("top_level", "fingerprint_params", etc.)
+
+    Returns:
+        Dict mapping key_name to help_text.
+    """
+    result: Dict[str, str] = {}
+    for schema in schemas:
+        for arg_spec in schema.arguments.get(section, []):
+            source = arg_spec.get("source", "")
+            if source.startswith("metadata."):
+                key_name = source[len("metadata.") :]
+                if key_name not in result:
+                    result[key_name] = arg_spec.get("help", f"Enter {key_name}")
+    return result
+
+
 @dataclass(frozen=True)
 class ScenarioConfig:
     """Scenario configuration details."""

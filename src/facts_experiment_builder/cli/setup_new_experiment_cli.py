@@ -87,13 +87,6 @@ from facts_experiment_builder.core.registry import ModuleRegistry
     help="Location file name",
 )
 @click.option(
-    "--fingerprint-dir",
-    type=str,
-    required=False,
-    help="Name of directory holding GRD fingerprint data",
-    default="FPRINT",
-)
-@click.option(
     "--module-specific-inputs",
     type=str,
     required=False,
@@ -124,7 +117,6 @@ def main(
     nsamps,
     seed,
     location_file,
-    fingerprint_dir,
     module_specific_inputs,
     shared_inputs,
 ):
@@ -204,7 +196,6 @@ def main(
         nsamps=nsamps,
         seed=seed,
         location_file=location_file,
-        fingerprint_dir=fingerprint_dir,
         module_specific_inputs=module_specific_inputs,
         shared_inputs=shared_inputs,
     )
@@ -225,7 +216,6 @@ def main(
         nsamps=nsamps,
         seed=seed,
         location_file=location_file,
-        fingerprint_dir=fingerprint_dir,
         module_specific_inputs=module_specific_inputs,
         experiment_specific_inputs=supplied_climate_step_data,
         shared_inputs=shared_inputs,
@@ -406,7 +396,6 @@ def print_global_params_info(
     nsamps: int,
     seed: int,
     location_file: str,
-    fingerprint_dir: str,
     module_specific_inputs: str,
     shared_inputs: str,
 ):
@@ -423,7 +412,6 @@ def print_global_params_info(
             nsamps,
             seed,
             location_file,
-            fingerprint_dir,
             module_specific_inputs,
             shared_inputs,
         ]

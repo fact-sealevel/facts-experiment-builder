@@ -51,6 +51,13 @@ arguments:
       source: "metadata.baseyear"
       optional: true
       help: "Year from which to start integrating temperature"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   # Module-specific options
   options:
@@ -97,15 +104,7 @@ arguments:
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "input"
-        container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "str"
-      source: "module_inputs.fingerprint_params.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
-
+        container_path: "/mnt/shared_in"
   # Input file arguments
   inputs:
     - name: "climate-data-file"
@@ -130,16 +129,7 @@ arguments:
       help: "Path to fingerprint directory"
       mount:
         volume: "shared_input"
-        container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "file"
-      source: "module_inputs.inputs.location_file"
-      help: "File that contains name, id, lat, and lon of points for localization"
-      mount:
-        volume: "shared_input"
-        container_path: "/mnt/general_in"
-      optional: true
-
+        container_path: "/mnt/shared_in"
   # Output file arguments
   outputs:
     files:
@@ -174,7 +164,7 @@ volumes:
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
     help: "TO DO ADD HELP TEXT"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     help: "TO DO ADD HELP TEXT"

@@ -55,6 +55,13 @@ arguments:
       source: "metadata.pyear_step"
       optional: true
       help: "Projection year step"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   # Module-specific options
   options:
@@ -86,15 +93,7 @@ arguments:
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "input"
-        container_path: "/mnt/general_in"
-    - name: "location-file"
-      type: "str"
-      source: "module_inputs.fingerprint_params.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
-
+        container_path: "/mnt/shared_in"
   # Input file arguments
   inputs:
     - name: "climate-data-file"
@@ -173,6 +172,6 @@ volumes:
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
     help: "TO DO ADD HELP TEXT"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
 
 # Service dependencies are automatically added in generate_compose.py when uses_climate_file: true

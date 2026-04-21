@@ -7,7 +7,7 @@
 options:
   replace: 1
   chunksize: 50
-
+fingerprint_params:
+  fingerprint-dir: FPRINT
 inputs:
   slr_proj_mat_file: "SLRProjections190726core_SEJ_full.mat"
-

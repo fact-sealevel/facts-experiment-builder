@@ -44,6 +44,13 @@ arguments:
       source: "metadata.pyear_step"
       optional: true
       help: "Projection year step"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   # Module-specific options
   options:
@@ -63,14 +70,6 @@ arguments:
       optional: true
       help: "TO DO ADD HELP TEXT"
 
-  fingerprint_params:
-    - name: "location-file"
-      type: "str"
-      source: "module_inputs.fingerprint_params.location_file"
-      help: "TO DO ADD HELP TEXT"
-      mount:
-        volume: "input"
-        container_path: "/mnt/general_in"
   # Input file arguments
   inputs:
     - name: "input-fname"
@@ -104,7 +103,7 @@ volumes:
   shared_input:
     host_path: "module_inputs.input_paths.shared_input_dir"
     help: "TO DO ADD HELP TEXT"
-    container_path: "/mnt/general_in"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     help: "TO DO ADD HELP TEXT"

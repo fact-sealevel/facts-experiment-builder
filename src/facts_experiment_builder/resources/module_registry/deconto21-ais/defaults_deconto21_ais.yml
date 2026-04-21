@@ -6,6 +6,8 @@
 options:
   replace: true
   chunksize: 50
+fingerprint_params:
+  fingerprint-dir: FPRINT
 inputs:
   input-eais-rcp26-file: "dp21_eais_rcp26.nc"
   input-eais-rcp45-file: "dp21_eais_rcp45.nc"

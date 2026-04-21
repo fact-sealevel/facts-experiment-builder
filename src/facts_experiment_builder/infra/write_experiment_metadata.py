@@ -32,19 +32,15 @@ experiment_name:
 {{ format_value(experiment.experiment_name) }}
 
 ##----- Top-level params -----##
-{% for key in top_level_params %}
-{% if key in experiment.top_level_params %}
+{% for key, value in experiment.top_level_params.items() %}
 {{ key }}:
-{{ format_value(experiment.top_level_params[key]) }}
-{% endif %}
+{{ format_value(value) }}
 {% endfor %}
 
 ##----- Fingerprint params -----##
-{% for key in fingerprint_params %}
-{% if key in experiment.fingerprint_params %}
+{% for key, value in experiment.fingerprint_params.items() %}
 {{ key }}:
-{{ format_value(experiment.fingerprint_params[key]) }}
-{% endif %}
+{{ format_value(value) }}
 {% endfor %}
 
 ##----- Modules included in experiment -----##
@@ -259,18 +255,6 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
         experiment: FactsExperiment
         output_path: Path to output YAML file (typically experiment-config.yaml)
     """
-    # Define sections
-    top_level_params = [
-        "pipeline-id",
-        "scenario",
-        "baseyear",
-        "pyear_start",
-        "pyear_end",
-        "pyear_step",
-        "nsamps",
-        "seed",
-    ]
-    fingerprint_params = ["fingerprint-dir", "location-file"]
     # Build manifest and module_sections from steps
     fw = (
         [experiment.totaling_step.module_name]
@@ -323,13 +307,13 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
 
     # Module-specific sections (all keys that are module names)
     # Exclude top-level params, included_modules, inputs, outputs, and experiment_name
-    excluded_keys = set(
-        top_level_params
-        + fingerprint_params
-        + included_modules
-        + inputs
-        + outputs
-        + ["experiment_name"]
+    excluded_keys = (
+        set(experiment.top_level_params.keys())
+        | set(experiment.fingerprint_params.keys())
+        | set(included_modules)
+        | set(inputs)
+        | set(outputs)
+        | {"experiment_name"}
     )
     module_keys = [
         key
@@ -379,8 +363,6 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
             experiment=experiment,
             manifest=manifest,
             module_sections=module_sections,
-            top_level_params=top_level_params,
-            fingerprint_params=fingerprint_params,
             included_modules=included_modules,
             inputs=inputs,
             outputs=outputs,
