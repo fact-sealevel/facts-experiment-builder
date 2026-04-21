@@ -25,6 +25,7 @@ from facts_experiment_builder.infra.write_experiment_metadata import (
 )  # TODO move this eventually
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list,
+    unparse_module_list,
     validate_module_names,
 )
 from facts_experiment_builder.core.registry import ModuleRegistry
@@ -61,6 +62,13 @@ from facts_experiment_builder.core.registry import ModuleRegistry
     default="facts-total",
     show_default=True,
     help="Name of the totaling step module (use 'NONE' if you do not want to call the totaling module)",
+)
+@click.option(
+    "--total-all-modules",
+    type=bool,
+    default=True,
+    show_default=True,
+    help="If true, automatically creates a workflow that includes all specified sealevel modules. User may still choose to specify additional workflows.",
 )
 @click.option(
     "--extremesealevel-step",
@@ -107,6 +115,7 @@ def main(
     sealevel_step,
     supplied_totaled_sealevel_step_data,
     totaling_step,
+    total_all_modules,
     extremesealevel_step,
     pipeline_id,
     scenario,
@@ -165,10 +174,13 @@ def main(
 
     # Validate the total list of modules
     _validate_modules_list_experiment(skeleton.all_module_names)
-
+    print('total all modules: ', total_all_modules)
     # If framework includes facts-total, collect workflows and attach to skeleton
     if skeleton.totaling_module == "facts-total":
-        workflow_dict = _collect_workflows(skeleton.all_module_names)
+        workflow_dict = _collect_workflows(
+            complete_modules_list=skeleton.all_module_names,
+            total_all_modules=total_all_modules,
+        )
         skeleton = dataclasses.replace(skeleton, workflows=workflow_dict)
     console.rule(style="rule")
     console.rule(style="rule", title="Setting up new FACTS experiment")
@@ -295,6 +307,13 @@ def _check_for_required_args(
     )
 
 
+def _create_all_modules_workflow(complete_modules_list: list[str]) -> tuple[str, str]:
+    workflow_name = "all-modules"
+    module_list = complete_modules_list
+    module_list_str = unparse_module_list(module_list)
+    return (workflow_name, module_list_str)
+
+
 def _collect_single_workflow(complete_modules_list: list[str]) -> tuple[str, str]:
     workflow_name = click.prompt(
         "Enter a name for this workflow (e.g. wf1)",
@@ -335,9 +354,19 @@ def _validate_modules_list_workflow(
         )
 
 
-def _collect_workflows(complete_modules_list: list[str]) -> dict[str, str]:
+def _collect_workflows(
+    complete_modules_list: list[str],
+    total_all_modules: bool,
+) -> dict[str, str]:
     """Collects workflows from the user until they are done."""
     workflow_dict = {}
+    print('total all workflow2: ', total_all_modules)
+    if total_all_modules:
+        print('creating a workflow w/ all modules')
+        workflow_name, module_list_str = _create_all_modules_workflow(
+            complete_modules_list=complete_modules_list,
+        )
+        workflow_dict[workflow_name] = module_list_str.strip()
     while True:
         workflow_name, module_list_str = _collect_single_workflow(
             complete_modules_list=complete_modules_list
