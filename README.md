@@ -71,32 +71,35 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
+#### 3. Specify workflows
+Workflows are lists of sea-level modules that are passed to the totaling step. When `--total-all-modules` is set to `True`, a workflow is automatically created that includes all sea-level modules included in the experiment. You may also specify your own workflows with different sets of modules using the CLI prompts.
+
 - If `facts-total` is passed to `--totaling-step`, the CLI prompts the user for information about the workflows included in the experiment:
 ![workflow prompts](imgs/cli_output_workflow_prompts.png)
-- If `total-all-modules` is True, a workflow is automatically added that contains all seaelevl modules specified in the sealevel step. 
+ 
 Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
      - Creates and partially pre-populates an `experiment-config.yaml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
-     - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified
+     - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified. Module default values are all propagated from the `defaults_*modulename*.yaml` file corresponding to that module in the ModuleRegistry.
 You will see the following output in your terminal window:
 ![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.png)
 
-#### 3. Review and manually complete any empty fields in the top section of the experiment metadata file.
+#### 4. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
 > [!NOTE]
 > If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--shared-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-config.yaml` that is created.
 
-- If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. if not, specify them here
+- If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. If not, specify them here.
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
 
-#### 4. Generate docker compose file via CLI
+#### 5. Generate docker compose file via CLI
 Example:
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main generate-compose \
---experiment-name toy_experiment
+--experiment-name facts_experiment
 ```
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
-- this is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
+- This is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
 
 ![generate-compose](imgs/cli_output_generate_compose.png)
 
@@ -123,38 +126,55 @@ Each step accepts either a module name or a path to pre-existing data:
 uv run setup-new-experiment --help
 Usage: setup-new-experiment [OPTIONS]
 
-  Set up a new experiment with setup-new-experiment CLI command.
+  Set up a new experiment with setup-new-experiment CLI command. This function
+  includes a number of steps:
+
+      - Creates a sub-directory in experiments/ for this experiment. Raises
+      error if one already exists
+
+      - Check that all required arguments were Received
+
+      - Create a SkeletonExperiment object. This only includes information
+      about which modules will be included in the experiment.
+
+      - If facts-total passed, collects workflows w/ user prompts
 
 Options:
-  --experiment-name TEXT         Name of the experiment  [required]
-  --climate-step TEXT            Name of the temperature module
-  --supplied-climate-step-data PATH       Path to data to use in place of running a
-                                 module in the climate step of the experiment.
-  --sealevel-step TEXT           Names of the sea level modules, separated by
-                                 commas
-  --supplied-totaled-sealevel-step-data PATH      Path to data to use in place of running
-                                 modules in sea-level step
-  --totaling-step TEXT           Name of the totaling step module (use 'NONE'
-                                 if you do not want to call the totaling
-                                 module)  [default: facts-total]
-  --extremesealevel-step TEXT    Name of the extreme sea level module (use
-                                 'NONE' if no extreme sea level module)
-  --pipeline-id TEXT             Pipeline ID
-  --scenario TEXT                Scenario
-  --baseyear INTEGER             Base year
-  --pyear-start INTEGER          Projection year start
-  --pyear-end INTEGER            Projection year end
-  --pyear-step INTEGER           Projection year step
-  --nsamps INTEGER               Number of samples
-  --seed INTEGER                 Random seed to use for sampling
-  --location-file TEXT           Location file name
-  --fingerprint-dir TEXT         Name of directory holding GRD fingerprint
-                                 data
-  --module-specific-inputs TEXT  Path to module-specific input data (written
-                                 to experiment metadata)
-  --shared-inputs TEXT          Path to shared input data (written to
-                                 experiment metadata)
-  -h, --help                     Show this message and exit.
+  --experiment-name TEXT          Name of the experiment  [required]
+  --climate-step TEXT             Name of the temperature module
+  --supplied-climate-step-data PATH
+                                  Path to data to use in place of running a
+                                  module in the climate step of the
+                                  experiment.
+  --sealevel-step TEXT            Names of the sea level modules, separated by
+                                  commas
+  --supplied-totaled-sealevel-step-data PATH
+                                  Path to pre-existing totaled sealevel data.
+                                  Replaces running both the climate and
+                                  sealevel steps.
+  --totaling-step TEXT            Name of the totaling step module (use 'NONE'
+                                  if you do not want to call the totaling
+                                  module)  [default: facts-total]
+  --total-all-modules BOOLEAN     If true, automatically creates a workflow
+                                  that includes all specified sealevel
+                                  modules. User may still choose to specify
+                                  additional workflows.  [default: True]
+  --extremesealevel-step TEXT     Name of the extreme sea level module (use
+                                  'NONE' if no extreme sea level module)
+  --pipeline-id TEXT              Pipeline ID
+  --scenario TEXT                 Scenario
+  --baseyear INTEGER              Base year
+  --pyear-start INTEGER           Projection year start
+  --pyear-end INTEGER             Projection year end
+  --pyear-step INTEGER            Projection year step
+  --nsamps INTEGER                Number of samples
+  --seed INTEGER                  Random seed to use for sampling
+  --location-file TEXT            Location file name
+  --module-specific-inputs TEXT   Path to module-specific input data (written
+                                  to experiment metadata)
+  --shared-inputs TEXT            Path to shared input data (written to
+                                  experiment metadata)
+  -h, --help                      Show this message and exit.
 ```
 
 **`generate-compose`**

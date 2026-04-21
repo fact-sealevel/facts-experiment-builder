@@ -130,10 +130,10 @@ def main(
     shared_inputs,
 ):
     """Set up a new experiment with setup-new-experiment CLI command.
-    This function includes a number of steps:
-        - Creates a sub-directory in experiments/ for this experiment. Raises error if one already exists
-        - Check that all required arguments were Received
-        - Create a SkeletonExperiment object. This only includes information about which modules will be included in the experiment.
+    This function includes a number of steps: \n
+        - Creates a sub-directory in experiments/ for this experiment. Raises error if one already exists \n
+        - Check that all required arguments were Received \n
+        - Create a SkeletonExperiment object. This only includes information about which modules will be included in the experiment. \n
         - If facts-total passed, collects workflows w/ user prompts
 
     """
