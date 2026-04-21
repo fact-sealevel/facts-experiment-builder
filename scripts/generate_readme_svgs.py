@@ -9,7 +9,6 @@ Usage:
 """
 
 import os
-import re
 import shutil
 import traceback
 from pathlib import Path
@@ -63,14 +62,9 @@ SETUP_COMMAND_LINES = [
 IMGS_DIR = Path(__file__).parent.parent / "imgs"
 
 
-def _strip_textlength(svg: str) -> str:
-    """Remove SVG textLength attributes that cause Rich to letter-space overflowing lines."""
-    return re.sub(r'\s*textLength="[^"]*"', "", svg)
-
-
 def generate_setup_svg() -> None:
     """Run setup-new-experiment and export the Rich output as an SVG."""
-    recording_console = Console(theme=lapaz_theme, record=True, width=220)
+    recording_console = Console(theme=lapaz_theme, record=True, width=300)
 
     # Print the command at the top so the SVG shows what was run
     for line in SETUP_COMMAND_LINES:
@@ -125,7 +119,6 @@ def generate_setup_svg() -> None:
 
     svg = recording_console.export_svg(title="setup-new-experiment")
     svg = svg.replace(temp_prefix, "./my-facts-project/")
-    svg = _strip_textlength(svg)
     out = IMGS_DIR / "cli_output_setup_new_experiment.svg"
     out.write_text(svg)
     print(f"Written: {out}")
@@ -133,7 +126,7 @@ def generate_setup_svg() -> None:
 
 def generate_compose_svg() -> None:
     """Run generate-compose against the checked-in facts_experiment and export SVG."""
-    recording_console = Console(theme=lapaz_theme, record=True, width=220)
+    recording_console = Console(theme=lapaz_theme, record=True, width=300)
 
     recording_console.print(
         "uv run generate-compose --experiment-name facts_experiment",
@@ -142,9 +135,12 @@ def generate_compose_svg() -> None:
 
     runner = CliRunner()
 
+    # coupling-ssp126 has all required paths filled in; facts_experiment does not.
+    # We copy it into the isolated filesystem as facts_experiment so the
+    # displayed experiment name in the SVG output remains correct.
     source_config = (
         Path(__file__).parent.parent
-        / "experiments" / "facts_experiment" / "experiment-config.yaml"
+        / "experiments" / "coupling-ssp126" / "experiment-config.yaml"
     )
 
     temp_prefix = None
@@ -178,7 +174,6 @@ def generate_compose_svg() -> None:
 
     svg = recording_console.export_svg(title="generate-compose")
     svg = svg.replace(temp_prefix, "./my-facts-project/")
-    svg = _strip_textlength(svg)
     out = IMGS_DIR / "cli_output_generate_compose.svg"
     out.write_text(svg)
     print(f"Written: {out}")
