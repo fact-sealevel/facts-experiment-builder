@@ -1,13 +1,14 @@
 # EMULANDICE GrIS (Greenland Ice Sheet) MODULE CONFIGURATION
 # This YAML file describes the arguments and configuration needed to run the module.
-# It is used to generate FactsModule objects.
+# It is used to generate ModuleSchema objects.
 # Based on https://github.com/fact-sealevel/emulandice/blob/main/src/emulandice/cli.py (gris command).
 
 module_name: "emulandice-gris"
 container_image: "ghcr.io/fact-sealevel/emulandice:latest"
 uses_climate_file: true
 climate_file_required: true
-command: "gris"
+command: "gris" # The sub-command to run
+input_dir_name: "emulandice" # All 3 emulandice-* modules share one input directory
 
 # Argument specifications
 arguments:
@@ -21,7 +22,14 @@ arguments:
       type: "int"
       source: "metadata.baseyear"
       optional: true
-      help: "Base year to which projections should be referenced"
+      help: "Year from which to start integrating temperature"
+    - name: "location-file"
+      type: "str"
+      source: "metadata.location-file"
+      optional: true
+      help: "File containing name, id, lat, and lon of points for localization"
+      mount:
+        container_path: "/mnt/shared_in"
 
   options:
     - name: "chunksize"
@@ -31,20 +39,13 @@ arguments:
       help: "Number of locations to process at a time"
 
   fingerprint_params:
-    - name: "location-file"
-      type: "str"
-      source: "metadata.location-file"
-      help: "File containing name, id, lat, and lon of points for localization"
-      mount:
-        volume: "general_input"
-        container_path: "/mnt/general_in"
     - name: "fprint-gis-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_gis_file"
       help: "File containing GIS fingerprint data"
       mount:
-        volume: "general_input"
-        container_path: "/mnt/general_in"
+        volume: "shared_input"
+        container_path: "/mnt/shared_in"
 
   inputs:
     - name: "input-data-file"
@@ -59,31 +60,35 @@ arguments:
     - name: "forcing-head-path"
       type: "file"
       source: "module_inputs.inputs.forcing_head_path"
-      help: "Path to the climate forcing head CSV file"
+      envvar: "EMULANDICE_FORCING_HEAD_PATH"
+      optional: true
+      help: "Path to the climate forcing head CSV file (supplied via EMULANDICE_FORCING_HEAD_PATH env var by the container)"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
-
   outputs:
-    - name: "output-gslr-file"
-      type: "file"
-      source: "module_inputs.outputs.output_gslr_file"
-      filename: "output-gslr-gris.nc"
-      help: "Path to write output global SLR file"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-    - name: "output-lslr-file"
-      type: "file"
-      source: "module_inputs.outputs.output_lslr_file"
-      filename: "output-lslr-gris.nc"
-      help: "Path to write output local SLR file"
-      mount:
-        volume: "output"
-        container_path: "/mnt/out"
-        transform: "filename"
-      optional: true
+    files:
+      - name: "output-gslr-file"
+        type: "file"
+        source: "module_inputs.outputs.output_gslr_file"
+        filename: "output-gslr-gris.nc"
+        help: "Path to write output global SLR file"
+        output_type: "global"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+      - name: "output-lslr-file"
+        type: "file"
+        source: "module_inputs.outputs.output_lslr_file"
+        filename: "output-lslr-gris.nc"
+        help: "Path to write output local SLR file"
+        output_type: "local"
+        mount:
+          volume: "output"
+          container_path: "/mnt/out"
+          transform: "filename"
+        optional: true
 
 # Volume specifications
 volumes:
@@ -91,10 +96,10 @@ volumes:
     host_path: "module_inputs.input_paths.module_specific_input_dir"
     help: "Module-specific input directory"
     container_path: "/mnt/module_specific_in"
-  general_input:
-    host_path: "module_inputs.input_paths.general_input_dir"
-    help: "General input directory (fingerprints, location file)"
-    container_path: "/mnt/general_in"
+  shared_input:
+    host_path: "module_inputs.input_paths.shared_input_dir"
+    help: "Shared input directory (fingerprints, location file)"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     help: "Output directory for SLR files"

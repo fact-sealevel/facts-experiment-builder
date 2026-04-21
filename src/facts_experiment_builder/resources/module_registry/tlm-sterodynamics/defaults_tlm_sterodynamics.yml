@@ -7,7 +7,8 @@ options:
   no_drift_corr: false
   no_correlation: false
   scenario_dsl: ""
-  
+fingerprint_params:
+  fingerprint-dir: FPRINT
 inputs:
   expansion_coefficients_file: scmpy2LM_RCMIP_CMIP6calpm_n18_expcoefs.nc
   gsat_rmses_file: scmpy2LM_RCMIP_CMIP6calpm_n17_gsat_rmse.nc

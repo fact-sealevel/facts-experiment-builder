@@ -21,7 +21,7 @@ def create_module_service_spec_from_metadata(
     Create a single module service spec from experiment metadata.
 
     Args:
-        metadata_path: Path to experiment-metadata.yml
+        metadata_path: Path to experiment-config.yaml
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
         module_type: Optional category (e.g. 'temperature_module', 'sealevel_module')
         metadata: Optional pre-loaded metadata (if provided, metadata_path is used only for experiment_dir)

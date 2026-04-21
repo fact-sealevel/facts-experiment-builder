@@ -113,7 +113,7 @@ arguments:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
 
-  outputs: []
+  outputs: {}
   # output-dir is provided via options (source: module_inputs.module_name) only to avoid duplicate --output-dir in the command
 
 # Volume specifications (aligned with README: totaled data via output, GESLA via module_specific_in)
@@ -121,9 +121,9 @@ volumes:
   module_specific_in:
     host_path: "module_inputs.input_paths.module_specific_input_dir"
     container_path: "/mnt/module_specific_in"
-  general_in:
-    host_path: "module_inputs.input_paths.general_input_dir"
-    container_path: "/mnt/general_in"
+  shared_in:
+    host_path: "module_inputs.input_paths.shared_input_dir"
+    container_path: "/mnt/shared_in"
   output:
     host_path: "module_inputs.output_paths.output_dir"
     container_path: "/mnt/out"

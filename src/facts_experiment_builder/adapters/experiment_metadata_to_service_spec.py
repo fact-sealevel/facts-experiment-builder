@@ -129,9 +129,9 @@ def build_module_service_spec(
         else None
     )
 
-    general_input_data = expand_path(
-        experiment_paths["general_input_data"],
-        f"{module_context} (general-input-data)",
+    shared_input_data = expand_path(
+        experiment_paths["shared_input_data"],
+        f"{module_context} (shared-input-data)",
     )
 
     module_specific_input_base = expand_path(
@@ -184,14 +184,10 @@ def build_module_service_spec(
             if not key.startswith("#"):
                 options_dict[key] = value
 
-    # Path under output root for files produced by another service (e.g. temperature climate file).
-    # Stored as relative (e.g. "fair-temperature/climate.nc") so compose command gets /mnt/out/<that>.
-    output_root_relative_inputs = {
-        "climate_data_file",
-        "climate-data-file",
-        "climate_file",
-        "climate-file",
-    }
+    # Inputs that mount from the shared output volume produced by another serivce (such as fair-temperature)
+    # They're stored as relative paths (ie. fair-temperature/climate.nc -> /mnt/out/fair-temperature/climate.nc)
+    # Prev. this was a hard-coded list of the names used for climate-data-file across different module yamls...
+    output_root_relative_inputs = module_definition.get_output_volume_input_keys()
 
     multiple_file_input_keys = _multiple_file_input_keys(module_definition)
 
@@ -227,7 +223,7 @@ def build_module_service_spec(
                         resolve_input_path(
                             key,
                             item_value,
-                            general_input_data,
+                            shared_input_data,
                             module_specific_input_data,
                             module_name,
                             module_context,
@@ -277,7 +273,7 @@ def build_module_service_spec(
                 resolved_path = resolve_input_path(
                     key,
                     value,
-                    general_input_data,
+                    shared_input_data,
                     module_specific_input_data,
                     module_name,
                     module_context,
@@ -311,7 +307,7 @@ def build_module_service_spec(
 
     module_outputs = get_required_field(module_metadata, "outputs", module_context)
     outputs_dict = {}
-    outputs_config = module_definition.arguments.get("outputs", [])
+    outputs_config = module_definition.get_outputs_list()
 
     if isinstance(module_outputs, dict):
         for output_spec in outputs_config:
@@ -386,7 +382,7 @@ def build_module_service_spec(
 
     input_paths = build_module_input_paths(
         module_specific_input_dir=module_specific_input_data,
-        general_input_dir=general_input_data,
+        shared_input_dir=shared_input_data,
         module_name=module_name,
     )
     output_type = module_metadata.get("output_type", "")
@@ -395,9 +391,26 @@ def build_module_service_spec(
     )
 
     fingerprint_params = {
-        "fingerprint_dir": metadata.get("fingerprint-dir", "FPRINT"),
-        "location_file": metadata.get("location-file", "location.lst"),
+        "location_file": metadata.get("location-file"),
     }
+    # Merge module-specific fingerprint params (e.g. fprint_gis_file for emulandice-gris)
+    module_fp_section = module_metadata.get("fingerprint_params") or {}
+    if isinstance(module_fp_section, dict):
+        for k, v in module_fp_section.items():
+            actual = v.get("value", v) if isinstance(v, dict) else v
+            if actual is not None:
+                fingerprint_params[k.replace("-", "_")] = actual
+    # Fallback: for module-specific fingerprint params whose value ended up in inputs_dict
+    # (e.g. from defaults files that use inputs: instead of fingerprint_params:), check there too.
+    for fp_arg in module_definition.arguments.get("fingerprint_params", []):
+        source = fp_arg.get("source", "")
+        if not source.startswith("module_inputs.fingerprint_params."):
+            continue
+        fp_key = source.split(".")[-1]
+        if fp_key in fingerprint_params:
+            continue
+        if fp_key in inputs_dict:
+            fingerprint_params[fp_key] = inputs_dict[fp_key]
     impl_inputs = ModuleServiceSpecComponents(
         module_name=module_name,
         options=options_dict,

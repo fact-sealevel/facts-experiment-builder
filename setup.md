@@ -11,10 +11,10 @@ Run these commands from the directory where you want to store the data. All down
 
 ```shell
 mkdir module_specific_inputs
-mkdir general_input_data
+mkdir shared_input_data
 ```
 
-When running `setup-new-experiment`, pass the paths to these directories via `--module-specific-inputs` and `--general-inputs`.
+When running `setup-new-experiment`, pass the paths to these directories via `--module-specific-inputs` and `--shared-inputs`.
 
 ## Downloading the data
 
@@ -25,9 +25,9 @@ The input data for each module is available at the following Zenodo records. You
 ```bash
 mkdir -p module_specific_inputs/fair-temperature module_specific_inputs/fair2-climate module_specific_inputs/fittedismip-gris module_specific_inputs/bamber19-icesheets module_specific_inputs/deconto21-ais module_specific_inputs/ipccar5-glaciers module_specific_inputs/ipccar5-icesheets module_specific_inputs/larmip-ais module_specific_inputs/ssp-landwaterstorage module_specific_inputs/tlm-sterodynamics module_specific_inputs/ebm3-thermalexpansion
 
-curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o general_input_data/grd_fingerprints_data.tgz
-tar -xzf general_input_data/grd_fingerprints_data.tgz -C general_input_data
-echo "New_York	12	40.70	-74.01" > general_input_data
+curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o shared_input_data/grd_fingerprints_data.tgz
+tar -xzf shared_input_data/grd_fingerprints_data.tgz -C shared_input_data
+echo "New_York	12	40.70	-74.01" > shared_input_data
 
 curl -L https://zenodo.org/record/7478192/files/fair_temperature_fit_data.tgz -o module_specific_inputs/fair-temperature/fair_temperature_fit_data.tgz
 tar -xzf module_specific_inputs/fair-temperature/fair_temperature_fit_data.tgz -C module_specific_inputs/fair-temperature
@@ -71,16 +71,16 @@ tar -xzf module_specific_inputs/ebm3-thermalexpansion/ebm3_thermal_expansion_dat
 
 Each block below can be copied and run independently from the directory containing `module_specific_inputs/`.
 
-### General input data
+### Shared input data
 
 GRD fingerprint data (note- how this is hadnled is subject to change in the future. this is most likely a temporary solution)
 ```bash
-curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o general_input_data/grd_fingerprints_data.tgz
-tar -xzf general_input_data/grd_fingerprints_data.tgz -C general_input_data
+curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o shared_input_data/grd_fingerprints_data.tgz
+tar -xzf shared_input_data/grd_fingerprints_data.tgz -C shared_input_data
 ```
 Location file:
 ```bash
-echo "New_York	12	40.70	-74.01" > general_input_data
+echo "New_York	12	40.70	-74.01" > shared_input_data
 ```
 
 

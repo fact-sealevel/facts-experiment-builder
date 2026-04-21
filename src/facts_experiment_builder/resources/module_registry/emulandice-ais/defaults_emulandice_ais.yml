@@ -8,6 +8,7 @@ options:
   chunksize: 50
 
 inputs:
-  fprint-wais-file: "fprint_wais.nc"
-  fprint-eais-file: "fprint_eais.nc"
-  
+  input-data-file: "fair-temperature/gsat.nc"
+fingerprint_params:
+  fprint-wais-file: "FPRINT/fprint_wais.nc"
+  fprint-eais-file: "FPRINT/fprint_eais.nc"

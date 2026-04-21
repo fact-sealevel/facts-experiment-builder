@@ -34,7 +34,7 @@ def test_setup_new_experiment_runs_successfully(
             project_root
             / "experiments"
             / str(experiment_name)
-            / "experiment-metadata.yml"
+            / "experiment-config.yaml"
         ).exists()
 
         # roundtrip
@@ -43,7 +43,7 @@ def test_setup_new_experiment_runs_successfully(
             project_root
             / "experiments"
             / str(experiment_name)
-            / "experiment-metadata.yml"
+            / "experiment-config.yaml"
         )
         # read metadata file
         metadata_dict = yaml.safe_load(metadata_path.read_text())
@@ -62,6 +62,7 @@ def test_setup_new_experiment_runs_successfully(
             "nsamps": nsamps,
             "pipeline-id": pipeline_id,
             "seed": seed,
+            "location-file": "location.lst",
         }
         experiment_steps = experiment.list_all_steps()
         all_module_names = [

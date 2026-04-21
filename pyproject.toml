@@ -19,6 +19,7 @@ dependencies = [
 ]
 
 [project.scripts]
+feb = "facts_experiment_builder.cli:main"
 facts-experiment-builder = "facts_experiment_builder.cli.cli:main"
 setup-new-experiment = "facts_experiment_builder.cli.setup_new_experiment_cli:main"
 setup-new-experiment-jinja2 = "facts_experiment_builder.cli.setup_new_experiment_jinja2_cli:main"

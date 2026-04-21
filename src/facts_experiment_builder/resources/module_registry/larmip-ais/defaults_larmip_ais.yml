@@ -8,7 +8,8 @@ options:
   refyear_end: 1900
   year_start: 1900
   year_end: 2300
-
+fingerprint_params:
+  fingerprint-dir: FPRINT
 inputs:
   scaling_coefficients_dir: "ScalingCoefficients"
   r_functions_dir: "RFunctions"

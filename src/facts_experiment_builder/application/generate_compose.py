@@ -2,7 +2,7 @@
 """Generate Docker Compose file from experiment metadata.
 
 This script follows a domain-driven design pattern:
-- experiment-metadata.yml is the "user interface" (UI layer)
+- experiment-config.yaml is the "user interface" (UI layer)
 - Module service specs are created from experiment metadata (Adapter layer)
 - Docker compose files are the "engine" (Infrastructure layer)
 
@@ -27,7 +27,31 @@ from facts_experiment_builder.core.workflow.workflow import (
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.path_utils import expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
-from facts_experiment_builder.infra.module_loader import load_facts_module_from_yaml
+from facts_experiment_builder.infra.module_loader import (
+    load_facts_module_from_yaml,
+    load_facts_module_by_name,
+)
+from facts_experiment_builder.core.module.module_schema import (
+    collect_metadata_param_keys,
+)
+
+
+def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
+    """Extract a flat list of all module names from the experiment manifest keys."""
+    names: List[str] = []
+    temp = metadata.get("temperature_module")
+    if temp and str(temp).upper() != "NONE":
+        names.append(str(temp))
+    for m in metadata.get("sealevel_modules") or []:
+        if isinstance(m, str):
+            names.append(m)
+    for m in metadata.get("framework_modules") or []:
+        if isinstance(m, str):
+            names.append(m)
+    for m in metadata.get("esl_modules") or []:
+        if isinstance(m, str):
+            names.append(m)
+    return names
 
 
 def _module_requires_climate_file(module_name: str) -> bool:
@@ -67,35 +91,33 @@ def _validate_climate_file_inputs(
     missing_climate_files = []
 
     for module_name in sealevel_modules:
-        # Check if this module requires a climate file
-        if not _module_requires_climate_file(module_name):
+        module_yaml_path = find_module_yaml_path(module_name)
+        module_schema = load_facts_module_from_yaml(yaml_path=module_yaml_path)
+
+        if not module_schema.uses_climate_file:
             continue
 
-        module_metadata = metadata.get(module_name, {})
-        module_inputs = module_metadata.get("inputs", {})
+        module_inputs = metadata.get(module_name, {}).get("inputs", {})
+        climate_input_keys = module_schema.get_output_volume_input_keys()
 
-        # Check for various possible field names for climate file
-        # Common variations: climate_data_file, climate-data-file, climate_file, climate-file, climate_data, climate-data
-        climate_file = (
-            module_inputs.get("climate_data_file")
-            or module_inputs.get("climate-data-file")
-            or module_inputs.get("climate_file")
-            or module_inputs.get("climate-file")
-            or module_inputs.get("climate_data")
-            or module_inputs.get("climate-data")
+        climate_file = next(
+            (
+                v
+                for k in climate_input_keys
+                if (v := module_inputs.get(k)) and (not isinstance(v, str) or v.strip())
+            ),
+            None,
         )
 
-        if not climate_file or (
-            isinstance(climate_file, str) and climate_file.strip() == ""
-        ):
+        if not climate_file:
             missing_climate_files.append(module_name)
 
     if missing_climate_files:
         raise ValueError(
             f"No temperature module specified, but the following sealevel modules are missing "
             f"climate file inputs: {', '.join(missing_climate_files)}. "
-            f"Please provide 'climate_data_file' (or 'climate-data-file', 'climate_file', etc.) "
-            f"in the inputs section for each sealevel module."
+            f"Please provide the climate file input (e.g. 'climate_data_file' or the module-specific "
+            f"input key) in the inputs section for each sealevel module."
         )
 
 
@@ -125,7 +147,7 @@ def _collect_workflow_output_paths_by_type(
         for v in outputs.values():
             if isinstance(v, dict) and "value" in v:
                 p = v.get("value") or ""
-                ot = v.get("output_type", "local")
+                ot = v.get("output_type", "")
             elif isinstance(v, str):
                 p = v
                 ot = "local"
@@ -220,7 +242,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     4. Generates docker compose services (Engine/Infrastructure layer)
 
     Args:
-        metadata_path: Path to experiment-metadata.yml
+        metadata_path: Path to experiment-config.yaml
 
     Returns:
         Complete Docker Compose file dictionary
@@ -235,8 +257,16 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     experiment_dir = metadata_path.parent
 
-    # Step 2: Build FactsExperiment
-    experiment = FactsExperiment.from_metadata_dict(metadata)
+    # Step 2: Build FactsExperiment — derive key sets from module schemas
+    _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
+    _schemas = [load_facts_module_by_name(m) for m in _manifest_module_names]
+    _top_level_keys = set(collect_metadata_param_keys(_schemas, "top_level"))
+    _fp_keys = set(collect_metadata_param_keys(_schemas, "fingerprint_params"))
+    experiment = FactsExperiment.from_metadata_dict(
+        metadata,
+        top_level_keys=_top_level_keys,
+        fingerprint_keys=_fp_keys,
+    )
 
     temperature_module_name = experiment.climate_step.module_name or "NONE"
     sealevel_module_names = experiment.sealevel_step.module_names

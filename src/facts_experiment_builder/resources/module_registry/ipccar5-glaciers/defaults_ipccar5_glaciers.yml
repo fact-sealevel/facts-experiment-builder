@@ -14,6 +14,7 @@ options:
   #nmsamps: 1000
   use_gmip: 2
   chunksize: 20
-
+fingerprint_params:
+  fingerprint-dir: FPRINT
 inputs:
   glacier_fraction_file: glacier_fraction.txt

@@ -1,0 +1,109 @@
+# Module Registry
+
+This is the module registry, it contains a sub-directory for every FACTS 2 module that is accessible to `facts-experiment-builder`. Within each sub-directory, there are two files:
+- `*module_name*_module.yml`
+- `defaults_*module_name*.yml`
+
+## Module yaml file
+This functions as the calling card of a module (really a module + a command) so that `facts-experiment-builder` knows how to assimilate it into experiments. It contains important metadata about the module, the inputs it requires and the files it writes. There are different types of modules that are used during different steps of a FACTS 2 experiment. Different types of modules require and generate different types of inputs. Within each category, the specific arguments and parameters vary mdoule-to-module. Below is a detailed description of each component of a typical module yaml for each type of module.
+
+### Header fields (top of file)
+
+- **module_name**: This string is the name of the module set and the specific module, or sub-command, being called, separated by a dash. For example `"fair-temperature"` runs the temperature module from the fair module set. `ipccar5-glaciers` runs the glaciers module while `ipccar5-icesheets` modules from the ipccar5 module set. 
+- **container_image**: A string url pointing to the Docker image for the module that is stored in the fact-sealevel GitHub organization's container registry.
+- **climate_file_required**: This boolean field indicates whether or not the module requires input data that is generated from running a module in the climate step.
+- **uses_climate_file**: This boolean field indicates whether the module *can* accept outputs from the climate step as an input. Some modules can optionally accept climate step outputs but do not require it.
+- **command**: The name of the function from the module application's `cli.py` script that is run to execute this command. In most cases `command: "main"`. If a module set (such as `ipccar5` or `emulandice`) has multiple sub-commands (such as `glaciers` and `icesheets`), this field is set to the name of the function in `cli.py` used to run this specific sub-command/module.
+
+Example: 
+```yaml
+module_name: "fair-temperature"
+container_image: "ghcr.io/fact-sealevel/fair-temperature:0.2.1"
+climate_file_required: false
+uses_climate_file: false
+command: "main"
+```
+
+### Arguments 
+Now, the file specifies all of the arguments that can be passed to the containerized application.
+
+#### Top-level parameters
+There are some pieces of information that all modules require; these are called 'top-level parameters'. They generally do not vary across an experiment. Top-level parameters include `pipeline-id`, `nsamps`, `scenario`, `pyear-start`, `pyear-end`, `pyear-step`, and `baseyear`.
+For each top-level parameter, there are a few fields:
+- name: This must exactly match the name of the parameter in the application's cli.py script.
+- type: The type of the parameter
+- source: This is used by the experiment builder. In most cases it is `metadata.parameter-name`.
+- help: Help message associated with this parameter. It should match the help message specified in the cli.py script.
+
+Example:
+```yaml
+top_level:
+    - name: "pipeline-id"
+      type: "str"
+      source: "metadata.pipeline-id"
+      help: "Pipeline ID"
+    - name: "nsamps"
+      type: "int"
+      source: "metadata.nsamps"
+      help: "Number of samples"
+    - name: "seed"
+      type: "int"
+      source: "metadata.seed"
+      help: "Random seed to use for sampling"
+    - name: "scenario"
+      type: "str"
+      source: "metadata.scenario"
+      transform: "scenario_name"  # Extract from ScenarioConfig object
+      help: "Emissions scenario name"
+```
+
+#### Options
+In addition to the top-level parameters, most modules require additional parameters that are specific to that module. These are referred to as `options` and should be enumerated in this section following the same convention as top-level parameters (the name, type and help fields should match those specified in cli.py).
+
+Example (for fair-temperature module): 
+```yaml
+options:
+    - name: "cyear-start"
+      type: "int"
+      source: "module_inputs.inputs.cyear_start"
+      help: "TO DO ADD HELP TEXT"
+    - name: "cyear-end"
+      type: "int"
+      source: "module_inputs.inputs.cyear_end"
+      help: "TO DO ADD HELP TEXT"
+    - name: "smooth-win"
+      type: "int"
+      source: "module_inputs.inputs.smooth_win"
+      help: "TO DO ADD HELP TEXT"
+```
+
+#### Inputs 
+In this section, specify all of the input data objects that can be passed to this application. Each should have the same name, type, source, and help fields as the other parameters but data objects each have an additional section, mount. Because FACTS 2 experiments consist of multiple containerized applications, we must mount volumes to the containers to establish connections between the local file system where your data is stored and the container where the application is run. For each input, in the mount section, give the name of the volume and the container path. 
+The name of the volume must be one of two possible values:
+- "module_specific_in": This is input data that is specific to the module. It is stored in the module-named sub-directories described in the experiment builder's [README](../../../../README.md).
+- "general_in": This is input data that is shared across modules. It is stored in the general-inputs sub-directory described in the experiment builder's [README](../../../../README.md).
+
+Example input section for the fair-temperature module:
+```yaml 
+inputs:
+    - name: "rcmip-file"
+      type: "file"
+      source: "module_inputs.inputs.rcmip_fname"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "module_specific_in"
+        container_path: "/mnt/module_specific_in"
+    - name: "param-file"
+      type: "file"
+      source: "module_inputs.inputs.param_fname"
+      help: "TO DO ADD HELP TEXT"
+      mount:
+        volume: "module_specific_in"
+        container_path: "/mnt/module_specific_in"
+```
+### Climate step
+
+Modules that are used in the climate step are passed an emissions scenario and generate climate-related outputs such as projections of temperature and ocean heat content. 
+
+
+ Below is a detailed description of each field in the file using `fair-temperature` as an example. 

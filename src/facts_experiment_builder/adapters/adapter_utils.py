@@ -83,7 +83,7 @@ def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[st
 
     Returns:
         Dictionary with keys:
-        - 'general_input_data': Path to general input data
+        - 'shared_input_data': Path to shared input data
         - 'module_specific_input_data': Path to module-specific input data
         - 'output_data_location': Path to output data location
 
@@ -91,19 +91,19 @@ def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[st
         KeyError: If required paths are missing from metadata
         ValueError: If path values are None or invalid
     """
-    general_input_data = get_required_field_with_alternatives(
-        metadata, "general-input-data", ["general_input_data"], context
+    shared_input_data = get_required_field_with_alternatives(
+        metadata, "shared-input-data", ["shared_input_data"], context
     )
-    if general_input_data is None:
+    if shared_input_data is None:
         context_msg = f" in {context}" if context else ""
         raise ValueError(
-            f"Required path field 'general-input-data' (or 'general_input_data') is None{context_msg}. "
+            f"Required path field 'shared-input-data' (or 'shared_input_data') is None{context_msg}. "
             f"Please provide a valid path string."
         )
-    if not isinstance(general_input_data, str):
+    if not isinstance(shared_input_data, str):
         context_msg = f" in {context}" if context else ""
         raise ValueError(
-            f"Required path field 'general-input-data' has invalid type: expected str, got {type(general_input_data)}{context_msg}"
+            f"Required path field 'shared-input-data' has invalid type: expected str, got {type(shared_input_data)}{context_msg}"
         )
 
     module_specific_input_data = get_required_field_with_alternatives(
@@ -140,7 +140,7 @@ def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[st
         )
 
     return {
-        "general_input_data": general_input_data,
+        "shared_input_data": shared_input_data,
         "module_specific_input_data": module_specific_input_data,
         "output_data_location": output_data_location,
     }

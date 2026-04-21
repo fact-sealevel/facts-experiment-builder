@@ -8,6 +8,7 @@ def build_compose_service_dict(
     command: List[str],
     volumes: List[str],
     depends_on: Optional[Dict[str, Any]] = None,
+    environment: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
     """
     Build a Docker Compose service dictionary from a ModuleServiceSpec.
@@ -17,12 +18,13 @@ def build_compose_service_dict(
         command: List of command-line argument strings (e.g. ["--pipeline-id=aaa", ...])
         volumes: List of volume mount strings (e.g. ["/host/path:/container/path"])
         depends_on: Optional dict mapping service names to dependency conditions
+        environment: Optional dict of environment variables to set in the container
 
     Returns:
         Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
     """
     # TODO: better fix for this but should work for now
-    if command[0] == "main":
+    if command and command[0] == "main":
         command = command[1:]
     service = {
         "image": image_str,
@@ -30,6 +32,8 @@ def build_compose_service_dict(
         "volumes": volumes,
         "restart": "no",
     }
+    if environment:
+        service["environment"] = environment
     if depends_on:
         service["depends_on"] = depends_on
     return service
