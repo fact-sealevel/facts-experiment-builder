@@ -174,11 +174,13 @@ def main(
 
     # Validate the total list of modules
     _validate_modules_list_experiment(skeleton.all_module_names)
-    print('total all modules: ', total_all_modules)
+    print("total all modules: ", total_all_modules)
     # If framework includes facts-total, collect workflows and attach to skeleton
+    sl_modules = skeleton.sealevel_modules
+    print("sl modules: ", sl_modules)
     if skeleton.totaling_module == "facts-total":
         workflow_dict = _collect_workflows(
-            complete_modules_list=skeleton.all_module_names,
+            complete_modules_list=sl_modules,
             total_all_modules=total_all_modules,
         )
         skeleton = dataclasses.replace(skeleton, workflows=workflow_dict)
@@ -360,9 +362,10 @@ def _collect_workflows(
 ) -> dict[str, str]:
     """Collects workflows from the user until they are done."""
     workflow_dict = {}
-    print('total all workflow2: ', total_all_modules)
+    print("total all workflow2: ", total_all_modules)
+    print("complete modules list: ", complete_modules_list)
     if total_all_modules:
-        print('creating a workflow w/ all modules')
+        print("creating a workflow w/ all modules")
         workflow_name, module_list_str = _create_all_modules_workflow(
             complete_modules_list=complete_modules_list,
         )
