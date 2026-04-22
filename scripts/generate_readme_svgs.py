@@ -30,21 +30,36 @@ SEALEVEL_MODULES = (
 )
 
 SETUP_ARGS = [
-    "--experiment-name", "facts_experiment",
-    "--climate-step", "fair-temperature",
-    "--sealevel-step", SEALEVEL_MODULES,
-    "--total-all-modules", "True",
-    "--totaling-step", "facts-total",
-    "--extremesealevel-step", "extremesealevel-pointsoverthreshold",
-    "--pipeline-id", "aaa",
-    "--scenario", "ssp126",
-    "--baseyear", "2005",
-    "--pyear-start", "2020",
-    "--pyear-end", "2150",
-    "--pyear-step", "10",
-    "--nsamps", "1000",
-    "--seed", "1234",
-    "--location-file", "location.lst",
+    "--experiment-name",
+    "facts_experiment",
+    "--climate-step",
+    "fair-temperature",
+    "--sealevel-step",
+    SEALEVEL_MODULES,
+    "--total-all-modules",
+    "True",
+    "--totaling-step",
+    "facts-total",
+    "--extremesealevel-step",
+    "extremesealevel-pointsoverthreshold",
+    "--pipeline-id",
+    "aaa",
+    "--scenario",
+    "ssp126",
+    "--baseyear",
+    "2005",
+    "--pyear-start",
+    "2020",
+    "--pyear-end",
+    "2150",
+    "--pyear-step",
+    "10",
+    "--nsamps",
+    "1000",
+    "--seed",
+    "1234",
+    "--location-file",
+    "location.lst",
 ]
 
 SETUP_COMMAND_LINES = [
@@ -93,7 +108,9 @@ def generate_setup_svg() -> None:
     for line in SETUP_COMMAND_LINES:
         recording_console.print(line, markup=False)
 
-    prompt_answers = iter(["wf1", "fittedismip-gris,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics"])
+    prompt_answers = iter(
+        ["wf1", "fittedismip-gris,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics"]
+    )
     confirm_answers = iter([False])
 
     def mock_prompt(text, **kwargs):
@@ -153,7 +170,9 @@ def generate_compose_svg() -> None:
     # displayed experiment name in the SVG output remains correct.
     source_config = (
         Path(__file__).parent.parent
-        / "experiments" / "coupling-ssp126" / "experiment-config.yaml"
+        / "experiments"
+        / "coupling-ssp126"
+        / "experiment-config.yaml"
     )
 
     with runner.isolated_filesystem():
