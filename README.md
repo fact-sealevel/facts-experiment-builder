@@ -81,7 +81,7 @@ Once completed, the program:
      - Creates and partially pre-populates an `experiment-config.yaml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
      - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified. Module default values are all propagated from the `defaults_*modulename*.yaml` file corresponding to that module in the ModuleRegistry.
 You will see the following output in your terminal window:
-![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.svg)
+![rest of experiment setup](imgs/cli_output_setup_new_experiment.svg)
 
 #### 4. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
