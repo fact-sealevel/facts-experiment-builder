@@ -47,7 +47,6 @@ SETUP_ARGS = [
     "--location-file", "location.lst",
 ]
 
-# Command text shown at the top of the setup SVG, matching the README example
 SETUP_COMMAND_LINES = [
     "uv run setup-new-experiment \\",
     "--experiment-name facts_experiment --climate-step fair-temperature \\",
@@ -59,20 +58,41 @@ SETUP_COMMAND_LINES = [
     "--nsamps 1000 --seed 1234 --location-file location.lst",
 ]
 
+DISPLAY_PREFIX = "./my-facts-project/"
+
 IMGS_DIR = Path(__file__).parent.parent / "imgs"
+
+
+def _make_recording_console(temp_prefix_ref: list) -> Console:
+    """Return a recording Console whose print() replaces the temp path before recording.
+
+    temp_prefix_ref is a one-element list so the prefix can be set after the
+    isolated filesystem is entered (avoiding a chicken-and-egg problem).
+    """
+    console = Console(theme=lapaz_theme, record=True, width=220)
+    _original_print = console.print
+
+    def _print_with_path_replacement(*args, **kwargs):
+        prefix = temp_prefix_ref[0]
+        if prefix:
+            args = tuple(
+                arg.replace(prefix, DISPLAY_PREFIX) if isinstance(arg, str) else arg
+                for arg in args
+            )
+        return _original_print(*args, **kwargs)
+
+    console.print = _print_with_path_replacement
+    return console
 
 
 def generate_setup_svg() -> None:
     """Run setup-new-experiment and export the Rich output as an SVG."""
-    recording_console = Console(theme=lapaz_theme, record=True, width=300)
+    temp_prefix_ref = [None]
+    recording_console = _make_recording_console(temp_prefix_ref)
 
-    # Print the command at the top so the SVG shows what was run
     for line in SETUP_COMMAND_LINES:
         recording_console.print(line, markup=False)
 
-    # --total-all-modules True auto-creates the "all-modules" workflow, but the
-    # while loop still prompts for at least one additional workflow before asking
-    # whether to continue. We simulate one minimal extra workflow then decline.
     prompt_answers = iter(["wf1", "fittedismip-gris,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics"])
     confirm_answers = iter([False])
 
@@ -88,9 +108,8 @@ def generate_setup_svg() -> None:
 
     runner = CliRunner()
 
-    temp_prefix = None
     with runner.isolated_filesystem():
-        temp_prefix = os.getcwd() + "/"
+        temp_prefix_ref[0] = os.getcwd() + "/"
         os.makedirs("experiments")
         with (
             patch(
@@ -100,33 +119,27 @@ def generate_setup_svg() -> None:
             patch("click.prompt", mock_prompt),
             patch("click.confirm", mock_confirm),
         ):
-            result = runner.invoke(
-                setup_main,
-                SETUP_ARGS,
-                catch_exceptions=False,
-            )
+            result = runner.invoke(setup_main, SETUP_ARGS, catch_exceptions=False)
 
     if result.exit_code != 0:
         print(f"CLI exited with code {result.exit_code}")
         print(result.output)
         if result.exception:
             traceback.print_exception(
-                type(result.exception),
-                result.exception,
-                result.exception.__traceback__,
+                type(result.exception), result.exception, result.exception.__traceback__
             )
         return
 
     svg = recording_console.export_svg(title="setup-new-experiment")
-    svg = svg.replace(temp_prefix, "./my-facts-project/")
     out = IMGS_DIR / "cli_output_setup_new_experiment.svg"
     out.write_text(svg)
     print(f"Written: {out}")
 
 
 def generate_compose_svg() -> None:
-    """Run generate-compose against the checked-in facts_experiment and export SVG."""
-    recording_console = Console(theme=lapaz_theme, record=True, width=300)
+    """Run generate-compose against a complete experiment config and export SVG."""
+    temp_prefix_ref = [None]
+    recording_console = _make_recording_console(temp_prefix_ref)
 
     recording_console.print(
         "uv run generate-compose --experiment-name facts_experiment",
@@ -143,10 +156,8 @@ def generate_compose_svg() -> None:
         / "experiments" / "coupling-ssp126" / "experiment-config.yaml"
     )
 
-    temp_prefix = None
-
     with runner.isolated_filesystem():
-        temp_prefix = os.getcwd() + "/"
+        temp_prefix_ref[0] = os.getcwd() + "/"
         exp_dir = Path("experiments") / "facts_experiment"
         exp_dir.mkdir(parents=True)
         shutil.copy(source_config, exp_dir / "experiment-config.yaml")
@@ -166,14 +177,11 @@ def generate_compose_svg() -> None:
         print(result.output)
         if result.exception:
             traceback.print_exception(
-                type(result.exception),
-                result.exception,
-                result.exception.__traceback__,
+                type(result.exception), result.exception, result.exception.__traceback__
             )
         return
 
     svg = recording_console.export_svg(title="generate-compose")
-    svg = svg.replace(temp_prefix, "./my-facts-project/")
     out = IMGS_DIR / "cli_output_generate_compose.svg"
     out.write_text(svg)
     print(f"Written: {out}")
