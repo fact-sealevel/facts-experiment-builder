@@ -100,7 +100,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main ge
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - This is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
 
-![generate-compose](imgs/cli_output_generate_compose.png)
+![generate-compose](imgs/cli_output_generate_compose.svg)
 
 Then,
 - Inspect the compose file
