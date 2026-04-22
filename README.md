@@ -35,7 +35,7 @@ cd fresh_facts_project
 
 
 #### 2. Create an experiment via CLI
-- The `setup-new-experiment` command - at a minimum, this entails specifying:
+- at a minimum, this entails specifying:
      - `--experiment-name`
      - `--climate-step` OR `--supplied-climate-step-data` (module name or path to pre-existing climate data)
      - `--sealevel-step` OR `--supplied-totaled-sealevel-step-data` (module name(s) or path to pre-existing sealevel data)
@@ -58,7 +58,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --nsamps 1000 --seed 1234 --location-file location.lst
 ```
 >[!NOTE]
-> If you run `setup-new-experiment` with the options shown above, you **must** manually edit the resulting `experiment-config.yml` file to specify the paths for `module-specific-inputs` and `shared-inputs`. Or, you can pass the paths in the CLI command with `--module-specific-inputs` and `--shared-inputs`
+> If you run `setup-new-experiment` with the options shown above, you **must** manually edit the resulting `experiment-config.yml` file to specify the paths for `module-specific-inputs` and `shared-inputs`.
 
 Example (using pre-existing climate data instead of running a climate module):
 ```shell
@@ -74,14 +74,15 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 #### 3. Specify workflows
 Workflows are lists of sea-level modules that are passed to the totaling step. When `--total-all-modules` is set to `True`, a workflow is automatically created that includes all sea-level modules included in the experiment. You may also specify your own workflows with different sets of modules using the CLI prompts.
 
-- If `facts-total` is passed to `--totaling-step`, the CLI prompts the user for information about the workflows included in the experiment. Follow the prompts to enter a name for the workflow, and then the modules to be included in it. Repeat this for as many workflows as you would like to define.
+- If `facts-total` is passed to `--totaling-step`, the CLI prompts the user for information about the workflows included in the experiment:
+![workflow prompts](imgs/cli_output_workflow_prompts.png)
  
 Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
      - Creates and partially pre-populates an `experiment-config.yaml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
      - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified. Module default values are all propagated from the `defaults_*modulename*.yaml` file corresponding to that module in the ModuleRegistry.
 You will see the following output in your terminal window:
-![rest of experiment setup](imgs/cli_output_setup_new_experiment.svg)
+![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.png)
 
 #### 4. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
@@ -100,7 +101,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main ge
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - This is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
 
-![generate-compose](imgs/cli_output_generate_compose.svg)
+![generate-compose](imgs/cli_output_generate_compose.png)
 
 Then,
 - Inspect the compose file
