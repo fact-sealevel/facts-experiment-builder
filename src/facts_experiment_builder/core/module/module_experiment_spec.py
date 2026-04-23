@@ -25,8 +25,44 @@ def get_clue_from_module_yaml(
             help_text = arg_spec.get("help", "")
             if help_text:
                 return help_text
-    return f"add you {field_name} here"
+    return f"add your {field_name} here"
 
+def get_default_value_from_module_yaml(
+    module_schema: ModuleSchema,
+    arg_type: str,
+    field_name:str
+):
+    """Extract default value from module schema for a given field."""
+    # This is a list of dicts of the field for each arg_type (inputs,options...)
+    # keys are name, type, source, help, default value.
+    arg_specs = module_schema.arguments.get(arg_type, [])
+
+    for arg_spec in arg_specs:
+        source = arg_spec.get("source","")
+
+        if "." in source and source.split(".")[-1] == field_name:
+            default_value = arg_spec.get("default_value", "")
+
+            if default_value:
+                return default_value
+    return f"no default value for {field_name}"
+
+def get_filename_from_module_yaml(
+    module_schema: ModuleSchema,
+    arg_type: str,
+    field_name:str
+):
+    """Extract filename from module schema for a given field."""
+    arg_specs = module_schema.arguments.get(arg_type, [])
+    for arg_spec in arg_specs:
+        source = arg_spec.get("source","")
+        filename = arg_spec.get('filename','')
+        #if "." in source and source.split(".")[-1] == field_name:
+        #    filename = arg_spec.get("filename", "")
+        #    print('filename: ', filename)
+        if filename:
+            return filename
+    return f"no specified filename for {field_name}"
 
 @dataclass
 class ModuleExperimentSpec:
@@ -35,6 +71,7 @@ class ModuleExperimentSpec:
     Fields mirror the dict shape used in the YAML:
         inputs:  {field_name: clue/value-bundle-or-plain-value}
         options: {field_name: clue/value-bundle-or-plain-value}
+        fingerprint-params: ...
         outputs: {output_name: {"value": path, "output_type": ...}}
         image:   str (container image URL)
     """
@@ -49,7 +86,7 @@ class ModuleExperimentSpec:
     # Constructors
     @classmethod
     def from_module_schema(cls, module_schema: ModuleSchema) -> "ModuleExperimentSpec":
-        """Build an initial spec with clue/value placeholdres from a moduleschema"""
+        """Build an initial spec with clue,value,default,filename placeholders from a moduleschema"""
         # inputs
         module_inputs: Dict[str, Any] = {}
 
@@ -61,12 +98,23 @@ class ModuleExperimentSpec:
             kebab_field_name = snake_field_name.replace("_", "-")
             logger.info("snake %s", snake_field_name)
 
+            #Extract clue text from module yaml
             clue = get_clue_from_module_yaml(
                 module_schema=module_schema,
                 arg_type="inputs",
                 field_name=kebab_field_name,
             )
-            module_inputs[snake_field_name] = create_metadata_bundle(clue)
+            # Extract any specified filenames
+            filename = get_filename_from_module_yaml(
+                module_schema= module_schema,
+                arg_type = "inputs",
+                field_name = kebab_field_name
+            )
+            module_inputs[snake_field_name] = {
+                'clue': clue,
+                'filename': filename
+            }
+            #create_metadata_bundle(clue = clue)
 
         # options
         module_options: Dict[str, Any] = {}
@@ -86,7 +134,16 @@ class ModuleExperimentSpec:
                 arg_type="options",
                 field_name=snake_field_name,
             )
-            module_options[snake_field_name] = create_metadata_bundle(clue)
+            default_value = get_default_value_from_module_yaml(
+                module_schema = module_schema,
+                arg_type="options",
+                field_name = snake_field_name
+            )
+            module_options[snake_field_name] = {
+                'clue': clue,
+                'default_value': default_value
+            }
+            #module_options[snake_field_name] = create_metadata_bundle(clue)
 
         # fingerprint_params (module-specific only — entries sourced from module_inputs.fingerprint_params.*)
         module_fingerprint_params: Dict[str, Any] = {}
@@ -95,8 +152,26 @@ class ModuleExperimentSpec:
             if not source.startswith("module_inputs.fingerprint_params."):
                 continue
             snake_field_name = source.split(".")[-1]
-            clue = arg_spec.get("help", f"add your {snake_field_name} here")
-            module_fingerprint_params[snake_field_name] = create_metadata_bundle(clue)
+            clue = get_clue_from_module_yaml(
+                module_schema=module_schema,
+                arg_type="fingerprint_params",
+                field_name=snake_field_name,
+            )
+            default_value = get_default_value_from_module_yaml(
+                module_schema = module_schema,
+                arg_type="fingerprint_params",
+                field_name = snake_field_name
+            )
+            module_options[snake_field_name] = {
+                'clue': clue,
+                'default_value': default_value
+            }
+            module_fingerprint_params[snake_field_name] = {
+                'clue': clue,
+                'default_value': default_value
+            }
+            #clue = arg_spec.get("help", f"add your {snake_field_name} here")
+            #module_fingerprint_params[snake_field_name] = create_metadata_bundle(clue)
 
         # outputs
         module_outputs: Dict[str, Any] = {}

@@ -113,7 +113,12 @@ class ModuleSchema:
 def collect_metadata_param_keys(
     schemas: List["ModuleSchema"], section: str
 ) -> Dict[str, str]:
-    """Return {key_name: help_text} for args in `section` sourced from metadata.*.
+    """
+    This function loops through the ModuleSchema (rep. of module yaml) for each module in an ExperimentSkeleton object.
+    It is looking for a specific section ('top-level','options','inputs',outputs', etc.)
+    It pulls out the keyname (ie. 'pipeline-id' for 'metadata.pipeline-id') as well as help text, if it is included in that object's field in the module yaml file.
+
+    Return {key_name: help_text} for args in `section` sourced from metadata.*.
 
     Iterates over all schemas and collects argument specs in the given section
     (e.g. "top_level" or "fingerprint_params") whose source starts with "metadata.".

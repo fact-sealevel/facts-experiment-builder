@@ -103,24 +103,35 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
     indent_str = " " * indent
 
     if is_metadata_value(value):
-        # Clue/value dict: render clue as comment, CLI-provided value below if it exists
         clue = value.get("clue", "")
-        cli_value = value.get("value")  # Value from CLI, or None if not provided
+        cli_value = value.get("value")
+        default_value = value.get("default_value", "")
+        filename = value.get("filename", "")
         lines.append(f"{indent_str}{key}:")
         lines.append(f"{indent_str}  # {clue}")
         if cli_value is not None:
-            # Format the CLI-provided value
             if isinstance(cli_value, str):
                 if cli_value.startswith("$") or " " in cli_value or "/" in cli_value:
-                    lines.append(f'{indent_str}  "{cli_value}"')
+                    lines.append(f'{indent_str}  "{cli_value}"  # user specified value')
                 else:
-                    lines.append(f"{indent_str}  {cli_value}")
+                    lines.append(f"{indent_str}  {cli_value}  # user specified value")
             elif isinstance(cli_value, list):
                 for item in cli_value:
                     lines.append(f"{indent_str}  - {item}")
             else:
-                lines.append(f"{indent_str}  {cli_value}")
-        # If cli_value is None, no value line is added (blank line after comment)
+                lines.append(f"{indent_str}  {cli_value}  # user specified value")
+        elif filename:
+            if isinstance(filename, str) and ("/" in filename or " " in filename):
+                lines.append(f'{indent_str}  "{filename}"  # filename from module defaults')
+            else:
+                lines.append(f"{indent_str}  {filename}  # filename from module defaults")
+        elif default_value:
+            if isinstance(default_value, str) and (
+                default_value.startswith("$") or " " in default_value or "/" in default_value
+            ):
+                lines.append(f'{indent_str}  "{default_value}"  # value from module defaults')
+            else:
+                lines.append(f"{indent_str}  {default_value}  # value from module defaults")
     elif isinstance(value, dict):
         # Regular nested dict (like inputs, options, outputs sections)
         lines.append(f"{indent_str}{key}:")
