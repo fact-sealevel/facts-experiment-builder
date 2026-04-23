@@ -11,7 +11,6 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.setup_new_experiment import (
     setup_new_experiment_fs,
     experiment_skeleton_to_facts_experiment,
-    populate_experiment_defaults,
     populate_experiment_directory,
 )
 from facts_experiment_builder.core.experiment.exceptions import (
@@ -235,15 +234,15 @@ def main(
 
     # Step 3: Populate experiment with defaults from defaults.yml files
     # Revert: for module_name in ...: metadata = populate_metadata_with_defaults(metadata, module_name)
-    console.print(
-        "[primary]Step 4: Populating metadata with defaults from defaults.yml files...[/primary]"
-    )
-    for module_name in skeleton.all_module_names:
-        if module_name and module_name.upper() != "NONE":
-            console.print(
-                f"  Populating defaults for module: [secondary]{module_name}[/secondary]"
-            )
-            populate_experiment_defaults(experiment, module_name)
+    #console.print(
+    #    "[primary]Step 4: Populating metadata with defaults from defaults.yml files...[/primary]"
+    #)
+    #for module_name in skeleton.all_module_names:
+    #    if module_name and module_name.upper() != "NONE":
+    #        console.print(
+    #            f"  Populating defaults for module: [secondary]{module_name}[/secondary]"
+    #        )
+    #        populate_experiment_defaults(experiment, module_name)
 
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")

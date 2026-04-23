@@ -183,6 +183,9 @@ def experiment_skeleton_to_facts_experiment(
         "location_file": location_file,
     }
 
+    ## This section is for top-level / experiment-level fields
+    # it extracts information for top-level params from module yamls
+    # and has fixed fields for experiment level params like paths
     top_level_keys = collect_metadata_param_keys(schemas, "top_level")
     top_level_params = {
         key: create_metadata_bundle(help_text, cli_values.get(key))
@@ -233,17 +236,17 @@ def experiment_skeleton_to_facts_experiment(
     )
 
 
-def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) -> None:
-    """
-    Load defaults from defaults.yml for the module and merge into the experiment (application layer: I/O).
-    """
-    defaults_yml = load_module_defaults(module_name)
+#def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) -> None:
+#    """
+#    Load defaults from defaults.yml for the module and merge into the experiment (application layer: I/O).
+#    """
+#    defaults_yml = load_module_defaults(module_name)
 
-    if not defaults_yml:
-        return
-    try:
-        module_def = load_facts_module_by_name(module_name)
-    except FileNotFoundError as e:
-        raise ValueError(f"Could not load module definition for '{module_name}") from e
+#    if not defaults_yml:
+#        return
+#    try:
+#        module_def = load_facts_module_by_name(module_name)
+#    except FileNotFoundError as e:
+#        raise ValueError(f"Could not load module definition for '{module_name}") from e
 
-    experiment.merge_defaults_for_module(module_name, defaults_yml, module_def)
+#    experiment.merge_defaults_for_module(module_name, defaults_yml, module_def)
