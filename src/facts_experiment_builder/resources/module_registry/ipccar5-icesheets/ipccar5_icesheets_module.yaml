@@ -26,11 +26,6 @@ arguments:
       transform: "scenario_name"
       optional: true
       help: "Emissions scenario name"
-    - name: "rng-seed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
-      help: "Seed value for random number generator"
     - name: "pyear-start"
       type: "int"
       source: "metadata.pyear_start"
