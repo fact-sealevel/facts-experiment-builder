@@ -142,9 +142,7 @@ def experiment_skeleton_to_facts_experiment(
     pyear_end: Optional[int] = None,
     pyear_step: Optional[int] = None,
     nsamps: Optional[int] = None,
-    seed: Optional[int] = None,
     location_file: Optional[str] = None,
-    # fingerprint_dir: Optional[str] = None,
     module_specific_inputs: Optional[str] = None,
     experiment_specific_inputs: Optional[str] = None,
     shared_inputs: Optional[str] = None,
@@ -179,7 +177,6 @@ def experiment_skeleton_to_facts_experiment(
         "pyear_step": pyear_step,
         "pyear-step": pyear_step,
         "nsamps": nsamps,
-        "seed": seed,
         "location-file": location_file,
         "location_file": location_file,
     }

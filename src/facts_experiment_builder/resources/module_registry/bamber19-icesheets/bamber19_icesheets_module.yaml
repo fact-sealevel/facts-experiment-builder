@@ -19,9 +19,6 @@ arguments:
     - name: "nsamps"
       type: "int"
       source: "metadata.nsamps"
-    - name: "rngseed"
-      type: "int"
-      source: "metadata.seed"
     - name: "scenario"
       type: "str"
       source: "metadata.scenario"
@@ -57,6 +54,11 @@ arguments:
       source: "module_inputs.options.chunksize"
       default_value: 50
       optional: true
+    - name: "rngseed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1423
+      help: "Seed for the random number generator."
 
   fingerprint_params:
     - name: "fingerprint-dir"

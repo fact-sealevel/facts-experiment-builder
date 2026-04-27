@@ -25,10 +25,6 @@ arguments:
       type: "int"
       source: "metadata.nsamps"
       optional: true
-    - name: "rngseed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
     - name: "baseyear"
       type: "int"
       source: "metadata.baseyear"
@@ -65,6 +61,11 @@ arguments:
       source: "module_inputs.options.chunksize"
       optional: true
       default_value: 50
+    - name: "rngseed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1342
+      help: "Seed for the random number generator."
 
   fingerprint_params:
     - name: "fingerprint-dir"

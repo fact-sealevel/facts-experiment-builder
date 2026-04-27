@@ -26,11 +26,6 @@ arguments:
       transform: "scenario_name"
       optional: true
       help: "Emissions scenario name"
-    - name: "rng-seed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
-      help: "Seed value for random number generator"
     - name: "pyear-start"
       type: "int"
       source: "metadata.pyear_start"
@@ -94,6 +89,11 @@ arguments:
       source: "module_inputs.options.chunksize"
       optional: true
       help: "Number of locations to process at a time"
+    - name: "rng-seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1423
+      help: "Seed for the random number generator."
 
   fingerprint_params:
     - name: "fingerprint-dir"

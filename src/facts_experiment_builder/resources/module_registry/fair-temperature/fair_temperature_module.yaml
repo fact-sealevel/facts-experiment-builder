@@ -22,10 +22,6 @@ arguments:
       type: "int"
       source: "metadata.nsamps"
       help: "Number of samples"
-    - name: "seed"
-      type: "int"
-      source: "metadata.seed"
-      help: "Random seed to use for sampling"
     - name: "scenario"
       type: "str"
       source: "metadata.scenario"
@@ -67,6 +63,11 @@ arguments:
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
+    - name: "seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 2314
+      help: "Seed for the random number generator."
   # Output file arguments
   outputs:
     files:

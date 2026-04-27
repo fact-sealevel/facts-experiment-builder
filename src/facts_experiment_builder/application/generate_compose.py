@@ -264,7 +264,6 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         "experiment_name",
         "pipeline-id",
         "nsamps",
-        "seed",
         "scenario",
         "pyear_start",
         "pyear_end",

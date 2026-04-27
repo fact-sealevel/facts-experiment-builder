@@ -20,7 +20,6 @@ def test_setup_new_experiment_runs_successfully(
     pyear_step,
     baseyear,
     pipeline_id,
-    seed,
 ):
     monkeypatch.chdir(project_root)
     with patch(
@@ -61,7 +60,6 @@ def test_setup_new_experiment_runs_successfully(
             "baseyear": baseyear,
             "nsamps": nsamps,
             "pipeline-id": pipeline_id,
-            "seed": seed,
             "location-file": "location.lst",
         }
         experiment_steps = experiment.list_all_steps()

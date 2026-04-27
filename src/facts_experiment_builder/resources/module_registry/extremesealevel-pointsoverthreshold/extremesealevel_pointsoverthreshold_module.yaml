@@ -19,10 +19,6 @@ arguments:
       type: "int"
       source: "metadata.nsamps"
       optional: true
-    - name: "seed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
     - name: "target-years"
       type: "str"
       source: "module_inputs.options.target_years"
@@ -109,6 +105,11 @@ arguments:
       type: "bool"
       source: "module_inputs.options.debug"
       optional: true
+    - name: "seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 2413
+      help: "Seed for the random number generator."
 
   inputs:
     # Total localized sea-level file (path under output root, e.g. facts-total/wf1_total.nc).

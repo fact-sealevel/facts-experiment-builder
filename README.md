@@ -54,7 +54,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --extremesealevel-step extremesealevel-pointsoverthreshold \
 --pipeline-id aaa --scenario ssp126 --baseyear 2005 \
 --pyear-start 2020 --pyear-end 2150 --pyear-step 10 \
---nsamps 1000 --seed 1234 --location-file location.lst
+--nsamps 1000 --location-file location.lst
 ```
 >[!NOTE]
 > If you run `setup-new-experiment` with the options shown above, you **must** manually edit the resulting `experiment-config.yml` file to specify the paths for `module-specific-inputs` and `shared-inputs`. Or, you can pass the paths in the CLI command with `--module-specific-inputs` and `--shared-inputs`
@@ -63,7 +63,7 @@ Example (using pre-existing climate data instead of running a climate module):
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
 --experiment-name toy_experiment_with_climate_data --scenario ssp585 \
---pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
+--pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --nsamps 1000 \
 --supplied-climate-step-data /path/to/climate_data.nc \
 --sealevel-step bamber19-icesheets,tlm-sterodynamics \
 --extremesealevel-step extremesealevel-pointsoverthreshold
@@ -160,7 +160,6 @@ Options:
   --pyear-end INTEGER             Projection year end
   --pyear-step INTEGER            Projection year step
   --nsamps INTEGER                Number of samples
-  --seed INTEGER                  Random seed to use for sampling
   --location-file TEXT            Location file name
   --module-specific-inputs TEXT   Path to module-specific input data (written
                                   to experiment metadata)
