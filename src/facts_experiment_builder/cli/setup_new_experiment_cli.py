@@ -27,6 +27,10 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     unparse_module_list,
     validate_module_names,
 )
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.WARNING)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -54,7 +58,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     required=False,
     help="Path to pre-existing totaled sealevel data. Replaces running both the climate and sealevel steps.",
 )
-
 @click.option(
     "--total-all-modules",
     type=bool,
@@ -100,6 +103,7 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     default=None,
     help="Path to shared input data (written to experiment metadata)",
 )
+@click.option("--debug/--no-debug", default=False)
 def main(
     experiment_name,
     climate_step,
@@ -119,6 +123,7 @@ def main(
     location_file,
     module_specific_inputs,
     shared_inputs,
+    debug,
 ):
     """Set up a new experiment with setup-new-experiment CLI command.
     This function includes a number of steps: \n
@@ -128,6 +133,9 @@ def main(
         - If facts-total passed, collects workflows w/ user prompts
 
     """
+    if debug:
+        logging.root.setLevel(logging.INFO)
+
     console.rule(
         characters="- - ",
         style="rule",
@@ -158,8 +166,10 @@ def main(
             extremesealevel_step=extremesealevel_step,
         )
     except ValueError as e:
-        raise click.UsageError('Failed to create experient skeleton in application.setup_new_experiment: %s', str(e))
-
+        raise click.UsageError(
+            "Failed to create experient skeleton in application.setup_new_experiment: %s",
+            str(e),
+        )
 
     # If no sealevel modules are provided, skip sealevel step
     if not skeleton.sealevel_modules:
@@ -394,6 +404,7 @@ def print_climate_step_info(skeleton: "ExperimentSkeleton"):
 def print_sealevel_step_info(skeleton: "ExperimentSkeleton"):
     value = skeleton.sealevel_modules or skeleton.supplied_totaled_sealevel_step_data
     console.print(f"    - Sea-level step: [secondary]{value}[/secondary]")
+
 
 def print_extremesealevel_step_info(skeleton: "ExperimentSkeleton"):
     console.print(
