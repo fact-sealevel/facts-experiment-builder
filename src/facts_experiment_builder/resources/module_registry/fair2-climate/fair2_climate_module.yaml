@@ -66,6 +66,11 @@ arguments:
       optional: true
       help: "Number of years to use as a smoothing window"
       default_value: 19
+    - name: "seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1234
+      help: "Seed for the random number generator."
 
   # Input file arguments
   inputs:

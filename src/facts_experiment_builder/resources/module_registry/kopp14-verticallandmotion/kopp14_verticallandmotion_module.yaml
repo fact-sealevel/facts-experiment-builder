@@ -23,11 +23,6 @@ arguments:
       source: "metadata.nsamps"
       optional: true
       help: "Number of samples"
-    - name: "rng-seed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
-      help: "Random seed to use for sampling"
     - name: "baseyear"
       type: "int"
       source: "metadata.baseyear"
@@ -64,6 +59,11 @@ arguments:
       optional: true
       help: "TO DO ADD HELP TEXT"
       default_value: 50
+    - name: "rng-seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 5678
+      help: "Seed for the random number generator."
 
   # Input file arguments
   inputs:

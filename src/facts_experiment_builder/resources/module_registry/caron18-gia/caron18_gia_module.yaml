@@ -22,10 +22,6 @@ arguments:
       type: "int"
       source: "metadata.nsamps"
       help: "Number of samples"
-    - name: "rng-seed"
-      type: "int"
-      source: "metadata.seed"
-      help: "Random seed to use for sampling"
     - name: "baseyear"
       type: "int"
       source: "metadata.baseyear"
@@ -58,6 +54,11 @@ arguments:
       optional: true
       help: "Number of locations to process in each chunk"
       default_value: 1000
+    - name: "rng-seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1234
+      help: "Seed for the random number generator."
 
   # Input file arguments
   inputs:

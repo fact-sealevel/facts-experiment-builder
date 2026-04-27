@@ -23,11 +23,6 @@ arguments:
       source: "metadata.nsamps"
       optional: true
       help: "Number of samples"
-    - name: "seed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
-      help: "Random seed to use for sampling"
     - name: "scenario"
       type: "str"
       source: "metadata.scenario"
@@ -100,6 +95,12 @@ arguments:
       optional: true
       help: "TO DO ADD HELP TEXT"
       default_value: 50
+    - name: "seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1243
+      help: "Seed for the random number generator."
+
   fingerprint_params:
     - name: "fp-file"
       type: "str"

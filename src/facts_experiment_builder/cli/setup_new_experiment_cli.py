@@ -79,9 +79,7 @@ logging.basicConfig(level=logging.WARNING)
 @click.option("--pyear-end", type=int, required=False, help="Projection year end")
 @click.option("--pyear-step", type=int, required=False, help="Projection year step")
 @click.option("--nsamps", type=int, required=False, help="Number of samples")
-@click.option(
-    "--seed", type=int, required=False, help="Random seed to use for sampling"
-)
+
 @click.option(
     "--location-file",
     type=str,
@@ -119,7 +117,6 @@ def main(
     pyear_end,
     pyear_step,
     nsamps,
-    seed,
     location_file,
     module_specific_inputs,
     shared_inputs,
@@ -210,7 +207,6 @@ def main(
         pyear_end=pyear_end,
         pyear_step=pyear_step,
         nsamps=nsamps,
-        seed=seed,
         location_file=location_file,
         module_specific_inputs=module_specific_inputs,
         shared_inputs=shared_inputs,
@@ -230,7 +226,6 @@ def main(
         pyear_end=pyear_end,
         pyear_step=pyear_step,
         nsamps=nsamps,
-        seed=seed,
         location_file=location_file,
         module_specific_inputs=module_specific_inputs,
         experiment_specific_inputs=supplied_climate_step_data,
@@ -424,7 +419,6 @@ def print_global_params_info(
     pyear_end: int,
     pyear_step: int,
     nsamps: int,
-    seed: int,
     location_file: str,
     module_specific_inputs: str,
     shared_inputs: str,
@@ -440,7 +434,6 @@ def print_global_params_info(
             pyear_end,
             pyear_step,
             nsamps,
-            seed,
             location_file,
             module_specific_inputs,
             shared_inputs,

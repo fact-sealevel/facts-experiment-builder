@@ -27,11 +27,6 @@ arguments:
       type: "int"
       source: "metadata.nsamps"
       help: "Number of samples"
-    - name: "seed"
-      type: "int"
-      source: "metadata.seed"
-      optional: true
-      help: "Random seed to use for sampling"
     - name: "baseyear"
       type: "int"
       source: "metadata.baseyear"
@@ -101,6 +96,11 @@ arguments:
       source: "module_inputs.options.chunksize"
       optional: true
       help: "TO DO ADD HELP TEXT"
+    - name: "seed"
+      type: "int"
+      source: "module_inputs.options.seed"
+      default_value: 1342
+      help: "Seed for the random number generator."
 
   fingerprint_params:
     - name: "fingerprint-dir"
