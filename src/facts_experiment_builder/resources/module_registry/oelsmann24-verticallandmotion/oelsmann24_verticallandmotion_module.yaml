@@ -93,13 +93,13 @@ arguments:
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
-    - name: "input-example-file"
-      type: "file"
-      source: "module_inputs.inputs.example_fname"
-      help: "Path to example data file providing spatial structure"
-      mount:
-        volume: "module_specific_input"
-        container_path: "/mnt/module_specific_in"
+    #- name: "input-example-file"
+    #  type: "file"
+    #  source: "module_inputs.inputs.example_fname"
+    #  help: "Path to example data file providing spatial structure"
+    #  mount:
+    #    volume: "module_specific_input"
+    #    container_path: "/mnt/module_specific_in"
 
   # Output file arguments
   outputs:

@@ -33,7 +33,6 @@ class SealevelStep(ExperimentStep):
             )
         return cls(module_specs_list=specs)
 
-
     @classmethod
     def from_dict(
         cls, module_names: List[str], metadata: Dict[str, Any]
@@ -55,7 +54,6 @@ class SealevelStep(ExperimentStep):
     def to_dict(self) -> Dict[str, Dict[str, Any]]:
         """Returns {module_name: spec_dict, ...} for each sealevel module."""
         return {s.module_name: s.to_dict() for s in self.module_specs_list}
-
 
     @property
     def module_names(self) -> List[str]:

@@ -1,6 +1,150 @@
 """Tests for facts_experiment_builder.core.module.module_schema."""
 
+import pytest
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.section_field import SectionField, ModuleSection
+
+
+## Field-level tests
+def test_section_field_missing_name_raises():
+    with pytest.raises(ValidationError) as exc_info:
+        SectionField(source="module_inputs.inputs.rcmip-file", help="help text")
+    errors = exc_info.value.errors()
+    assert any(e["loc"] == ("name",) for e in errors)
+
+
+def test_section_field_stores_name_and_filename():
+    f = SectionField(
+        name="rcmip-file",
+        source="module_inputs.inputs.rcmip-file",
+        filename="filename.nc",
+        help="Help string about this field",
+    )
+    assert f.name == "rcmip-file"
+    assert f.filename == "filename.nc"
+    assert f.help == "Help string about this field"
+
+
+def test_section_field_missing_source_and_help_raises():
+    with pytest.raises(ValidationError) as exc_info:
+        SectionField(name="rcmip-file")
+    errors = exc_info.value.errors()
+    missing_fields = {e["loc"][0] for e in errors}
+    assert "source" in missing_fields
+    assert "help" in missing_fields
+
+
+def test_wrong_type_section_name_raises():
+    with pytest.raises(ValidationError):
+        SectionField(name=123, source="module_inputs.inputs.field", help="Help")
+
+
+def test_section_field_filename_defaults_to_none():
+    f = SectionField(
+        name="chunksize",
+        source="module_inputs.inputs.chunksize",
+        help="Chunksize desc.",
+    )
+    assert f.filename is None
+    assert f.default_value is None
+    assert f.mount is None
+
+
+def test_section_field_mount_accepts_dict():
+    f = SectionField(
+        name="param-file",
+        source="module_inputs.inputs.param_fname",
+        help="help text",
+        filename="param_filename.nc",
+        mount={
+            "volume": "module_specific_in",
+            "container_path": "mnt/module_specific_in",
+        },
+    )
+    assert f.filename == "param_filename.nc"
+    assert f.mount["volume"] == "module_specific_in"
+    assert f.mount["container_path"] == "mnt/module_specific_in"
+
+
+def test_section_field_mount_wrong_type_raises():
+    with pytest.raises(ValidationError):
+        SectionField(
+            name="rcmip-file",
+            source="module_inputs.inputs.rcmip-fname",
+            help="help",
+            mount="mount string",  # Mount should be a dict
+        )
+
+
+## Module section tests
+def test_module_section_stores_fields():
+    rcmip_file_field = SectionField(
+        name="rcmip-file",
+        source="module_inputs.inputs.rcmip-file",
+        filename="filename.nc",
+        help="Help string about this field",
+    )
+    param_file_field = SectionField(
+        name="param-file",
+        source="module_inputs.inputs.param-file",
+        filename="param_filename.nc",
+        help="Help string about this field",
+    )
+    section = ModuleSection(
+        name="inputs",
+        fields=[
+            rcmip_file_field,
+            param_file_field,
+        ],
+    )
+    assert section.name == "inputs"
+    assert len(section.fields) == 2
+
+
+def test_module_section_fields_not_list_of_fields_raises():
+    with pytest.raises(ValidationError):
+        SectionField(name="inputs", fields=["one part", "another part"])
+
+
+# def test_module_schema_args_are_module_sections():
+#     schema = ModuleSchema.from_dict(
+#         {
+#             "module_name": "foo",
+#             "arguments": {
+#                 "inputs": [
+#                     {
+#                         "name": "module_input1",
+#                         "source": "module_inputs.inputs.module_input1",
+#                         "help": "help for module_input1",
+#                         "filename": "filename/module_input1",
+#                     },
+#                     {
+#                         "name": "module_input2",
+#                         "source": "module_inputs.inputs.module_input2",
+#                         "help": "help for module_input2",
+#                         "filename": "filename/module_input2",
+#                     },
+#                 ],
+#             },
+#             "outputs": [
+#                 {
+#                     "name": "module_output1",
+#                     "source": "module_inputs.outputs.module_outputs1",
+#                     "help": "help for module_output1",
+#                     "filename": "filename/module_output1",
+#                 },
+#                 {
+#                     "name": "module_output2",
+#                     "source": "module_inputs.outputs.module_outputs2",
+#                     "help": "help for module_output2",
+#                     "filename": "filename/module_output2",
+#                 },
+#             ],
+#             "volumes": {},
+#         }
+#     )
+#     assert isinstance(schema.arguments["inputs"], ModuleSection)
+#     assert isinstance(schema.arguments["inputs"].fields[0], SectionField)
 
 
 def test_module_schema_construction_minimal():
