@@ -122,16 +122,26 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
                 lines.append(f"{indent_str}  {cli_value}  # user specified value")
         elif filename:
             if isinstance(filename, str) and ("/" in filename or " " in filename):
-                lines.append(f'{indent_str}  "{filename}"  # filename from module defaults')
+                lines.append(
+                    f'{indent_str}  "{filename}"  # filename from module defaults'
+                )
             else:
-                lines.append(f"{indent_str}  {filename}  # filename from module defaults")
+                lines.append(
+                    f"{indent_str}  {filename}  # filename from module defaults"
+                )
         elif default_value:
             if isinstance(default_value, str) and (
-                default_value.startswith("$") or " " in default_value or "/" in default_value
+                default_value.startswith("$")
+                or " " in default_value
+                or "/" in default_value
             ):
-                lines.append(f'{indent_str}  "{default_value}"  # value from module defaults')
+                lines.append(
+                    f'{indent_str}  "{default_value}"  # value from module defaults'
+                )
             else:
-                lines.append(f"{indent_str}  {default_value}  # value from module defaults")
+                lines.append(
+                    f"{indent_str}  {default_value}  # value from module defaults"
+                )
     elif isinstance(value, dict):
         # Regular nested dict (like inputs, options, outputs sections)
         lines.append(f"{indent_str}{key}:")
