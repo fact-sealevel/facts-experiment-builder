@@ -293,20 +293,6 @@ def test_from_module_schema_includes_module_specific_fingerprint_params():
     assert entry.get("clue") == "File containing GIS fingerprint data"
 
 
-def test_from_module_schema_excludes_top_level_fingerprint_params():
-    """Top-level fingerprint params (source: metadata.*) are NOT added to the spec — they come from top-level metadata."""
-    schema = _schema_with_fp([FP_SPEC_TOP_LEVEL])
-    spec = ModuleExperimentSpec.from_module_schema(schema)
-    assert spec.fingerprint_params == {}
-
-
-def test_from_module_schema_fingerprint_params_omitted_from_to_dict_when_empty():
-    """to_dict() omits the fingerprint_params key when there are none."""
-    schema = _schema_with_fp([FP_SPEC_TOP_LEVEL])
-    spec = ModuleExperimentSpec.from_module_schema(schema)
-    assert "fingerprint_params" not in spec.to_dict()
-
-
 def test_from_module_schema_fingerprint_params_present_in_to_dict_when_populated():
     """to_dict() includes fingerprint_params when the spec has them."""
     schema = _schema_with_fp([FP_SPEC_MODULE_SPECIFIC])

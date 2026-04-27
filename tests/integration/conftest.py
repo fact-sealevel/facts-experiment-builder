@@ -34,13 +34,6 @@ def sealevel_step():
 
 
 @pytest.fixture
-def totaling_step():
-    """The module to include in the totaling step of the integration test experiment."""
-    input = "facts-total"
-    return input
-
-
-@pytest.fixture
 def extremesealevel_step():
     """The module(s) to include in the extremesealevel step of the integration test experiment."""
     input = "extremesealevel-pointsoverthreshold"
@@ -112,7 +105,6 @@ def setup_args(
     experiment_name,
     climate_step,
     sealevel_step,
-    totaling_step,
     extremesealevel_step,
     module_specific_inputs_path,
     shared_inputs_path,
@@ -148,8 +140,6 @@ def setup_args(
         climate_step,
         "--sealevel-step",
         sealevel_step,
-        "--totaling-step",
-        totaling_step,
         "--extremesealevel-step",
         extremesealevel_step,
         "--module-specific-inputs",
