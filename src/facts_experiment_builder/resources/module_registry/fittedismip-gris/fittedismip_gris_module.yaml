@@ -70,6 +70,7 @@ arguments:
       source: "module_inputs.options.tlm_flag"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 1
     - name: "cyear-start"
       type: "int"
       source: "module_inputs.options.cyear_start"
@@ -80,17 +81,20 @@ arguments:
       source: "module_inputs.options.cyear_end"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 2100
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 50
 
   fingerprint_params:
     - name: "fingerprint-dir"
       type: "str"
       source: "module_inputs.fingerprint_params.fingerprint_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: FPRINT
       mount:
         volume: "input"
         container_path: "/mnt/shared_in"
@@ -100,6 +104,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.climate_data_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "fair-temperature/climate.nc"
       mount:
         volume: "out" # Implicit dependency: needs fair output
         container_path: "/mnt/out"
@@ -109,6 +114,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.gris_parm_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "FittedParms_GrIS_ALL.csv"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
@@ -116,6 +122,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.wais_parm_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "FittedParms_AIS_WAIS.csv"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
@@ -123,6 +130,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.eais_parm_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "FittedParms_AIS_EAIS.csv"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
@@ -130,6 +138,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.pen_parm_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "FittedParms_AIS_PEN.csv"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"

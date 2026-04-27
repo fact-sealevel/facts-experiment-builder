@@ -35,20 +35,15 @@ arguments:
       type: "int"
       source: "module_inputs.options.chunksize"
       optional: true
+      default_value: 50
       help: "Number of locations to process at a time"
 
   fingerprint_params:
-    #- name: "fingerprint-dir"
-    #  type: "str"
-    #  source: "module_inputs.fingerprint_params.fingerprint_dir"
-    #  help: "Path to directory containing fingerprint files"
-    #  mount:
-    #    volume: "shared_input"
-    #    container_path: "/mnt/shared_in"
     - name: "fprint-wais-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_wais_file"
       help: "File containing WAIS fingerprint data"
+      filename: "FPRINT/fprint_wais.nc"
       mount:
         volume: "shared_input"
         container_path: "/mnt/shared_in"
@@ -56,6 +51,7 @@ arguments:
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_eais_file"
       help: "File containing EAIS fingerprint data"
+      filename: "FPRINT/fprint_eais.nc"
       mount:
         volume: "shared_input"
         container_path: "/mnt/shared_in"
@@ -66,6 +62,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.input_data_file"
       help: "Full path for temperature trajectory input file"
+      filename: "fair-temperature/gsat.nc"
       mount:
         volume: "output"
         container_path: "/mnt/out"

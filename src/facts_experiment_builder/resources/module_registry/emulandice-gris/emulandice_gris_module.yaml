@@ -37,12 +37,14 @@ arguments:
       source: "module_inputs.options.chunksize"
       optional: true
       help: "Number of locations to process at a time"
+      default_value: 50
 
   fingerprint_params:
     - name: "fprint-gis-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_gis_file"
       help: "File containing GIS fingerprint data"
+      filename: "FPRINT/fprint_gis.nc"
       mount:
         volume: "shared_input"
         container_path: "/mnt/shared_in"
@@ -52,6 +54,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.input_data_file"
       help: "Full path for temperature trajectory input file"
+      filename: "fair-temperature/gsat.nc"
       mount:
         volume: "output"
         container_path: "/mnt/out"

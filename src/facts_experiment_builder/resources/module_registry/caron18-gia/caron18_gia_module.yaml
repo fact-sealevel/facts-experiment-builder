@@ -57,6 +57,7 @@ arguments:
       source: "module_inputs.options.chunksize"
       optional: true
       help: "Number of locations to process in each chunk"
+      default_value: 1000
 
   # Input file arguments
   inputs:
@@ -64,6 +65,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.gia_stats_input_fname"
       help: "Path to GIA statistics netCDF file"
+      filename: "GIA_stats.nc"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"

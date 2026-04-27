@@ -57,6 +57,7 @@ arguments:
       source: "module_inputs.options.chunk_size"
       optional: true
       help: "Number of locations to process at a time"
+      default_value: 50
 
   # Input file arguments
   inputs:
@@ -64,6 +65,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.vlm_reconstruction_fname"
       help: "Path to VLM reconstruction data file"
+      filename: "VLM_reconstruction.nc"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
@@ -71,6 +73,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.gps_vlm_fname"
       help: "Path to GPS VLM data file"
+      filename: "NGL14_CMR_corrected.nc"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
@@ -78,6 +81,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.gia_vlm_fname"
       help: "Path to GIA VLM statistics file"
+      filename: "GIA_stats.nc"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
@@ -85,6 +89,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.dist2coast_fname"
       help: "Path to distance-to-coast GRD file"
+      filename: "dist2coast_1deg_v2.grd"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"

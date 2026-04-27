@@ -47,21 +47,25 @@ arguments:
       source: "module_inputs.options.reference_year"
       optional: true
       help: "Reference year for RCMIP data"
+      default_value: 1750
     - name: "cyear-start"
       type: "int"
       source: "module_inputs.options.cyear_start"
       optional: true
       help: "Start year of temporal range for centering"
+      default_value: 1850
     - name: "cyear-end"
       type: "int"
       source: "module_inputs.options.cyear_end"
       optional: true
       help: "End year of temporal range for centering"
+      default_value: 1900
     - name: "smooth-win"
       type: "int"
       source: "module_inputs.options.smooth_win"
       optional: true
       help: "Number of years to use as a smoothing window"
+      default_value: 19
 
   # Input file arguments
   inputs:
@@ -69,6 +73,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.rcmip_concentration_fname"
       help: "Path to RCMIP concentrations file"
+      filename: "rcmip/rcmip-concentrations-annual-means-v5-1-0.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -76,6 +81,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.rcmip_emissions_fname"
       help: "Path to RCMIP emissions file"
+      filename: "rcmip/rcmip-emissions-annual-means-v5-1-0.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -83,6 +89,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.rcmip_forcing_fname"
       help: "Path to RCMIP radiative forcing file"
+      filename: "rcmip/rcmip-radiative-forcing-annual-means-v5-1-0.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -90,6 +97,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.calibration_fname"
       help: "Path to calibrated constrained parameters file"
+      filename: "parameters/calibrated_constrained_parameters.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -97,6 +105,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.species_config_fname"
       help: "Path to species configuration properties file"
+      filename: "parameters/species_configs_properties_calibration1.2.0.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -104,6 +113,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.volcanic_erf_fname"
       help: "Path to volcanic ERF timebounds file"
+      filename: "parameters/volcanic_ERF_1750-2101_timebounds.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -111,6 +121,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.solar_erf_fname"
       help: "Path to solar ERF timebounds file"
+      filename: "parameters/solar_erf_timebounds.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"

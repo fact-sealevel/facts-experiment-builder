@@ -59,16 +59,19 @@ arguments:
       type: "bool"
       source: "module_inputs.options.replace"
       optional: true
+      default_value: true
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
       optional: true
+      default_value: 50
 
   fingerprint_params:
     - name: "fingerprint-dir"
       type: "str"
       source: "module_inputs.fingerprint_params.fingerprint_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: FPRINT
       mount:
         volume: "input"
         container_path: "/mnt/shared_in"
@@ -78,36 +81,42 @@ arguments:
     - name: "input-eais-rcp26-file"
       type: "file"
       source: "module_inputs.inputs.input_eais_rcp26_file"
+      filename: "dp21_eais_rcp26.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
     - name: "input-eais-rcp45-file"
       type: "file"
       source: "module_inputs.inputs.input_eais_rcp45_file"
+      filename: "dp21_eais_rcp45.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
     - name: "input-eais-rcp85-file"
       type: "file"
       source: "module_inputs.inputs.input_eais_rcp85_file"
+      filename: "dp21_eais_rcp85.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
     - name: "input-wais-rcp26-file"
       type: "file"
       source: "module_inputs.inputs.input_wais_rcp26_file"
+      filename: "dp21_wais_rcp26.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
     - name: "input-wais-rcp45-file"
       type: "file"
       source: "module_inputs.inputs.input_wais_rcp45_file"
+      filename: "dp21_wais_rcp45.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
     - name: "input-wais-rcp85-file"
       type: "file"
       source: "module_inputs.inputs.input_wais_rcp85_file"
+      filename: "dp21_wais_rcp85.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"

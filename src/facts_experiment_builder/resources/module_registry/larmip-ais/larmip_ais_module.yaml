@@ -67,21 +67,25 @@ arguments:
       source: "module_inputs.options.refyear_start"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 1850
     - name: "refyear-end"
       type: "int"
       source: "module_inputs.options.refyear_end"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 1900
     - name: "year-start"
       type: "int"
       source: "module_inputs.options.year_start"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 1900
     - name: "year-end"
       type: "int"
       source: "module_inputs.options.year_end"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 2300
     - name: "cyear-start"
       type: "int"
       source: "module_inputs.options.cyear_start"
@@ -103,6 +107,7 @@ arguments:
       type: "str"
       source: "module_inputs.fingerprint_params.fingerprint_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: FPRINT
       mount:
         volume: "input"
         container_path: "/mnt/shared_in"
@@ -112,6 +117,7 @@ arguments:
     - name: "climate-data-file"
       type: "file"
       source: "module_inputs.inputs.climate_data_file"
+      filename: "fair-temperature/climate.nc"
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "out" # Implicit dependency: needs fair output
@@ -122,6 +128,7 @@ arguments:
       type: "str"
       source: "module_inputs.inputs.scaling_coefficients_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: "ScalingCoefficients"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -129,6 +136,7 @@ arguments:
       type: "str"
       source: "module_inputs.inputs.r_functions_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: "RFunctions"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"

@@ -59,16 +59,19 @@ arguments:
       source: "module_inputs.options.min_qf"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 5
     - name: "use-boprates"
       type: "int"
       source: "module_inputs.options.use_boprates"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 1
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 50
 
   # Input file arguments
   inputs:
@@ -76,6 +79,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.input_fname"
       help: "TO DO ADD HELP TEXT"
+      filename: NZ_2km.txt
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"

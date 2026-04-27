@@ -33,7 +33,43 @@ def get_required_field(
     return metadata[field_name]
 
 
+def get_required_field_with_alternatives(
+    metadata: Dict[str, Any],
+    primary_field: str,
+    alternative_fields: List[str],
+    context: str = "",
+) -> Any:
+    """
+    Get a required field, trying primary first, then alternatives.
 
+    Args:
+        metadata: Metadata dictionary
+        primary_field: Primary field name to try first
+        alternative_fields: List of alternative field names to try
+        context: Optional context for error message
+
+    Returns:
+        Field value from first found field
+
+    Raises:
+        KeyError: If none of the fields are present
+    """
+    # Try primary field first
+    if primary_field in metadata:
+        return metadata[primary_field]
+
+    # Try alternatives
+    for alt_field in alternative_fields:
+        if alt_field in metadata:
+            return metadata[alt_field]
+
+    # None found
+    # all_fields = [primary_field] + alternative_fields
+    context_msg = f" in {context}" if context else ""
+    raise KeyError(
+        f"Required field '{primary_field}' (or alternatives: {', '.join(alternative_fields)}) "
+        f"is missing from metadata{context_msg}"
+    )
 
 
 def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[str, str]:
