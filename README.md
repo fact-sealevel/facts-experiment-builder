@@ -10,7 +10,7 @@ This is a prototype of a package for configuring and managing FACTS 2 experiment
 
 This package centers around physical artifacts, YAML files, and core in-memory representations of the artifacts. For example, an experiment is abstractly defined as a set of parameters, a collection of modules, and a list of workflows. This is store on disk as an `experiment-config.yaml` file and represented in-memory by the `FactsExperiment` class. 
 
-Each containerized module application has a corresponding module yaml file (ie. `bamber19_icesheets_module.yaml` or `tlm_sterodynamics_module.yaml`) and a defaults yaml file (ie. `defaults_bamber19_icesheets.yml` or `defaults_tlm_sterodynamics.yml`). *Note: These yaml files are currently located in this repo, eventually they will be stored in the module repos.* The module yaml represents all of the inputs, outputs, and parameters used to specify that module as well as other critical metadata. In memory, this is stored as an object of the `ModuleSchema` class. The defaults file contains default values for any parameters in the module; this includes default values of filenames (input and output) relevant to the module. 
+Each containerized module application has a corresponding module yaml file (ie. `bamber19_icesheets_module.yaml` or `tlm_sterodynamics_module.yaml`). *Note: These yaml files are currently located in this repo, eventually they will be stored in the module repos.* The module yaml represents all of the inputs, outputs, and parameters used to specify that module as well as other critical metadata. In memory, this is stored as an object of the `ModuleSchema` class. Default values for parameters and filenames for input and output files are also stored in the module yaml files.
 
 To run a FACTS 2 experiment, we need more than the abstract information stored in an `experiment-config.yaml`. `facts-experiment-builder` plans to offer implementations for multiple execution environments, with an experiment's `experiment-config.yaml` remainining the underlying source of 'truth' about the experiment. From here, run files can be generated for specific execution environments such as Docker (`experiment-compose.yml`) and Async-Flow (`async-flow-experiment.py`, **not yet implemented**).
 
@@ -39,7 +39,6 @@ cd fresh_facts_project
      - `--experiment-name`
      - `--climate-step` OR `--supplied-climate-step-data` (module name or path to pre-existing climate data)
      - `--sealevel-step` OR `--supplied-totaled-sealevel-step-data` (module name(s) or path to pre-existing sealevel data)
-     - `--totaling-step` defaults to `facts-total`; pass `NONE` to skip (automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
      - `--extremesealevel-step` (ie. `extremesealevel-pointsoverthreshold`)
      - For full features list, see help section below.
 
@@ -51,7 +50,7 @@ Example:
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
 --experiment-name facts_experiment --climate-step fair-temperature \
 --sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,kopp14-verticallandmotion,ssp-landwaterstorage \
---total-all-modules True --totaling-step facts-total \
+--total-all-modules True \
 --extremesealevel-step extremesealevel-pointsoverthreshold \
 --pipeline-id aaa --scenario ssp126 --baseyear 2005 \
 --pyear-start 2020 --pyear-end 2150 --pyear-step 10 \
@@ -67,22 +66,19 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --seed 1234 --nsamps 1000 \
 --supplied-climate-step-data /path/to/climate_data.nc \
 --sealevel-step bamber19-icesheets,tlm-sterodynamics \
---totaling-step facts-total \
 --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
 #### 3. Specify workflows
 Workflows are lists of sea-level modules that are passed to the totaling step. When `--total-all-modules` is set to `True`, a workflow is automatically created that includes all sea-level modules included in the experiment. You may also specify your own workflows with different sets of modules using the CLI prompts.
 
-- If `facts-total` is passed to `--totaling-step`, the CLI prompts the user for information about the workflows included in the experiment:
-![workflow prompts](imgs/cli_output_workflow_prompts.png)
+- If more than one sea-level module is specified, the CLI prompts the user for information about the workflows included in the experiment.
  
-Once completed, the program:
+- Once completed, the program:
      - Makes a sub-directory in experiments with the supplied `--experiment-name` 
      - Creates and partially pre-populates an `experiment-config.yaml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
-     - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified. Module default values are all propagated from the `defaults_*modulename*.yaml` file corresponding to that module in the ModuleRegistry.
-You will see the following output in your terminal window:
-![rest of experiment setup](imgs/cli_output_setup_new_experiment_no_workflows.png)
+     - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified. Module default values are all propagated from each module's yaml file in the ModuleRegistry.
+You will see the following output in your terminal window.
 
 #### 4. Review and manually complete any empty fields in the top section of the experiment metadata file.
 
@@ -123,7 +119,6 @@ Each step accepts either a module name or a path to pre-existing data:
 - `--sealevel-step` / `--supplied-totaled-sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
 
 ```shell
-uv run setup-new-experiment --help
 Usage: setup-new-experiment [OPTIONS]
 
   Set up a new experiment with setup-new-experiment CLI command. This function
@@ -152,9 +147,6 @@ Options:
                                   Path to pre-existing totaled sealevel data.
                                   Replaces running both the climate and
                                   sealevel steps.
-  --totaling-step TEXT            Name of the totaling step module (use 'NONE'
-                                  if you do not want to call the totaling
-                                  module)  [default: facts-total]
   --total-all-modules BOOLEAN     If true, automatically creates a workflow
                                   that includes all specified sealevel
                                   modules. User may still choose to specify
@@ -174,6 +166,7 @@ Options:
                                   to experiment metadata)
   --shared-inputs TEXT            Path to shared input data (written to
                                   experiment metadata)
+  --debug / --no-debug
   -h, --help                      Show this message and exit.
 ```
 
