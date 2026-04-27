@@ -37,12 +37,6 @@ experiment_name:
 {{ format_value(value) }}
 {% endfor %}
 
-##----- Fingerprint params -----##
-{% for key, value in experiment.fingerprint_params.items() %}
-{{ key }}:
-{{ format_value(value) }}
-{% endfor %}
-
 ##----- Modules included in experiment -----##
 {% for module_key in included_modules %}
 {% if module_key in manifest %}
@@ -75,6 +69,9 @@ workflows:
 {% endif %}
 {% endfor %}
 
+
+##--------------------------------------------------------##
+##--------------------------------------------------------##
 ##----- Module-specific inputs, options, and outputs -----##
 {% for module_key in module_keys %}
 {{ module_key }}:
