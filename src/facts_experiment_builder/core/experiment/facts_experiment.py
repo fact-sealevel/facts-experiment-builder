@@ -257,26 +257,3 @@ class FactsExperiment:
             extra=extra,
             workflows=workflows,
         )
-
-    def merge_defaults_for_module(
-        self,
-        module_name: str,
-        defaults_yml: Dict[str, Any],
-        module_def: Optional[Any],
-    ) -> None:
-        """
-        Merge defaults from defaults_yml into this experiment's module section.
-        Delegates to the step that owns the named module.
-        """
-        if not defaults_yml:
-            return
-        if self._climate_step.module_name == module_name:
-            self._climate_step.merge_defaults(defaults_yml, module_def)
-        elif module_name in self._sealevel_step.module_names:
-            self._sealevel_step.merge_defaults_for_module(
-                module_name, defaults_yml, module_def
-            )
-        elif self._totaling_step.module_name == module_name:
-            self._totaling_step.merge_defaults(defaults_yml, module_def)
-        elif self._extreme_sealevel_step.module_name == module_name:
-            self._extreme_sealevel_step.merge_defaults(defaults_yml, module_def)

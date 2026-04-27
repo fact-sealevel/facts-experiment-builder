@@ -38,20 +38,24 @@ arguments:
       type: "int"
       source: "module_inputs.inputs.cyear_start"
       help: "TO DO ADD HELP TEXT"
+      default_value: 1850
     - name: "cyear-end"
       type: "int"
       source: "module_inputs.inputs.cyear_end"
       help: "TO DO ADD HELP TEXT"
+      default_value: 1900
     - name: "smooth-win"
       type: "int"
       source: "module_inputs.inputs.smooth_win"
       help: "TO DO ADD HELP TEXT"
+      default_value: 19
   # Input file arguments
   inputs:
     - name: "rcmip-file"
       type: "file"
       source: "module_inputs.inputs.rcmip_fname"
       help: "TO DO ADD HELP TEXT"
+      filename: "rcmip/rcmip-emissions-annual-means-v5-1-0.csv"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"
@@ -59,6 +63,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.param_fname"
       help: "TO DO ADD HELP TEXT"
+      filename: "parameters/fair_ar6_climate_params_v4.0.nc"
       mount:
         volume: "module_specific_in"
         container_path: "/mnt/module_specific_in"

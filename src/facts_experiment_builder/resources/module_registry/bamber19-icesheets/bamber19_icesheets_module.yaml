@@ -51,9 +51,11 @@ arguments:
     - name: "replace"
       type: "int"
       source: "module_inputs.options.replace"
+      default_value: 1
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
+      default_value: 50
       optional: true
 
   fingerprint_params:
@@ -61,6 +63,7 @@ arguments:
       type: "str"
       source: "module_inputs.fingerprint_params.fingerprint_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: "FPRINT"
       mount:
         volume: "input"
         container_path: "/mnt/shared_in"
@@ -70,6 +73,7 @@ arguments:
     - name: "climate-data-file"
       type: "file"
       source: "module_inputs.inputs.climate_data_file"
+      filename: "fair-temperature/climate.nc"
       mount:
         volume: "output"
         container_path: "/mnt/out"
@@ -78,6 +82,7 @@ arguments:
     - name: "slr-proj-mat-file"
       type: "file"
       source: "module_inputs.inputs.slr_proj_mat_file"
+      filename: "SLRProjections190726core_SEJ_full.mat"
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"

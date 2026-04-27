@@ -69,36 +69,43 @@ arguments:
       source: "module_inputs.options.dotriangular"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: False
     - name: "dcyear-start"
       type: "int"
       source: "module_inputs.options.dcyear_start"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 2020
     - name: "dcyear-end"
       type: "int"
       source: "module_inputs.options.dcyear_end"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 2040
     - name: "dcrate-lo"
       type: "float"
       source: "module_inputs.options.dcrate_lo"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 0.0
     - name: "dcrate-hi"
       type: "float"
       source: "module_inputs.options.dcrate_hi"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 0.0
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 50
   fingerprint_params:
     - name: "fp-file"
       type: "str"
       source: "module_inputs.fingerprint_params.fingerprint_dir"
       help: "TO DO ADD HELP TEXT"
+      filename: REL_GROUNDWATER_NOMASK.nc
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -108,6 +115,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.pophist_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "UNWPP2012_population_historical.csv"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -115,6 +123,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.reservoir_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "Chao2008_groundwater_impoundment.csv"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -122,6 +131,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.popscen_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "ssp_iam_baseline_popscenarios2100.csv"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -129,6 +139,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.gwd_file"
       help: "TO DO ADD HELP TEXT"
+      filename: [Konikow2011_GWD.csv, Wada2012_GWD.csv]
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"

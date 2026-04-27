@@ -3,11 +3,15 @@ from typing import Dict, List, Optional
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
 )
+from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
 )
 from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentAlreadyExistsError,
+)
+from facts_experiment_builder.core.experiment.module_name_validation import (
+    validate_module_names,
 )
 from facts_experiment_builder.core.experiment import FactsExperiment
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
@@ -21,9 +25,6 @@ from facts_experiment_builder.core.steps import (
 )
 from facts_experiment_builder.infra.module_loader import (
     load_facts_module_by_name,
-)
-from facts_experiment_builder.infra.module_defaults_loader import (
-    load_module_defaults,
 )
 from facts_experiment_builder.infra.experiment_manager import (
     resolve_experiment_directory_path,
@@ -43,37 +44,32 @@ def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
     return None
 
 
+def validate_skeleton_modules(skeleton: ExperimentSkeleton):
+    """Checks that all modules in the experiment skeleton are valid."""
+    valid = ModuleRegistry.default().list_modules()
+    try:
+        validate_module_names(skeleton.all_module_names, valid)
+    except ValueError as e:
+        raise ValueError(
+            f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
+        ) from e
+
+
 def hydrate_sealevel_step(skeleton) -> SealevelStep:
     if skeleton.sealevel_modules:
         sealevel_schemas = [
             load_facts_module_by_name(m) for m in skeleton.sealevel_modules
         ]
-        sealevel_step = SealevelStep.from_module_schemas(sealevel_schemas)
         climate_data_file = skeleton.climate_data
-        if (
-            not climate_data_file
-            and skeleton.climate_module
-            and skeleton.climate_module.upper() != "NONE"
-        ):
-            climate_data_file = _climate_output_file_path(skeleton.climate_module)
-        if climate_data_file:
-            for spec, schema in zip(sealevel_step.module_specs_list, sealevel_schemas):
-                if schema.uses_climate_file:
-                    output_vol_keys = schema.get_output_volume_input_keys()
-                    # get_output_volume_input_keys() returns both kebab YAML arg names and
-                    # snake_case source-derived keys; only the snake_case ones are metadata keys
-                    climate_keys = {k for k in output_vol_keys if "-" not in k}
-                    if not climate_keys:
-                        climate_keys = {
-                            "climate_data_file"
-                        }  # fallback for schemas without volume spec
-                    spec.merge_defaults(
-                        {"inputs": {k: climate_data_file for k in climate_keys}}, schema
-                    )
+
+        sealevel_step = SealevelStep.from_module_schemas(
+            sealevel_schemas, climate_data_file=climate_data_file
+        )
     else:
         sealevel_step = SealevelStep(
-            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_step_data
+            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_step_data,
         )
+
     return sealevel_step
 
 
@@ -158,6 +154,11 @@ def experiment_skeleton_to_facts_experiment(
 
     Unknown module names raise FileNotFoundError — no silent failures.
     """
+
+    # validate skeleton first
+    validate_skeleton_modules(skeleton)
+
+    # hydrate skeleton to create steps
     climate_step, sealevel_step, totaling_step, extreme_sealevel_step = (
         hydrate_experiment(skeleton)
     )
@@ -183,6 +184,9 @@ def experiment_skeleton_to_facts_experiment(
         "location_file": location_file,
     }
 
+    ## This section is for top-level / experiment-level fields
+    # it extracts information for top-level params from module yamls
+    # and has fixed fields for experiment level params like paths
     top_level_keys = collect_metadata_param_keys(schemas, "top_level")
     top_level_params = {
         key: create_metadata_bundle(help_text, cli_values.get(key))
@@ -231,19 +235,3 @@ def experiment_skeleton_to_facts_experiment(
         fingerprint_params=fingerprint_params,
         workflows=skeleton.workflows,
     )
-
-
-def populate_experiment_defaults(experiment: FactsExperiment, module_name: str) -> None:
-    """
-    Load defaults from defaults.yml for the module and merge into the experiment (application layer: I/O).
-    """
-    defaults_yml = load_module_defaults(module_name)
-
-    if not defaults_yml:
-        return
-    try:
-        module_def = load_facts_module_by_name(module_name)
-    except FileNotFoundError as e:
-        raise ValueError(f"Could not load module definition for '{module_name}") from e
-
-    experiment.merge_defaults_for_module(module_name, defaults_yml, module_def)

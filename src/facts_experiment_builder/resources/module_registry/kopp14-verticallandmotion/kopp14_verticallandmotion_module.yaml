@@ -63,6 +63,7 @@ arguments:
       source: "module_inputs.options.chunk_size"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: 50
 
   # Input file arguments
   inputs:
@@ -70,6 +71,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.rate_file"
       help: "TO DO ADD HELP TEXT"
+      filename: bkgdrate-210306.tsv
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"

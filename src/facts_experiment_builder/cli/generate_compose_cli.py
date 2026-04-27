@@ -49,11 +49,7 @@ def main(
     console.print(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
-    try:
-        compose_dict = generate_compose_from_metadata(metadata_path)
-    except Exception as e:
-        console.print(f"[danger]✗ Error generating compose content: {e}[/danger]")
-        raise click.ClickException(str(e))
+    compose_dict = generate_compose_from_metadata(metadata_path)
 
     # Step 3: Resolve output path for compose file
     console.print(

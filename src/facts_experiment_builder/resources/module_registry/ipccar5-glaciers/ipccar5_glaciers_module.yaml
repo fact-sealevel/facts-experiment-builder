@@ -58,6 +58,11 @@ arguments:
       help: "File containing name, id, lat, and lon of points for localization"
       mount:
         container_path: "/mnt/shared_in"
+    - name: "nsamps"
+      type: "int"
+      source: "metadata.nsamps"
+      optional: false
+      help: "Total number of samples to generate"
 
   # Module-specific options
   options:
@@ -65,43 +70,54 @@ arguments:
       type: "int"
       source: "module_inputs.options.refyear_start"
       optional: true
+      default_value: 1986
       help: "Start year for reference period"
     - name: "refyear-end"
       type: "int"
       source: "module_inputs.options.refyear_end"
       optional: true
       help: "End year for reference period"
+      default_value: 2005
     - name: "end-year"
       type: "int"
       source: "module_inputs.options.end_year"
       optional: true
       help: "Year to end the projection (Used in preprocess)"
+      default_value: 2301
     - name: "tlm-flag"
       type: "int"
       source: "module_inputs.options.tlm_flag"
       optional: true
       help: "Use the two-layer model data, 1=yes"
+      default_value: 1
     - name: "use-gmip"
       type: "int"
       source: "module_inputs.options.use_gmip"
       optional: true
       help: "Use the GMIP calibration"
-    - name: "nsamps"
-      type: "int"
-      source: "module_inputs.options.nsamps"
-      optional: true
-      help: "Total number of samples to generate (replaces 'nmsamps' and 'ntsamps' if provided)"
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
       optional: true
       help: "Number of locations to process at a time"
+      default_value: 50
+    - name: "ntsamps"
+      type: "int"
+      source: "module_inputs.options.ntsamps"
+      optional: true
+      help: "By-passed if nsamps passed at experiment level"
+    - name: "nmsamps"
+      type: "int"
+      source: "module_inputs.options.nmsamps"
+      optional: true
+      help: "By-passed if nsamps passed at experiment level"
 
   fingerprint_params:
     - name: "fingerprint-dir"
       type: "str"
       source: "module_inputs.fingerprint_params.fingerprint_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: FPRINT
       mount:
         volume: "input"
         container_path: "/mnt/shared_in"
@@ -111,6 +127,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.climate_data_file"
       help: "NetCDF4/HDF5 file containing surface temperature data (this should be a fair output)"
+      filename: "fair-temperature/climate.nc"
       mount:
         volume: "output" # Implicit dependency: needs fair output
         container_path: "/mnt/out"
@@ -120,16 +137,11 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.glacier_fraction_file"
       help: "Path to glacier fraction file"
+      filename: glacier_fraction.txt
       mount:
         volume: "module_specific_input"
         container_path: "/mnt/module_specific_in"
-    - name: "fingerprint-dir"
-      type: "str"
-      source: "module_inputs.inputs.fingerprint_dir"
-      help: "Path to fingerprint directory"
-      mount:
-        volume: "shared_input"
-        container_path: "/mnt/shared_in"
+
   # Output file arguments
   outputs:
     files:

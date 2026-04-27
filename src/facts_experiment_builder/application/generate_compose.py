@@ -34,6 +34,10 @@ from facts_experiment_builder.infra.module_loader import (
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
 )
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
@@ -254,7 +258,30 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     # Step 1: Load metadata (UI layer)
     metadata = load_experiment_metadata(metadata_path)
-
+    # Check that required fields in experient-config have been completed
+    # TODO do this better in future
+    required_fields = [
+        "experiment_name",
+        "pipeline-id",
+        "nsamps",
+        "seed",
+        "scenario",
+        "pyear_start",
+        "pyear_end",
+        "pyear_step",
+        "baseyear",
+        "module-specific-input-data",
+        "shared-input-data",
+        "output-data-location",
+    ]
+    # subset metadata to required fields
+    required_fields_meta = {k: v for k, v in metadata.items() if k in required_fields}
+    # raise error if any are missing a value
+    for k, v in required_fields_meta.items():
+        if v is None:
+            raise ValueError(
+                f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml file have been completed."
+            )
     experiment_dir = metadata_path.parent
 
     # Step 2: Build FactsExperiment — derive key sets from module schemas

@@ -14,12 +14,24 @@ class SealevelStep(ExperimentStep):
     supplied_totaled_sealevel_data: Optional[str] = None
 
     @classmethod
-    def from_module_schemas(cls, schemas: List[ModuleSchema]) -> "SealevelStep":
-        return cls(
-            module_specs_list=[
-                ModuleExperimentSpec.from_module_schema(s) for s in schemas
-            ]
-        )
+    def from_module_schemas(
+        cls, schemas: List[ModuleSchema], climate_data_file: Optional[str] = None
+    ) -> "SealevelStep":
+        specs = []
+        for schema in schemas:
+            prefilled: Dict[str, str] = {}
+            if climate_data_file and schema.uses_climate_file:
+                output_vol_keys = schema.get_output_volume_input_keys()
+                climate_keys = {k for k in output_vol_keys if "-" not in k} or {
+                    "climate_data_file"
+                }
+                prefilled = {k: climate_data_file for k in climate_keys}
+            specs.append(
+                ModuleExperimentSpec.from_module_schema(
+                    schema, prefilled_inputs=prefilled
+                )
+            )
+        return cls(module_specs_list=specs)
 
     @classmethod
     def from_dict(
@@ -42,17 +54,6 @@ class SealevelStep(ExperimentStep):
     def to_dict(self) -> Dict[str, Dict[str, Any]]:
         """Returns {module_name: spec_dict, ...} for each sealevel module."""
         return {s.module_name: s.to_dict() for s in self.module_specs_list}
-
-    def merge_defaults_for_module(
-        self,
-        module_name: str,
-        defaults_yml: Dict[str, Any],
-        schema: Optional[ModuleSchema] = None,
-    ) -> None:
-        for spec in self.module_specs_list:
-            if spec.module_name == module_name:
-                spec.merge_defaults(defaults_yml, schema)
-                return
 
     @property
     def module_names(self) -> List[str]:

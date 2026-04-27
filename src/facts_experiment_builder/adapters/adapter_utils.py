@@ -4,7 +4,6 @@ from typing import Dict, Any, List
 
 __all__ = [
     "get_required_field",
-    "get_required_field_with_alternatives",
     "get_experiment_paths",
 ]
 

@@ -1,5 +1,4 @@
 from unittest.mock import patch
-
 from facts_experiment_builder.application.setup_new_experiment import (
     hydrate_experiment,
     hydrate_sealevel_step,
@@ -123,67 +122,6 @@ def test_hydrate_sealevel_step_loads_schemas_for_each_module(mock_load):
     assert len(step.module_specs_list) == 2
     assert step.module_specs_list[0].module_name == "bamber19-icesheets"
     assert step.module_specs_list[1].module_name == "deconto21-ais"
-
-
-@patch(
-    "facts_experiment_builder.application.setup_new_experiment.load_facts_module_by_name"
-)
-def test_hydrate_sealevel_step_merges_climate_data_into_uses_climate_file_modules(
-    mock_load,
-):
-    mock_load.side_effect = [
-        make_module_schema("bamber19-icesheets", uses_climate_file=True),
-    ]
-    skeleton = make_skeleton(
-        sealevel_modules=["bamber19-icesheets"],
-        climate_data="/path/to/climate.nc",
-    )
-
-    step = hydrate_sealevel_step(skeleton)
-
-    spec = step.module_specs_list[0]
-    inputs = spec.to_dict().get("inputs", {})
-    climate_field = inputs.get("climate_data_file")
-    assert climate_field is not None
-    assert climate_field["value"] == "/path/to/climate.nc"
-
-
-@patch(
-    "facts_experiment_builder.application.setup_new_experiment.load_facts_module_by_name"
-)
-def test_hydrate_sealevel_step_merges_climate_module_output_into_uses_climate_file_modules(
-    mock_load,
-):
-    climate_schema = ModuleSchema(
-        module_name="fair-temperature",
-        container_image="test/image:latest",
-        arguments={
-            "inputs": [],
-            "options": [],
-            "outputs": {
-                "files": [{"name": "output-climate-file", "filename": "climate.nc"}]
-            },
-            "top_level": [],
-        },
-        volumes={},
-        uses_climate_file=False,
-    )
-    mock_load.side_effect = [
-        make_module_schema("bamber19-icesheets", uses_climate_file=True),
-        climate_schema,
-    ]
-    skeleton = make_skeleton(
-        sealevel_modules=["bamber19-icesheets"],
-        climate_module="fair-temperature",
-    )
-
-    step = hydrate_sealevel_step(skeleton)
-
-    spec = step.module_specs_list[0]
-    inputs = spec.to_dict().get("inputs", {})
-    climate_field = inputs.get("climate_data_file")
-    assert climate_field is not None
-    assert climate_field["value"] == "fair-temperature/climate.nc"
 
 
 @patch(

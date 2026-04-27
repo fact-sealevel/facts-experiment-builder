@@ -73,11 +73,13 @@ arguments:
       source: "module_inputs.options.no_drift_corr"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: false
     - name: "no-correlation"
       type: "bool"
       source: "module_inputs.options.no_correlation"
       optional: true
       help: "TO DO ADD HELP TEXT"
+      default_value: false
     - name: "chunksize"
       type: "int"
       source: "module_inputs.options.chunksize"
@@ -94,6 +96,7 @@ arguments:
     - name: "climate-data-file"
       type: "file"
       source: "module_inputs.inputs.climate_data_file"
+      filename: "fair-temperature/climate.nc"
       help: "TO DO ADD HELP TEXT"
       mount:
         volume: "output" # Implicit dependency: needs fair output
@@ -104,6 +107,7 @@ arguments:
       type: "str"
       source: "module_inputs.inputs.model_dir"
       help: "TO DO ADD HELP TEXT"
+      default_value: "cmip6/"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -111,6 +115,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.expansion_coefficients_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "scmpy2LM_RCMIP_CMIP6calpm_n18_expcoefs.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"
@@ -118,6 +123,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.gsat_rmses_file"
       help: "TO DO ADD HELP TEXT"
+      filename: "scmpy2LM_RCMIP_CMIP6calpm_n17_gsat_rmse.nc"
       mount:
         volume: "input"
         container_path: "/mnt/module_specific_in"

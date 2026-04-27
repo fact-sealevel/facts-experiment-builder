@@ -36,12 +36,14 @@ arguments:
       source: "module_inputs.options.chunksize"
       optional: true
       help: "Number of locations to process at a time"
+      default_value: 50
 
   fingerprint_params:
     - name: "fprint-glacier-dir"
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_glacier_dir"
       help: "Path to directory containing glacier fingerprint files"
+      default_value: "FPRINT"
       mount:
         volume: "shared_input"
         container_path: "/mnt/shared_in"
@@ -49,6 +51,7 @@ arguments:
       type: "str"
       source: "module_inputs.fingerprint_params.fprint_map_file"
       help: "Path to the fingerprint region map CSV file"
+      filename: "fingerprint_region_map.csv"
       mount:
         volume: "shared_input"
         container_path: "/mnt/shared_in"
@@ -58,6 +61,7 @@ arguments:
       type: "file"
       source: "module_inputs.inputs.input_data_file"
       help: "Full path for temperature trajectory input file"
+      filename: "fair-temperature/gsat.nc"
       mount:
         volume: "output"
         container_path: "/mnt/out"
