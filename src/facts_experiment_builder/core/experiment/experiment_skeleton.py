@@ -76,7 +76,7 @@ class ExperimentSkeleton:
             climate_data=supplied_climate_step_data,
             sealevel_modules=sealevel_modules,
             supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-            totaling_module= totaling_module, #totaling_modules[0] if totaling_modules else None,
+            totaling_module=totaling_module,  # totaling_modules[0] if totaling_modules else None,
             extremesealevel_module=esl_modules[0] if esl_modules else None,
         )
 
