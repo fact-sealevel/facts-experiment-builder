@@ -14,7 +14,6 @@ from facts_experiment_builder.infra.write_compose import (
     write_compose_yaml,
 )
 
-
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "--experiment-name",
@@ -49,11 +48,7 @@ def main(
     console.print(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
-    try:
-        compose_dict = generate_compose_from_metadata(metadata_path)
-    except Exception as e:
-        console.print(f"[danger]✗ Error generating compose content: {e}[/danger]")
-        raise click.ClickException(str(e))
+    compose_dict = generate_compose_from_metadata(metadata_path)
 
     # Step 3: Resolve output path for compose file
     console.print(
