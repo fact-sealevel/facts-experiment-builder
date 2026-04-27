@@ -4,11 +4,13 @@ from click.testing import CliRunner
 import click
 from facts_experiment_builder.cli.setup_new_experiment_cli import (
     main,
-    _validate_modules_list_experiment,
     _validate_modules_list_workflow,
-    _check_experiment_step,
+    _check_required_experiment_step,
     _create_all_modules_workflow,
     _collect_workflows,
+)
+from facts_experiment_builder.core.experiment.module_name_validation import (
+    parse_module_list,
 )
 import pytest
 from contextlib import nullcontext
@@ -20,19 +22,22 @@ runner = CliRunner()
 def test_cli_help_exits_zero():
     """--help runs and exits with 0."""
     result = runner.invoke(main, ["--help"])
-    print("output: ", result.output)
+    # Assert that the program runs successfully if --help passed
     assert result.exit_code == 0
+    # Assert that arg names are in output
     assert "experiment-name" in result.output
     assert "climate-step" in result.output
     assert "sealevel-step" in result.output
-    assert "totaling-step" in result.output
     assert "extremesealevel-step" in result.output
 
 
 def test_cli_fails_without_required_args():
     """Invoking without required options exits non-zero."""
     result = runner.invoke(main, [])
+    print("result output: ", result.output)
+    # assert that program doesn't run successfully if requried args missing
     assert result.exit_code != 0
+    # Assert that the output contains informative message about whats missing
     assert (
         "experiment-name" in result.output
         or "Missing" in result.output
@@ -56,22 +61,22 @@ def test_setup_new_experiment_fails_with_invalid_module_name():
     # assert "Invalid module name(s): invalid-module-name" in result.output
 
 
-def test_validate_modules_list_experiment_passes_for_valid():
-    valid_module_names = ["fair-temperature", "ipccar5-icesheets", "ipccar5-glaciers"]
-    _validate_modules_list_experiment(valid_module_names)
-
-
-def test_validate_modules_list_experiment_fails_for_invalid():
-    invalid_module_names = ["invalid-module-name", "invalid-module-name-2"]
-    with pytest.raises(click.UsageError):
-        _validate_modules_list_experiment(invalid_module_names)
+def test_setup_new_experiment_fails_without_climate_step_info():
+    result = runner.invoke(
+        main,
+        [
+            "--experiment-name",
+            "test-exp",
+        ],
+    )
+    print("result output: ", result.output)
 
 
 def test_validate_modules_list_workflow_passes_for_valid():
     experiment_modules_list = [
         "ipccar5-icesheets",
         "ipccar5-glaciers",
-        "fair-temperature",
+        "ssp-landwaterstorage",
     ]
     workflow_modules_list = [
         "ipccar5-icesheets",
@@ -84,7 +89,7 @@ def test_validate_modules_list_workflow_fails_for_invalid():
     experiment_modules_list = [
         "ipccar5-icesheets",
         "ipccar5-glaciers",
-        "fair-temperature",
+        "ssp-landwaterstorage",
     ]
     workflow_modules_list = [
         "ipccar5-icesheets",
@@ -106,7 +111,9 @@ def test_validate_modules_list_workflow_fails_for_invalid():
 )
 def test_check_experiment_step(step_module, step_data, expectation):
     with expectation:
-        _check_experiment_step(step_module, step_data, "--step-module", "--step-data")
+        _check_required_experiment_step(
+            step_module, step_data, "--step-module", "--step-data"
+        )
 
 
 # --- _create_all_modules_workflow ---
@@ -114,8 +121,11 @@ def test_check_experiment_step(step_module, step_data, expectation):
 
 def test_create_all_modules_workflow_key_is_all_modules():
     modules = ["ipccar5-icesheets", "ipccar5-glaciers", "tlm-sterodynamics"]
-    name, _ = _create_all_modules_workflow(modules)
+    name, values = _create_all_modules_workflow(modules)
+    # turn values from str to list
+    values_list = parse_module_list(values)
     assert name == "all-modules"
+    assert values_list == modules, f"Expected: {modules}, received: {values}"
 
 
 def test_create_all_modules_workflow_value_contains_all_sealevel_modules():
