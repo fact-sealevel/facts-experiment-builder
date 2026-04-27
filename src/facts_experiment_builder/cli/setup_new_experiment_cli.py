@@ -79,7 +79,6 @@ logging.basicConfig(level=logging.WARNING)
 @click.option("--pyear-end", type=int, required=False, help="Projection year end")
 @click.option("--pyear-step", type=int, required=False, help="Projection year step")
 @click.option("--nsamps", type=int, required=False, help="Number of samples")
-
 @click.option(
     "--location-file",
     type=str,
