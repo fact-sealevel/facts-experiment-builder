@@ -35,7 +35,7 @@ cd fresh_facts_project
 
 
 #### 2. Create an experiment via CLI
-- at a minimum, this entails specifying:
+- The `setup-new-experiment` command - at a minimum, this entails specifying:
      - `--experiment-name`
      - `--climate-step` OR `--supplied-climate-step-data` (module name or path to pre-existing climate data)
      - `--sealevel-step` OR `--supplied-totaled-sealevel-step-data` (module name(s) or path to pre-existing sealevel data)
@@ -57,7 +57,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --nsamps 1000 --seed 1234 --location-file location.lst
 ```
 >[!NOTE]
-> If you run `setup-new-experiment` with the options shown above, you **must** manually edit the resulting `experiment-config.yml` file to specify the paths for `module-specific-inputs` and `shared-inputs`.
+> If you run `setup-new-experiment` with the options shown above, you **must** manually edit the resulting `experiment-config.yml` file to specify the paths for `module-specific-inputs` and `shared-inputs`. Or, you can pass the paths in the CLI command with `--module-specific-inputs` and `--shared-inputs`
 
 Example (using pre-existing climate data instead of running a climate module):
 ```shell
@@ -97,7 +97,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main ge
 - Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
 - This is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
 
-![generate-compose](imgs/cli_output_generate_compose.png)
+![generate-compose](imgs/cli_output_generate_compose.svg)
 
 Then,
 - Inspect the compose file
