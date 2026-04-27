@@ -95,12 +95,6 @@ def pipeline_id():
 
 
 @pytest.fixture
-def seed():
-    input = 1234
-    return input
-
-
-@pytest.fixture
 def setup_args(
     experiment_name,
     climate_step,
@@ -115,7 +109,6 @@ def setup_args(
     baseyear,
     nsamps,
     pipeline_id,
-    seed,
 ):
     input = [
         "--experiment-name",
@@ -132,8 +125,6 @@ def setup_args(
         pyear_step,
         "--baseyear",
         baseyear,
-        "--seed",
-        seed,
         "--nsamps",
         nsamps,
         "--climate-step",
