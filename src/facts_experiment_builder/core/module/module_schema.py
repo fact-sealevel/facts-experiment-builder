@@ -7,7 +7,6 @@ experiment-metadata content and, with experiment data, to build ModuleServiceSpe
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
 
-
 # TODO this would need to change if the module schema yaml structure changes.
 # is that fine or do we want it to be more flexibly defined?
 
