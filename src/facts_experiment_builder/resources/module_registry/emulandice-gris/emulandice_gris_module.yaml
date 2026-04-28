@@ -4,7 +4,7 @@
 # Based on https://github.com/fact-sealevel/emulandice/blob/main/src/emulandice/cli.py (gris command).
 
 module_name: "emulandice-gris"
-container_image: "ghcr.io/fact-sealevel/emulandice:latest"
+container_image: "ghcr.io/fact-sealevel/emulandice:0.1.1"
 uses_climate_file: true
 climate_file_required: true
 command: "gris" # The sub-command to run

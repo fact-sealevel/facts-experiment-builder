@@ -5,7 +5,7 @@
 # corresponding containerized facts module repository and be generated semi programmatically.
 
 module_name: "kopp14-verticallandmotion"
-container_image: "ghcr.io/fact-sealevel/kopp14-verticallandmotion:latest"
+container_image: "ghcr.io/fact-sealevel/kopp14-verticallandmotion:0.1.0"
 uses_climate_file: false
 climate_file_required: false
 command: "main"
