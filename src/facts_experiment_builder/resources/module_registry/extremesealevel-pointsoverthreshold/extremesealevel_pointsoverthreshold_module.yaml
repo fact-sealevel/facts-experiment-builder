@@ -3,7 +3,7 @@
 # Fits GPD on GESLA2 data, uses total module output, generates return curves and allowances.
 
 module_name: "extremesealevel-pointsoverthreshold"
-container_image: "ghcr.io/fact-sealevel/extremesealevel-pointsoverthreshold:latest"
+container_image: "ghcr.io/fact-sealevel/extremesealevel-pointsoverthreshold:0.1.0"
 uses_climate_file: false
 climate_file_required: false
 command: "main"

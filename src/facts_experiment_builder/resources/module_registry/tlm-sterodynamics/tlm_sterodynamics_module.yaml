@@ -5,7 +5,7 @@
 # corresponding containerized facts module repository and be generated semi programmatically.
 
 module_name: "tlm-sterodynamics"
-container_image: "ghcr.io/fact-sealevel/tlm-sterodynamics:latest"
+container_image: "ghcr.io/fact-sealevel/tlm-sterodynamics:0.3.1"
 uses_climate_file: true
 climate_file_required: true
 command: "main"

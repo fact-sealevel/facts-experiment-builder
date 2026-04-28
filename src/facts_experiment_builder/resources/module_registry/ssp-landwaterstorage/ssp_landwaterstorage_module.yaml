@@ -5,7 +5,7 @@
 # corresponding containerized facts module repository and be generated semi programmatically.
 
 module_name: "ssp-landwaterstorage"
-container_image: "ghcr.io/fact-sealevel/ssp-landwaterstorage:latest"
+container_image: "ghcr.io/fact-sealevel/ssp-landwaterstorage:0.2.0"
 uses_climate_file: false
 climate_file_required: false
 command: "main"
