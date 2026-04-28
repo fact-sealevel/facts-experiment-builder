@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Rename `general-inputs` to `shared-in` and `experiment-metadata.yml` to `experiment-config.yml` ([PR #45](https://github.com/fact-sealevel/facts-experiment-builder/pull/45), [@e-marshall](https://github.com/e-marshall))
 - Modules no longer have separate yaml files with default values, this information is now stored in the module yaml itself under `default_value` and `filename` keys. ([PR #55](https://github.com/fact-sealevel/facts-experiment-builder/pull/55), [@e-marshall](https://github.com/e-marshall))
 - `setup-new-experiment` CLI command did have a `--framework-step` arg that accepted `'facts-total'` module. this was redundant and now removed. `'facts-total'` called if multiple sea-level modules are specified in experiment. ([PR #55](https://github.com/fact-sealevel/facts-experiment-builder/pull/55), [@e-marshall](https://github.com/e-marshall))
-
+- Undo 43 ([PR #58](https://github.com/fact-sealevel/facts-experiment-builder/pull/58),[@e-marshall](https://github.com/e-marshall))
 ### Added
 - Added option to automatically pass all modules instead of specifying them all in a workflow ([PR #48](https://github.com/fact-sealevel/facts-experiment-builder/commit/ee08b23759b8dec5141323c2886d634113c26f4e), [@e-marshall](https://github.com/e-marshall))
 

@@ -1,6 +1,6 @@
 [project]
 name = "facts-experiment-builder"
-version = "0.1.0"
+version = "0.2.0"
 description = "FACTS experiment builder for creating and managing FACTS v2 experiments"
 readme = "README.md"
 authors = [
