@@ -20,3 +20,7 @@ Helpful guide to terms and how they are used in the FACTS2 ecosystem.
 ## Extreme sea-level step
 
 ## Workflow
+
+## Module ecosystem
+
+## Module registry
