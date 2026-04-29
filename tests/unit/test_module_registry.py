@@ -4,6 +4,8 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 )
 
 import pytest
+
+
 def test_validate_module_names_passes_for_valid():
     valid_module_names = ["fair-temperature", "ipccar5-icesheets", "ipccar5-glaciers"]
     validate_module_names(valid_module_names, ModuleRegistry.default().list_modules())
