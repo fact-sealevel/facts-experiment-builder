@@ -12,7 +12,7 @@ except ImportError:
 
 # Jinja2 template for experiment metadata YAML
 YAML_TEMPLATE = """
-### Experiment metadata YAML file ###
+### Experiment configuration YAML file ###
 # This is the main configuration file that describes the specified FACTS experiment.
 # It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`.
 # The values included here are defaults based on the default values for each module specified in /modules/module_name/defaults.yml.
@@ -28,6 +28,9 @@ YAML_TEMPLATE = """
 # `uv run generate-compose <experiment_directorY> to generate a Docker Compose file that corresponds to this experiment.
 # Then, run `docker compose -f <compose_file> up` to run the experiment.
 
+# About this experiment:
+# Date created: {{ experiment.date_created}}
+# Module registry version: {{ module_registry_version or "unknown" }}
 experiment_name:
 {{ format_value(experiment.experiment_name) }}
 
@@ -263,7 +266,11 @@ def format_yaml_value(value: Any) -> str:
     return result
 
 
-def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
+def write_metadata_yaml_jinja2(
+    experiment: FactsExperiment,
+    output_path: Path,
+    module_registry_version: str | None = None,
+):
     """
     Write metadata to YAML file using Jinja2 templating.
 
@@ -385,6 +392,7 @@ def write_metadata_yaml_jinja2(experiment: FactsExperiment, output_path: Path):
             inputs=inputs,
             outputs=outputs,
             module_keys=module_keys,
+            module_registry_version=module_registry_version,
         )
     except Exception as e:
         raise ValueError(f"Error rendering Jinja2 template: {e}") from e

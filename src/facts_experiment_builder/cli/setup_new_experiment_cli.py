@@ -22,6 +22,7 @@ from facts_experiment_builder.core.experiment.experiment_skeleton import (
 from facts_experiment_builder.infra.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )  # TODO move this eventually
+from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list,
     unparse_module_list,
@@ -234,7 +235,10 @@ def main(
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
     metadata_path = experiment_path / "experiment-config.yaml"
-    write_metadata_yaml_jinja2(experiment, metadata_path)
+    registry_version = ModuleRegistry.default().get_version()
+    write_metadata_yaml_jinja2(
+        experiment, metadata_path, module_registry_version=registry_version
+    )
     console.print(
         f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
     )
