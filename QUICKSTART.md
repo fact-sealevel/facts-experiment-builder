@@ -104,4 +104,4 @@ tar -xzf module_specific_inputs/ebm3-thermalexpansion/ebm3_thermal_expansion_dat
   git clone git@github.com:fact-sealevel/facts-module-registry.git
   ```
 
-  You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [documentation](README.md) for an example of how to create a new experiment with `setup-new-experiment`.
+  You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [README](#Create-an-experiment) for an example of how to create a new experiment with `setup-new-experiment`.
