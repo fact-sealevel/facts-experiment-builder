@@ -10,7 +10,7 @@
 
 When you create an experiment with FEB, an `experiment-config.yml` file is also created. This functions as the full scientific description of the experiment and a physical artifact that exists as a record of it. **Experiment configuration files are not executable files - they do not 'run' experiments.**
 
-An experiment execution file is created with `feb generate`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`expeirment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
+An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`expeirment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
 
 ## Getting started
 
