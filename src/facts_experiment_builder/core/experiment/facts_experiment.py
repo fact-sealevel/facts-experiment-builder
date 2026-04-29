@@ -1,7 +1,7 @@
 """In-memory representation of an experiment (analogous to experiment-config.yaml)."""
 
 from typing import Dict, Any, List, Optional, Set
-
+from datetime import datetime
 from facts_experiment_builder.core.workflow.workflow import (
     Workflow,
 )
@@ -84,6 +84,9 @@ class FactsExperiment:
         self._fingerprint_params = dict(fingerprint_params)
         self._extra = dict(extra) if extra is not None else {}
         self._workflows = dict(workflows) if workflows is not None else {}
+        self.date_created = datetime.now()
+        self.feb_version = None
+        self.fmr_version = None
 
     @property
     def experiment_name(self) -> str:

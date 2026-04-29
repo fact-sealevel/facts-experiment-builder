@@ -1,4 +1,7 @@
 import pytest
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 ## shared fixtures
@@ -11,6 +14,9 @@ def experiment_name():
 @pytest.fixture
 def project_root(tmp_path):
     (tmp_path / "experiments").mkdir()
+    (tmp_path / "facts-module-registry").symlink_to(
+        REPO_ROOT / "facts-module-registry", target_is_directory=True
+    )
     return tmp_path
 
 
