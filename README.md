@@ -14,102 +14,67 @@ Each containerized module application has a corresponding module yaml file (ie. 
 
 To run a FACTS 2 experiment, we need more than the abstract information stored in an `experiment-config.yaml`. `facts-experiment-builder` plans to offer implementations for multiple execution environments, with an experiment's `experiment-config.yaml` remainining the underlying source of 'truth' about the experiment. From here, run files can be generated for specific execution environments such as Docker (`experiment-compose.yml`) and Async-Flow (`async-flow-experiment.py`, **not yet implemented**).
 
-## Example
-Warning: it is still rough! 
-With the example experiment provided below, you should be able to run the two steps, `uv run setup-new-experiment` and `uv run generate-compose`, and then successfully execute the docker compose file to run the experiment. See facts_experiment's [experiment-config.yaml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/facts_experiment/experiment-config.yaml) and [experiment-compose.yml](https://github.com/fact-sealevel/facts-experiment-builder/blob/main/experiments/facts_experiment/experiment-compose.yaml) for examples of files created by the program.
+## Getting started
 
-### Steps to run:
-#### 1. Setup
-1. Start from your project root dir. For now, the experiment builder assumes you have an `experiments` sub-directory in this location. So something like...
+Check out our [quickstart](QUICKSTART.md) guide for instructions on how to begin creating FACTS2 experiments. 
+
+Once you have downloaded and organized input data for the modules you'd like to use and cloned the module registry to your local project work space, you can proceed to the next section that demonstrates how to configure and run a FACTS experiment using `facts-experiment-builder`. 
+
+The rest of the examples in this page will demonstrate how to create and run a facts experiment called `my_first_experiment`. You can see the experiment configuration and execution files that are created by running the following commands in `./experiments/my_first_experiment/`. 
+
+If you are new to FACTS and terms, we recommend pausing here and reviewing our [FACTS Glossary] page. It contains descriptions of terms that will be helpful to know in the following sections. 
+
+## Create an experiment
+
+Use the `feb setup-experiment` command like this: 
 ```shell
-mkdir -p fresh_facts_projects/experiments
-cd fresh_facts_project
-```
-2. `facts-experiment-builder` assumes you have FACTS input data downloaded (anywhere on your machine) and separated into module-specific input data and shared input data directories. See [setup.md](setup.md) for instructions on downloading the data.
-- `module_specific_inputs` should have a sub-directory for each FACTS module with the directory name matching the module name.
-- `shared_input_data` contains location data (ie. a `location.lst`) and GRD fingerprint data.
-
-- Example of input data directories:
-![shared input data](imgs/shared_inputs_screenshot.png)
-![module specific input data](imgs/module_specific_inputs_screenshot.png)
-
-
-#### 2. Create an experiment via CLI
-- The `setup-new-experiment` command - at a minimum, this entails specifying:
-     - `--experiment-name`
-     - `--climate-step` OR `--supplied-climate-step-data` (module name or path to pre-existing climate data)
-     - `--sealevel-step` OR `--supplied-totaled-sealevel-step-data` (module name(s) or path to pre-existing sealevel data)
-     - `--extremesealevel-step` (ie. `extremesealevel-pointsoverthreshold`)
-     - For full features list, see help section below.
-
->[!NOTE]
-> You can see which modules are available to use in an experiment by running `uv run list-modules`.
-
-Example:
-```shell
-uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
---experiment-name facts_experiment --climate-step fair-temperature \
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment \
+--experiment-name my_first_experiment \
+--climate-step fair-temperature \
 --sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,kopp14-verticallandmotion,ssp-landwaterstorage \
 --total-all-modules True \
 --extremesealevel-step extremesealevel-pointsoverthreshold \
 --pipeline-id aaa --scenario ssp126 --baseyear 2005 \
 --pyear-start 2020 --pyear-end 2150 --pyear-step 10 \
---nsamps 1000 --location-file location.lst
+--nsamps 1000 --location-file location.lst \
+--module-specific-inputs /path/to/module/inputs \
+--shared-inputs /path/to/shared/inputs
 ```
+- Not all of these options must be passed to `setup-new-experiment`, only `--experiment-name` is required. Any fields that are not passed at the CLI must be manually added to the `experiment-config.yml` file that is created after running `setup-experiment`. 
+
+You can see the full list of options by running `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment --help`. 
+
 >[!NOTE]
-> If you run `setup-new-experiment` with the options shown above, you **must** manually edit the resulting `experiment-config.yml` file to specify the paths for `module-specific-inputs` and `shared-inputs`. Or, you can pass the paths in the CLI command with `--module-specific-inputs` and `--shared-inputs`
+> You can see which modules are available to use in an experiment by running `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main list-modules`.
 
-Example (using pre-existing climate data instead of running a climate module):
+If you included multiple modules at the sea-level step, you will see ClI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary] for more detail on this.
+
+Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
+
+Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [Experiment configuration file overview](EXPERIMENT-CONFIG-OVERVIEW.md) page. 
+
+## Run an experiment
+
+In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yml` in our experiment's sub-directory. If you read the overview of the experiment-config file, you'll know that this file acts as the core artifact that fully specifies the experiment. However, you'll notice that it doesn't actually have the information required to *run* an experiment. 
+
+FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we only provide a [Docker Compose](https://docs.docker.com/compose/) implementation. If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
+
+facts-experiment-builder provides a command, `feb generate`, to generate an executable Docker Compose file from an `experiment-config.yml` that wil be used to actually run your experiment. The command writes the file, `experiment-compose.yml`, to your experiment's sub-directory just like `experiment-config.yml`. For more detail on the experiment compose file, see the [overview](EXPERIMENT-COMPOSE-OVERVIEW.md) page.
+
+Create the file by specifying the name of the experiment:
 ```shell
-uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
---experiment-name toy_experiment_with_climate_data --scenario ssp585 \
---pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --nsamps 1000 \
---supplied-climate-step-data /path/to/climate_data.nc \
---sealevel-step bamber19-icesheets,tlm-sterodynamics \
---extremesealevel-step extremesealevel-pointsoverthreshold
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb generate --experiment-name my_first_experiment
 ```
 
-#### 3. Specify workflows
-Workflows are lists of sea-level modules that are passed to the totaling step. When `--total-all-modules` is set to `True`, a workflow is automatically created that includes all sea-level modules included in the experiment. You may also specify your own workflows with different sets of modules using the CLI prompts.
-
-- If more than one sea-level module is specified, the CLI prompts the user for information about the workflows included in the experiment.
- 
-- Once completed, the program:
-     - Makes a sub-directory in experiments with the supplied `--experiment-name` 
-     - Creates and partially pre-populates an `experiment-config.yaml`. this is equivalent to a FACTS1 experiment `config.yml`. It is meant to be an abstract (run-environment agnostic), self-describing specification of the full experiment
-     - `experiment-config.yaml` is pre-populated based on the arguments you supply and the modules you specified. Module default values are all propagated from each module's yaml file in the ModuleRegistry.
-You will see the following output in your terminal window.
-
-#### 4. Review and manually complete any empty fields in the top section of the experiment metadata file.
-
-> [!NOTE]
-> If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--shared-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-config.yaml` that is created.
-
-- If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. If not, specify them here.
-- You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
-
-#### 5. Generate docker compose file via CLI
-Example:
+Inspect the compose file and when you are ready to run the experiment, execute it like this:
 ```shell
-uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main generate-compose \
---experiment-name facts_experiment
-```
-- Produces a docker compose file, `experiment-compose.yml` in the experiment sub-directory. 
-- This is the docker implementation of the abstract experiment specified by `experiment-config.yaml`
-
-![generate-compose](imgs/cli_output_generate_compose.svg)
-
-Then,
-- Inspect the compose file
-- Run experiment like (assuming from project root):
-```shell
-docker compose -f experiments/toy_experiment/experiment-compose.yaml up
+docker compose -f experiments/my_first_experiment/experiment-compose.yaml
 ```
 
 **Not yet implemented: async-flow equivalent of `generate-compose`.**
 
 ## Features
-This is a command line application with two main functions:
+facts-experiment-builder is a command line application with two main functions:
 
 **`setup-new-experiment`**
 Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
@@ -187,6 +152,18 @@ Options:
                              to file and use filename 'experiment-
                              compose.yaml'
   -h, --help                 Show this message and exit.
+```
+
+## Other experiment configurations 
+---
+You can bypass running a module at the climate step and instead pass your own data for this step that will be passed to the sea-level step. Below is an example of creating an experiment using pre-existing climate data instead of running a module at the climate step:
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+--experiment-name toy_experiment_with_climate_data --scenario ssp585 \
+--pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --nsamps 1000 \
+--supplied-climate-step-data /path/to/climate_data.nc \
+--sealevel-step bamber19-icesheets,tlm-sterodynamics \
+--extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
 ## Support
