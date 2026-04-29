@@ -6,13 +6,11 @@
 > This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases.
 
 ## Overview
-This is a prototype of a package for configuring and managing FACTS 2 experiments. A FACTS 2 experiment consists of running one or more modules from the FACTS 2 ecosystem. It usually has a set of specified 'top-level parameters' that apply across all of the modules in the experiment. These can include parameters such as `nsamps`, `pyear-start`, `pyear-step`, `pyear-end`, `baseyear`, and `scenario` and `location-file` if you would like to include localized projections in your experiment. Within an experiment, one can define multiple 'workflows`, these represent different combinations of sea-level modules to be summed to produce output distributions of projected future sea level rise. 
+`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the FACTS2 ecosystem. It usually has a set of specified 'top-level parameters' that apply across all of the modules in the experiment. These can include parameters such as `nsamps`, `pyear-start`, `pyear-step`, `pyear-end`, `baseyear`, and `scenario` and `location-file` if you would like to include localized projections in your experiment. Within an experiment, one can define multiple 'workflows`, these represent different combinations of sea-level modules to be summed to produce output distributions of projected future sea level rise. 
 
-When you create an experiment with FEB, you create an `experiment-config.yml` file. This is intended to be the full scientific description of the experiment and a physical artifact that exists as a record of it. However, to run a FACTS 2 experiment, you need more than the information stored in an `experiment-config.yaml`. Experiment execution files are what run the experiment specified in the configuation file.
+When you create an experiment with FEB, an `experiment-config.yml` file is also created. This functions as the full scientific description of the experiment and a physical artifact that exists as a record of it. **Experiment configuration files are not executable files - they do not 'run' experiments.**
 
-`facts-experiment-builder` plans to offer implementations for multiple execution environments, with an experiment's `experiment-config.yaml` remainining the underlying source of 'truth' about the experiment.
-
-For now, we provide a Docker Compose implementation (`expeirment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`), **not yet implemented**) implementation.
+An experiment execution file is created with `feb generate`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`expeirment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
 
 ## Getting started
 
