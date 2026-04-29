@@ -3,7 +3,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 )
 
 
-
 def test_parse_module_list_comma_separated():
     input_module_list = "nzinsargps-verticallandmotion,kopp14-verticallandmotion,facts-total,extremesealevel-pointsoverthreshold"
 
