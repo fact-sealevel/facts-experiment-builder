@@ -11,11 +11,11 @@ This section describes how to download and organize input data for modules in th
 
 ### Setup directories
 
-Run these commands from the directory where you want to store the data. All download commands below use relative paths from that same location.
+Run these commands from the directory where you want to store the data. All download commands below use relative paths from that same location. For example, if `data/` will be the main location for FACTS-related data, create the following sub-directories:
 
 ```shell
-mkdir module_specific_inputs
-mkdir shared_input_data
+mkdir -p data/module_specific_inputs
+mkdir -p data/shared_input_data
 ```
 
 When running `setup-new-experiment`, pass the paths to these directories via `--module-specific-inputs` and `--shared-inputs`.
@@ -86,22 +86,22 @@ tar -xzf module_specific_inputs/ebm3-thermalexpansion/ebm3_thermal_expansion_dat
 
 ## ii. Cloning module registry
 
-1. Setup your project workspace
+### 1. Setup your project workspace
 
-- Navigate to your project workspace where you will store FACTS2 experiments (ie. `/Users/Desktop/projects/facts2_work`). 
+  - Navigate to your project workspace where you will store FACTS2 experiments (ie. `/Users/Desktop/projects/facts2_work`). This does *not* need to be the same as where FACTS input data is stored on your machine.
 
-- Create an `experiments/` sub-directory. This will hold all files associated with experiments as well as data produced from experiment runs. 
+  - Create an `experiments/` sub-directory. This will hold all files associated with experiments as well as data produced from experiment runs. 
 
-```shell
-mkdir experiments
-```
+  ```shell
+  mkdir experiments
+  ```
 
-2. Clone the module repository
+### 2. Clone the module repository
 
-From this location, clone the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry) repository:
+  - From this location, clone the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry) repository:
 
-```
-git clone git@github.com:fact-sealevel/facts-module-registry.git
-```
+  ```
+  git clone git@github.com:fact-sealevel/facts-module-registry.git
+  ```
 
-You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [documentation](README.md) for an example of how to create a new experiment with `setup-new-experiment`.
+  You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [documentation](README.md) for an example of how to create a new experiment with `setup-new-experiment`.
