@@ -2,7 +2,7 @@
 
 This page contains instructions for getting started working with FACTS2. Configuring and running a FACTS2 experiment involves specifying modules to include in your experiment. This page includes instructions on downloading input data required to run different modules and accessing the module-registry, this registry acts as the interface between the FACTS2 module ecosystem and the facts-experiment-builder.
 
- 🚧 THIS PAGE IS UNDER CONSTRUCTION 🚧
+ 🚧 THIS PAGE IS UNDER CONSTRUCTION 🚧  
  Check back soon for updates.
  
 ## i. Downloading module input data

@@ -10,17 +10,17 @@
 
 When you create an experiment with FEB, an `experiment-config.yml` file is also created. This functions as the full scientific description of the experiment and a physical artifact that exists as a record of it. **Experiment configuration files are not executable files - they do not 'run' experiments.**
 
-An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`expeirment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
+An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
 
 ## Getting started
 
-Check out our [quickstart](QUICKSTART.md) guide for instructions on how to begin creating FACTS2 experiments. 
+Check out our [quickstart](QUICKSTART.md) guide for instructions on how to begin creating FACTS2 experiments. This page will show you how to download and organize input data used in FACTS2 modules and how to access the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry), which holds information about all of the modules available to use in FACTS2 experiments with FEB. 
 
-Once you have downloaded and organized input data for the modules you'd like to use and cloned the module registry to your local project work space, you can proceed to the next section that demonstrates how to configure and run a FACTS experiment using `facts-experiment-builder`. 
+Once you have downloaded and organized input data for the modules you'd like to use and cloned the module registry to your local project workspace, you can proceed to the next section that demonstrates how to configure and run an experiment using `facts-experiment-builder`. 
 
-The rest of the examples in this page will demonstrate how to create and run a facts experiment called `my_first_experiment`. You can see the experiment configuration and execution files that are created by running the following commands in `./experiments/my_first_experiment/`. 
+The rest of the examples in this page will demonstrate how to create and run a facts experiment called `my_first_experiment`. You can see the files associated with this experiment in `./experiments/my_first_experiment/`. 
 
-If you are new to FACTS and terms, we recommend pausing here and reviewing our [FACTS Glossary] page. It contains descriptions of terms that will be helpful to know in the following sections. 
+If you are new to FACTS and terms, we recommend pausing here and reviewing our [FACTS Glossary](FACTS_GLOSSARY.md) page. It contains descriptions of terms that will be helpful to know in the following sections. 
 
 ## Create an experiment
 
@@ -38,7 +38,11 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 --module-specific-inputs /path/to/module/inputs \
 --shared-inputs /path/to/shared/inputs
 ```
-- Not all of these options must be passed to `setup-new-experiment`, only `--experiment-name` is required. Any fields that are not passed at the CLI must be manually added to the `experiment-config.yml` file that is created after running `setup-experiment`. 
+- Not all of these options must be passed to `setup-new-experiment`.
+- The required arguments are:
+  - `--experiment-name`,
+  - Either `--climate-step` (the module to run at the climate step) or `--supplied-climate-data-step` (data to bypass running a module at the climate step). 
+-  Any fields that are not passed at the CLI must be manually added to the `experiment-config.yml` file that is created after running `setup-experiment`. 
 
 You can see the full list of options by running `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment --help`. 
 
@@ -49,19 +53,19 @@ If you included multiple modules at the sea-level step, you will see ClI prompts
 
 Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
 
-Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [Experiment configuration file overview](EXPERIMENT-CONFIG-OVERVIEW.md) page. 
+Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [experiment configuration file overview](EXPERIMENT-CONFIG-OVERVIEW.md) page. 
 
 ## Run an experiment
 
-In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yml` in our experiment's sub-directory. If you read the overview of the experiment-config file, you'll know that this file acts as the core artifact that fully specifies the experiment. However, you'll notice that it doesn't actually have the information required to *run* an experiment. 
+In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yml` in our experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
 
 FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we only provide a [Docker Compose](https://docs.docker.com/compose/) implementation. If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
 
-facts-experiment-builder provides a command, `feb generate`, to generate an executable Docker Compose file from an `experiment-config.yml` that wil be used to actually run your experiment. The command writes the file, `experiment-compose.yml`, to your experiment's sub-directory just like `experiment-config.yml`. For more detail on the experiment compose file, see the [overview](EXPERIMENT-COMPOSE-OVERVIEW.md) page.
+facts-experiment-builder provides a command, `feb generate-compose`, to generate an executable Docker Compose file from an `experiment-config.yml` that wil be used to run your experiment. The command writes the file, `experiment-compose.yml`, to your experiment's sub-directory just like `experiment-config.yml`. For more detail on the experiment compose file, see the [overview](EXPERIMENT-COMPOSE-OVERVIEW.md) page.
 
 Create the file by specifying the name of the experiment:
 ```shell
-uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb generate --experiment-name my_first_experiment
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb generate-compose --experiment-name my_first_experiment
 ```
 
 Inspect the compose file and when you are ready to run the experiment, execute it like this:
@@ -163,6 +167,8 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --sealevel-step bamber19-icesheets,tlm-sterodynamics \
 --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
+
+(NOTE: add more examples of possible configurations here/ possibly move to its own page).
 
 ## Support
 

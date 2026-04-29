@@ -2,7 +2,7 @@
 
 This page is an overview of the `experiment-config.yml` file created by `feb setup`. This file is the core artifact of a FACTS2 experiment. 
 
- 🚧 THIS PAGE IS UNDER CONSTRUCTION 🚧
+ 🚧 THIS PAGE IS UNDER CONSTRUCTION 🚧  
  Check back soon for updates.
 
 Content dumped from README to add here: 
