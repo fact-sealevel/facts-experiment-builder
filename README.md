@@ -6,10 +6,7 @@
 > This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases.
 
 ## Overview
-`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that is used to run the experiment. FEB offers a CLI tool with commands to configure an experiment and write an experiment configuration file (`feb setup-experiment`) and generate an executable experiment script (`feb generate-compose`). 
-
->[!NOTE]
-> If you're familiar with FACTS1, the `experiment-config.yml` created by FEB's `setup-experiment` command is equivalent to a FACTS1 experiment configuration file.
+`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that is used to run the experiment. FEB offers a CLI tool with commands to configure an experiment and write an experiment configuration file (`feb setup-experiment`) and generate an executable experiment script (`feb generate-compose`) from an experiment configuration file. If you are familiar with FACTS1, a FACTS2 `experiment-config.yml` is similar to a `config.yml` file that was used to define experiments in the previous framework. 
 
 An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
 
@@ -17,7 +14,6 @@ An experiment execution file is created with `feb generate-compose`. This contai
 > Experiment confgiuration files are not executable files. They only specify an experiment, while implementation files such as `experiment-compose.yml` created by `generate-compose` function as execution scripts. 
 
 ## Outline 
----
 This README is organized as follows:
 - [Getting Started](#getting-started)
 - [Create an experiment](#create-an-experiment)
@@ -27,7 +23,7 @@ This README is organized as follows:
 - [Support](#support)
 
 Other important pages:
-(some of these might move elswhere within the facts org eventually, just here for now).
+(some of these might move elsewhere within the facts org eventually, just here for now).
 - [FEB Quickstart](QUICKSTART.md)
 - [Experiment config file overview](EXPERIMENT-CONFIG-OVERVIEW.md)
 - [Experiment compose file overview](EXPERIMENT-COMPOSE-OVERVIEW.md)
@@ -44,7 +40,7 @@ Once you have downloaded and organized input data for the modules you'd like to 
 
 The rest of the examples in this page will demonstrate how to create and run a facts experiment called `my_first_experiment`. You can see the files associated with this experiment in `./experiments/my_first_experiment/`. 
 
-If you are new to FACTS and terms, we recommend pausing here and reviewing our [FACTS Glossary](FACTS_GLOSSARY.md) page. It contains descriptions of terms that will be helpful to know in the following sections. 
+If you are new to FACTS and the terms associated with it, we recommend pausing here and reviewing our [FACTS Glossary](FACTS_GLOSSARY.md) page. It contains descriptions of terms that will be helpful to know in the following sections. 
 
 >[!NOTE]
 > The examples on this page use [`uvx`](https://docs.astral.sh/uv/guides/tools/) to run the application directly from the repository. This is just one option — [`pipx`](https://pipx.pypa.io/stable/) is a popular alternative that works the same way. When you first run a command with `uvx`, you may see output indicating the package is being installed locally — this is expected and only happens once.
