@@ -6,11 +6,35 @@
 > This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases.
 
 ## Overview
-`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the FACTS2 ecosystem. It usually has a set of specified 'top-level parameters' that apply across all of the modules in the experiment. These can include parameters such as `nsamps`, `pyear-start`, `pyear-step`, `pyear-end`, `baseyear`, and `scenario` and `location-file` if you would like to include localized projections in your experiment. Within an experiment, one can define multiple 'workflows`, these represent different combinations of sea-level modules to be summed to produce output distributions of projected future sea level rise. 
+`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that is used to run the experiment. FEB offers a CLI tool with commands to configure an experiment and write an experiment configuration file (`feb setup-experiment`) and generate an executable experiment script (`feb generate-compose`). 
 
-When you create an experiment with FEB, an `experiment-config.yml` file is also created. This functions as the full scientific description of the experiment and a physical artifact that exists as a record of it. **Experiment configuration files are not executable files - they do not 'run' experiments.**
+>[!NOTE]
+> If you're familiar with FACTS1, the `experiment-config.yml` created by FEB's `setup-experiment` command is equivalent to a FACTS1 experiment configuration file.
 
 An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
+
+>[!IMPORTANT]
+> Experiment confgiuration files are not executable files. They only specify an experiment, while implementation files such as `experiment-compose.yml` created by `generate-compose` function as execution scripts. 
+
+## Outline 
+---
+This README is organized as follows:
+- [Getting Started](#getting-started)
+- [Create an experiment](#create-an-experiment)
+- [Run an experiment](#run-an-experiment)
+- [Features](#features)
+- [Other experiment configurations](#other-experiment-configurations)
+- [Support](#support)
+
+Other important pages:
+(some of these might move elswhere within the facts org eventually, just here for now).
+- [FEB Quickstart](QUICKSTART.md)
+- [Experiment config file overview](EXPERIMENT-CONFIG-OVERVIEW.md)
+- [Experiment compose file overview](EXPERIMENT-COMPOSE-OVERVIEW.md)
+- [FACTS Glossary](FACTS_GLOSSARY.md)
+- [Information for module contributors](CONTRIBUTOR_DOCS.md)
+
+---
 
 ## Getting started
 
@@ -21,6 +45,9 @@ Once you have downloaded and organized input data for the modules you'd like to 
 The rest of the examples in this page will demonstrate how to create and run a facts experiment called `my_first_experiment`. You can see the files associated with this experiment in `./experiments/my_first_experiment/`. 
 
 If you are new to FACTS and terms, we recommend pausing here and reviewing our [FACTS Glossary](FACTS_GLOSSARY.md) page. It contains descriptions of terms that will be helpful to know in the following sections. 
+
+>[!NOTE]
+> The examples on this page use [`uvx`](https://docs.astral.sh/uv/guides/tools/) to run the application directly from the repository. This is just one option — [`pipx`](https://pipx.pypa.io/stable/) is a popular alternative that works the same way. When you first run a command with `uvx`, you may see output indicating the package is being installed locally — this is expected and only happens once.
 
 ## Create an experiment
 
@@ -35,8 +62,8 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 --pipeline-id aaa --scenario ssp126 --baseyear 2005 \
 --pyear-start 2020 --pyear-end 2150 --pyear-step 10 \
 --nsamps 1000 --location-file location.lst \
---module-specific-inputs /path/to/module/inputs \
---shared-inputs /path/to/shared/inputs
+--module-specific-input-data /path/to/module/inputs \
+--shared-input-data /path/to/shared/inputs
 ```
 - Not all of these options must be passed to `setup-new-experiment`.
 - The required arguments are:

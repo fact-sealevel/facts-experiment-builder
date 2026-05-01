@@ -14,13 +14,13 @@ This section describes how to download and organize input data for modules in th
 Run these commands from the directory where you want to store the data. All download commands below use relative paths from that same location. For example, if `data/` will be the main location for FACTS-related data, create the following sub-directories:
 
 ```shell
-mkdir -p data/module_specific_inputs
+mkdir -p data/module_specific_input_data
 mkdir -p data/shared_input_data
 ```
 
-When running `setup-new-experiment`, pass the paths to these directories via `--module-specific-inputs` and `--shared-inputs`.
+When running `setup-new-experiment`, pass the paths to these directories via `--module-specific-input-data` and `--shared-input-data`.
 
-### Shared input data
+### Downloading shared input data
 
 GRD fingerprint data (note- how this is handled is subject to change in the future. this is most likely a temporary solution)
 ```bash
@@ -29,7 +29,7 @@ tar -xzf shared_input_data/grd_fingerprints_data.tgz -C shared_input_data
 ```
 Location file:
 ```bash
-echo "New_York	12	40.70	-74.01" > shared_input_data
+echo "New_York	12	40.70	-74.01" > shared_input_data/location.lst
 ```
 
 ### Downloading module-specific input data for all modules
@@ -39,49 +39,47 @@ The input data for each module is available at the Zenodo records shown below. Y
 > [!NOTE]
 > For copy & paste scripts to download input data for individual modules, head to the [module-specific input data downloads](module_input_data_downloads.md) page. 
 
+Before running any of the following download commands, be sure to `cd` into the directory where you plan to store FACTS2 data (**NOTE**: this does *not* need to be the same as your FACTS project workspace directory), ie. `cd /User/Desktop/data`.
+
 ```bash
-mkdir -p module_specific_inputs/fair-temperature module_specific_inputs/fair2-climate module_specific_inputs/fittedismip-gris module_specific_inputs/bamber19-icesheets module_specific_inputs/deconto21-ais module_specific_inputs/ipccar5-glaciers module_specific_inputs/ipccar5-icesheets module_specific_inputs/larmip-ais module_specific_inputs/ssp-landwaterstorage module_specific_inputs/tlm-sterodynamics module_specific_inputs/ebm3-thermalexpansion
+mkdir -p module_specific_input_data/fair-temperature module_specific_input_data/fair2-climate module_specific_input_data/fittedismip-gris module_specific_input_data/bamber19-icesheets module_specific_input_data/deconto21-ais module_specific_input_data/ipccar5-glaciers module_specific_input_data/ipccar5-icesheets module_specific_input_data/larmip-ais module_specific_input_data/ssp-landwaterstorage module_specific_input_data/tlm-sterodynamics module_specific_input_data/ebm3-thermalexpansion
 
-curl -L https://zenodo.org/record/7478192/files/grd_fingerprints_data.tgz -o shared_input_data/grd_fingerprints_data.tgz
-tar -xzf shared_input_data/grd_fingerprints_data.tgz -C shared_input_data
-echo "New_York	12	40.70	-74.01" > shared_input_data
+curl -L https://zenodo.org/record/7478192/files/fair_temperature_fit_data.tgz -o module_specific_input_data/fair-temperature/fair_temperature_fit_data.tgz
+tar -xzf module_specific_input_data/fair-temperature/fair_temperature_fit_data.tgz -C module_specific_input_data/fair-temperature
+curl -L https://zenodo.org/record/7478192/files/fair_temperature_preprocess_data.tgz -o module_specific_input_data/fair-temperature/fair_temperature_preprocess_data.tgz
+tar -xzf module_specific_input_data/fair-temperature/fair_temperature_preprocess_data.tgz -C module_specific_input_data/fair-temperature
 
-curl -L https://zenodo.org/record/7478192/files/fair_temperature_fit_data.tgz -o module_specific_inputs/fair-temperature/fair_temperature_fit_data.tgz
-tar -xzf module_specific_inputs/fair-temperature/fair_temperature_fit_data.tgz -C module_specific_inputs/fair-temperature
-curl -L https://zenodo.org/record/7478192/files/fair_temperature_preprocess_data.tgz -o module_specific_inputs/fair-temperature/fair_temperature_preprocess_data.tgz
-tar -xzf module_specific_inputs/fair-temperature/fair_temperature_preprocess_data.tgz -C module_specific_inputs/fair-temperature
+curl -L https://zenodo.org/records/11506798/files/fair2_climate_project_data.tgz -o module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz
+tar -xzf module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz -C module_specific_input_data/fair2-climate
 
-curl -L https://zenodo.org/records/11506798/files/fair2_climate_project_data.tgz -o module_specific_inputs/fair2-climate/fair2_climate_project_data.tgz
-tar -xzf module_specific_inputs/fair2-climate/fair2_climate_project_data.tgz -C module_specific_inputs/fair2-climate
+curl -L https://zenodo.org/record/7478192/files/FittedISMIP_icesheet_fit_data.tgz -o module_specific_input_data/fittedismip-gris/FittedISMIP_icesheet_fit_data.tgz
+tar -xzf module_specific_input_data/fittedismip-gris/FittedISMIP_icesheet_fit_data.tgz -C module_specific_input_data/fittedismip-gris
 
-curl -L https://zenodo.org/record/7478192/files/FittedISMIP_icesheet_fit_data.tgz -o module_specific_inputs/fittedismip-gris/FittedISMIP_icesheet_fit_data.tgz
-tar -xzf module_specific_inputs/fittedismip-gris/FittedISMIP_icesheet_fit_data.tgz -C module_specific_inputs/fittedismip-gris
+curl -L https://zenodo.org/record/7478192/files/bamber19_icesheets_preprocess_data.tgz -o module_specific_input_data/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz
+tar -xzf module_specific_input_data/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz -C module_specific_input_data/bamber19-icesheets
 
-curl -L https://zenodo.org/record/7478192/files/bamber19_icesheets_preprocess_data.tgz -o module_specific_inputs/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz
-tar -xzf module_specific_inputs/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz -C module_specific_inputs/bamber19-icesheets
+curl -L https://zenodo.org/record/7478192/files/deconto21_AIS_preprocess_data.tgz -o module_specific_input_data/deconto21-ais/deconto21_AIS_preprocess_data.tgz
+tar -xzf module_specific_input_data/deconto21-ais/deconto21_AIS_preprocess_data.tgz -C module_specific_input_data/deconto21-ais
 
-curl -L https://zenodo.org/record/7478192/files/deconto21_AIS_preprocess_data.tgz -o module_specific_inputs/deconto21-ais/deconto21_AIS_preprocess_data.tgz
-tar -xzf module_specific_inputs/deconto21-ais/deconto21_AIS_preprocess_data.tgz -C module_specific_inputs/deconto21-ais
+curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz
+tar -xzf module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz -C module_specific_input_data/ipccar5-glaciers
 
-curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o module_specific_inputs/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz
-tar -xzf module_specific_inputs/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz -C module_specific_inputs/ipccar5-glaciers
+curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz
+tar -xzf module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz -C module_specific_input_data/ipccar5-icesheets
 
-curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o module_specific_inputs/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz
-tar -xzf module_specific_inputs/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz -C module_specific_inputs/ipccar5-icesheets
+curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_fit_data.tgz -o module_specific_input_data/larmip-ais/larmip_icesheet_fit_data.tgz
+tar -xzf module_specific_input_data/larmip-ais/larmip_icesheet_fit_data.tgz -C module_specific_input_data/larmip-ais
+curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_project_data.tgz -o module_specific_input_data/larmip-ais/larmip_icesheet_project_data.tgz
+tar -xzf module_specific_input_data/larmip-ais/larmip_icesheet_project_data.tgz -C module_specific_input_data/larmip-ais
 
-curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_fit_data.tgz -o module_specific_inputs/larmip-ais/larmip_icesheet_fit_data.tgz
-tar -xzf module_specific_inputs/larmip-ais/larmip_icesheet_fit_data.tgz -C module_specific_inputs/larmip-ais
-curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_project_data.tgz -o module_specific_inputs/larmip-ais/larmip_icesheet_project_data.tgz
-tar -xzf module_specific_inputs/larmip-ais/larmip_icesheet_project_data.tgz -C module_specific_inputs/larmip-ais
+curl -L https://zenodo.org/record/7478192/files/ssp_landwaterstorage_preprocess_data.tgz -o module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz
+tar -xzf module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz -C module_specific_input_data/ssp-landwaterstorage
 
-curl -L https://zenodo.org/record/7478192/files/ssp_landwaterstorage_preprocess_data.tgz -o module_specific_inputs/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz
-tar -xzf module_specific_inputs/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz -C module_specific_inputs/ssp-landwaterstorage
+curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_preprocess_data.tgz -o module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz
+tar -xzf module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz -C module_specific_input_data/tlm-sterodynamics
 
-curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_preprocess_data.tgz -o module_specific_inputs/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz
-tar -xzf module_specific_inputs/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz -C module_specific_inputs/tlm-sterodynamics
-
-curl -L https://zenodo.org/records/11506798/files/ebm3_thermal_expansion_data.tgz -o module_specific_inputs/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz
-tar -xzf module_specific_inputs/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz -C module_specific_inputs/ebm3-thermalexpansion
+curl -L https://zenodo.org/records/11506798/files/ebm3_thermal_expansion_data.tgz -o module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz
+tar -xzf module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz -C module_specific_input_data/ebm3-thermalexpansion
 ```
 
 ## ii. Cloning module registry
@@ -98,7 +96,7 @@ tar -xzf module_specific_inputs/ebm3-thermalexpansion/ebm3_thermal_expansion_dat
 
 ### 2. Clone the module repository
 
-  - From this location, clone the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry) repository:
+  - Making sure you are still in your FACTS project workspace, clone the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry) repository:
 
   ```
   git clone git@github.com:fact-sealevel/facts-module-registry.git

@@ -48,13 +48,13 @@ def extremesealevel_step():
 
 @pytest.fixture
 def shared_inputs_path():
-    input = ("--shared-inputs", "/path/to/general/inputs")
+    input = ("--shared-input-data", "/path/to/general/inputs")
     return input
 
 
 @pytest.fixture
 def module_specific_inputs_path():
-    input = ("--module-specific-inputs", "/path/to/module_specific/inputs")
+    input = ("--module-specific-input-data", "/path/to/module_specific/inputs")
     return input
 
 
@@ -139,9 +139,9 @@ def setup_args(
         sealevel_step,
         "--extremesealevel-step",
         extremesealevel_step,
-        "--module-specific-inputs",
+        "--module-specific-input-data",
         module_specific_inputs_path[1],
-        "--shared-inputs",
+        "--shared-input-data",
         shared_inputs_path[1],
     ]
     return input

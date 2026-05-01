@@ -85,21 +85,21 @@ logging.basicConfig(level=logging.WARNING)
     type=str,
     required=False,
     default="location.lst",
-    help="Location file name",
+    help="Location file name (Must be in 'shared-input-data' directory).",
 )
 @click.option(
-    "--module-specific-inputs",
+    "--module-specific-input-data",
     type=str,
     required=False,
     default=None,
-    help="Path to module-specific input data (written to experiment metadata)",
+    help="Absolute path to module-specific input data to use in experiment.",
 )
 @click.option(
-    "--shared-inputs",
+    "--shared-input-data",
     type=str,
     required=False,
     default=None,
-    help="Path to shared input data (written to experiment metadata)",
+    help="Absolute path to shared input data to use in experiment.",
 )
 @click.option("--debug/--no-debug", default=False)
 def main(
@@ -118,8 +118,8 @@ def main(
     pyear_step,
     nsamps,
     location_file,
-    module_specific_inputs,
-    shared_inputs,
+    module_specific_input_data,
+    shared_input_data,
     debug,
 ):
     """Set up a new experiment with setup-new-experiment CLI command.
@@ -208,8 +208,8 @@ def main(
         pyear_step=pyear_step,
         nsamps=nsamps,
         location_file=location_file,
-        module_specific_inputs=module_specific_inputs,
-        shared_inputs=shared_inputs,
+        module_specific_input_data=module_specific_input_data,
+        shared_input_data=shared_input_data,
     )
 
     console.rule(style="rule", title="Generating experiment-config.yaml")
@@ -227,9 +227,9 @@ def main(
         pyear_step=pyear_step,
         nsamps=nsamps,
         location_file=location_file,
-        module_specific_inputs=module_specific_inputs,
-        experiment_specific_inputs=supplied_climate_step_data,
-        shared_inputs=shared_inputs,
+        module_specific_input_data=module_specific_input_data,
+        experiment_specific_input_data=supplied_climate_step_data,
+        shared_input_data=shared_input_data,
     )
 
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
@@ -290,7 +290,7 @@ def _check_for_required_args(
     experiment_name,
     climate_step,
     supplied_climate_step_data,
-    sealevel_step,
+    # sealevel_step,
     supplied_totaled_sealevel_step_data,
 ):
     if not experiment_name:
@@ -423,8 +423,8 @@ def print_global_params_info(
     pyear_step: int,
     nsamps: int,
     location_file: str,
-    module_specific_inputs: str,
-    shared_inputs: str,
+    module_specific_input_data: str,
+    shared_input_data: str,
 ):
     """Prints some CLI info about the global parameters provided."""
     # Print some CLI info
@@ -438,8 +438,8 @@ def print_global_params_info(
             pyear_step,
             nsamps,
             location_file,
-            module_specific_inputs,
-            shared_inputs,
+            module_specific_input_data,
+            shared_input_data,
         ]
     ):
         console.print(
