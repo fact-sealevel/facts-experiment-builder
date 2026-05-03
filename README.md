@@ -61,7 +61,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 --module-specific-input-data /path/to/module/inputs \
 --shared-input-data /path/to/shared/inputs
 ```
-- Not all of these options must be passed to `setup-new-experiment`.
+- Not all of these options must be passed to `setup-experiment`.
 - The required arguments are:
   - `--experiment-name`,
   - Either `--climate-step` (the module to run at the climate step) or `--supplied-climate-data-step` (data to bypass running a module at the climate step). 
@@ -101,7 +101,7 @@ docker compose -f experiments/my_first_experiment/experiment-compose.yaml
 ## Features
 facts-experiment-builder is a command line application with two main functions:
 
-**`setup-new-experiment`**
+**`setup-experiment`**
 Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
 
 Each step accepts either a module name or a path to pre-existing data:
@@ -109,9 +109,9 @@ Each step accepts either a module name or a path to pre-existing data:
 - `--sealevel-step` / `--supplied-totaled-sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
 
 ```shell
-Usage: setup-new-experiment [OPTIONS]
+Usage: setup-experiment [OPTIONS]
 
-  Set up a new experiment with setup-new-experiment CLI command. This function
+  Set up a new experiment with setup-experiment CLI command. This function
   includes a number of steps:
 
       - Creates a sub-directory in experiments/ for this experiment. Raises
@@ -183,7 +183,7 @@ Options:
 ---
 You can bypass running a module at the climate step and instead pass your own data for this step that will be passed to the sea-level step. Below is an example of creating an experiment using pre-existing climate data instead of running a module at the climate step:
 ```shell
-uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-new-experiment \
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main setup-experiment \
 --experiment-name toy_experiment_with_climate_data --scenario ssp585 \
 --pyear-start 2020 --pyear-end 2100 --pyear-step 10 --baseyear 2005 --nsamps 1000 \
 --supplied-climate-step-data /path/to/climate_data.nc \

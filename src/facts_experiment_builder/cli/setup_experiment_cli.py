@@ -1,6 +1,6 @@
 """CLI for setting up new experiments using Jinja2 templating.
 
-This script uses Jinja2-based YAML generation from setup_new_experiment.py.
+This script uses Jinja2-based YAML generation from setup_experiment.py.
 
 """
 
@@ -8,8 +8,8 @@ import dataclasses
 import click
 from pathlib import Path
 from facts_experiment_builder.cli.theme import console
-from facts_experiment_builder.application.setup_new_experiment import (
-    setup_new_experiment_fs,
+from facts_experiment_builder.application.setup_experiment import (
+    setup_experiment_fs,
     experiment_skeleton_to_facts_experiment,
     populate_experiment_directory,
 )
@@ -149,7 +149,7 @@ def main(
     )
     # first, check that experiment doesn't already exist
     try:
-        experiment_path = setup_new_experiment_fs(experiment_name=experiment_name)
+        experiment_path = setup_experiment_fs(experiment_name=experiment_name)
     except ExperimentAlreadyExistsError as e:
         raise click.UsageError(str(e))
 
@@ -164,7 +164,7 @@ def main(
         )
     except ValueError as e:
         raise click.UsageError(
-            "Failed to create experient skeleton in application.setup_new_experiment: %s",
+            "Failed to create experient skeleton in application.setup_experiment: %s",
             str(e),
         )
 
@@ -247,14 +247,12 @@ def main(
     console.rule(
         style="rule", title="[success]✨ Experiment directory setup complete![/success]"
     )
-    # console.print("[success]✨ Experiment directory setup complete![/success]")
     console.print("\n[primary]Next steps:[/primary]")
     console.print(f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]")
     console.print(
         "     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]"
     )
-    console.print("  [muted]2.[/muted] Generate Docker Compose:")
-    console.print(f"     [accent]uv run generate-compose {experiment_path}[/accent]")
+    console.print("  [muted]2.[/muted] Generate Docker Compose file.")
 
 
 def _check_required_experiment_step(

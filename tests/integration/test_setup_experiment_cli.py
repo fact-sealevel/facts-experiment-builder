@@ -1,5 +1,5 @@
 from click.testing import CliRunner
-from facts_experiment_builder.cli.setup_new_experiment_cli import main as main_setup
+from facts_experiment_builder.cli.setup_experiment_cli import main as main_setup
 from facts_experiment_builder.cli.generate_compose_cli import main as main_compose
 from facts_experiment_builder.core.experiment import FactsExperiment
 from unittest.mock import patch
@@ -8,7 +8,7 @@ import yaml
 runner = CliRunner()
 
 
-def test_setup_new_experiment_runs_successfully(
+def test_setup_experiment_runs_successfully(
     project_root,
     monkeypatch,
     setup_args,
@@ -23,7 +23,7 @@ def test_setup_new_experiment_runs_successfully(
 ):
     monkeypatch.chdir(project_root)
     with patch(
-        "facts_experiment_builder.cli.setup_new_experiment_cli._collect_workflows",
+        "facts_experiment_builder.cli.setup_experiment_cli._collect_workflows",
         return_value={"wf1": "bamber19-icesheets,deconto21-ais,fittedismip-gris"},
     ):
         result = runner.invoke(main_setup, setup_args, catch_exceptions=False)
@@ -79,7 +79,7 @@ def test_generate_compose_runs_successfully(
 ):
     monkeypatch.chdir(project_root)
     with patch(
-        "facts_experiment_builder.cli.setup_new_experiment_cli._collect_workflows",
+        "facts_experiment_builder.cli.setup_experiment_cli._collect_workflows",
         return_value={"wf1": "bamber19-icesheets,deconto21-ais,fittedismip-gris"},
     ):
         runner.invoke(main_setup, setup_args, catch_exceptions=False)
@@ -92,12 +92,12 @@ def test_generate_compose_runs_successfully(
     ).exists()
 
 
-def test_setup_new_experiment_fails_if_experiment_already_exists(
+def test_setup_experiment_fails_if_experiment_already_exists(
     project_root, monkeypatch, setup_args
 ):
     monkeypatch.chdir(project_root)
     with patch(
-        "facts_experiment_builder.cli.setup_new_experiment_cli._collect_workflows",
+        "facts_experiment_builder.cli.setup_experiment_cli._collect_workflows",
         return_value={"wf1": "bamber19-icesheets,deconto21-ais,fittedismip-gris"},
     ):
         runner.invoke(main_setup, setup_args)

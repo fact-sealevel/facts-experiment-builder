@@ -106,7 +106,7 @@ def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
     return climate_step, sealevel_step, totaling_step, extreme_sealevel_step
 
 
-def setup_new_experiment_fs(
+def setup_experiment_fs(
     experiment_name: str,
 ):
     """Given an experiment name, resolves path to the sub-directory for that experiment.

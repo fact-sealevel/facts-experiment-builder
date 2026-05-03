@@ -18,7 +18,7 @@ mkdir -p data/module_specific_input_data
 mkdir -p data/shared_input_data
 ```
 
-When running `setup-new-experiment`, pass the paths to these directories via `--module-specific-input-data` and `--shared-input-data`.
+When running `setup-experiment`, pass the paths to these directories via `--module-specific-input-data` and `--shared-input-data`.
 
 ### Downloading shared input data
 
@@ -102,4 +102,4 @@ tar -xzf module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion
   git clone git@github.com:fact-sealevel/facts-module-registry.git
   ```
 
-  You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [README](#Create-an-experiment) for an example of how to create a new experiment with `setup-new-experiment`.
+  You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [README](#Create-an-experiment) for an example of how to create a new experiment with `setup-experiment`.

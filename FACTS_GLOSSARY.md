@@ -29,7 +29,7 @@ A unique string identifier for an experiment run (e.g., `my-experiment-ssp585`).
 A named, fully-specified sea-level rise computation. An experiment selects a set of modules (one temperature module, one or more sea-level modules, a framework/totaling module, and optionally an extreme sea-level module), sets shared parameters, and defines one or more workflows. Everything needed to reproduce an experiment is captured in its `experiment-config.yaml`.
 
 ### experiment-config.yaml
-The primary configuration file for a FACTS experiment. Written by the `setup-new-experiment` CLI command and edited by the user. Contains:
+The primary configuration file for a FACTS experiment. Written by the `setup-experiment` CLI command and edited by the user. Contains:
 - **top-level parameters** shared across all modules (scenario, nsamps, pyear ranges, etc.)
 - **module manifest** declaring which modules are included
 - **module-specific sections** with inputs, options, outputs, and fingerprint parameters for each module

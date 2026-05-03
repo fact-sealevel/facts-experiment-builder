@@ -2,7 +2,7 @@
 
 from click.testing import CliRunner
 import click
-from facts_experiment_builder.cli.setup_new_experiment_cli import (
+from facts_experiment_builder.cli.setup_experiment_cli import (
     main,
     _validate_modules_list_workflow,
     _check_required_experiment_step,
