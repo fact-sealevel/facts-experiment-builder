@@ -1,6 +1,6 @@
 import click
 
-from facts_experiment_builder.cli.setup_new_experiment_cli import (
+from facts_experiment_builder.cli.setup_experiment_cli import (
     main as setup_new_experiment_group,
 )
 from facts_experiment_builder.cli.generate_compose_cli import (

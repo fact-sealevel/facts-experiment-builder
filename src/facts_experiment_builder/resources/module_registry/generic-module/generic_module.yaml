@@ -1,3 +1,0 @@
-## All module yamls in the module registry should match the structure laid out here.
-
-KNOWN_KEYS: ["module_name", "container_image", "arguments", "volumes", "depends_on", "command", "uses_climate_file", "climate_file_required"]

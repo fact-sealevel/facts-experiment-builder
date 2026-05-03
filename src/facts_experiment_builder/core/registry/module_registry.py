@@ -8,9 +8,13 @@ class ModuleRegistry:
 
     @classmethod
     def default(cls) -> "ModuleRegistry":
-        from facts_experiment_builder.resources import get_module_registry_dir
-
-        return cls(get_module_registry_dir())
+        registry_dir = Path.cwd() / "facts-module-registry"
+        if not registry_dir.exists():
+            raise FileNotFoundError(
+                f"Module registry not found at {registry_dir}. "
+                "Ensure facts-module-registry/ exists in your project root."
+            )
+        return cls(registry_dir)
 
     def get_module_yaml_path(self, module_name: str) -> Path:
         """Return path to <module_name>/<snake>_module.yaml in the registry."""
@@ -36,6 +40,13 @@ class ModuleRegistry:
     def get_module_file(self, module_name: str, filename: str) -> Path:
         """Return path to an arbitrary file inside a module's registry directory."""
         return self._registry_dir / module_name / filename
+
+    def get_version(self) -> str:
+        """Return the registry version from VERSION file, or 'unknown' if absent."""
+        version_file = self._registry_dir / "VERSION"
+        if version_file.exists():
+            return version_file.read_text().strip()
+        return "unknown"
 
     def list_modules(self) -> List[str]:
         """Return names of all module directories in the registry."""

@@ -1,6 +1,6 @@
 """CLI for setting up new experiments using Jinja2 templating.
 
-This script uses Jinja2-based YAML generation from setup_new_experiment.py.
+This script uses Jinja2-based YAML generation from setup_experiment.py.
 
 """
 
@@ -8,8 +8,8 @@ import dataclasses
 import click
 from pathlib import Path
 from facts_experiment_builder.cli.theme import console
-from facts_experiment_builder.application.setup_new_experiment import (
-    setup_new_experiment_fs,
+from facts_experiment_builder.application.setup_experiment import (
+    setup_experiment_fs,
     experiment_skeleton_to_facts_experiment,
     populate_experiment_directory,
 )
@@ -22,6 +22,7 @@ from facts_experiment_builder.core.experiment.experiment_skeleton import (
 from facts_experiment_builder.infra.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )  # TODO move this eventually
+from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list,
     unparse_module_list,
@@ -84,21 +85,21 @@ logging.basicConfig(level=logging.WARNING)
     type=str,
     required=False,
     default="location.lst",
-    help="Location file name",
+    help="Location file name (Must be in 'shared-input-data' directory).",
 )
 @click.option(
-    "--module-specific-inputs",
+    "--module-specific-input-data",
     type=str,
     required=False,
     default=None,
-    help="Path to module-specific input data (written to experiment metadata)",
+    help="Absolute path to module-specific input data to use in experiment.",
 )
 @click.option(
-    "--shared-inputs",
+    "--shared-input-data",
     type=str,
     required=False,
     default=None,
-    help="Path to shared input data (written to experiment metadata)",
+    help="Absolute path to shared input data to use in experiment.",
 )
 @click.option("--debug/--no-debug", default=False)
 def main(
@@ -117,8 +118,8 @@ def main(
     pyear_step,
     nsamps,
     location_file,
-    module_specific_inputs,
-    shared_inputs,
+    module_specific_input_data,
+    shared_input_data,
     debug,
 ):
     """Set up a new experiment with setup-new-experiment CLI command.
@@ -148,7 +149,7 @@ def main(
     )
     # first, check that experiment doesn't already exist
     try:
-        experiment_path = setup_new_experiment_fs(experiment_name=experiment_name)
+        experiment_path = setup_experiment_fs(experiment_name=experiment_name)
     except ExperimentAlreadyExistsError as e:
         raise click.UsageError(str(e))
 
@@ -163,7 +164,7 @@ def main(
         )
     except ValueError as e:
         raise click.UsageError(
-            "Failed to create experient skeleton in application.setup_new_experiment: %s",
+            "Failed to create experient skeleton in application.setup_experiment: %s",
             str(e),
         )
 
@@ -207,8 +208,8 @@ def main(
         pyear_step=pyear_step,
         nsamps=nsamps,
         location_file=location_file,
-        module_specific_inputs=module_specific_inputs,
-        shared_inputs=shared_inputs,
+        module_specific_input_data=module_specific_input_data,
+        shared_input_data=shared_input_data,
     )
 
     console.rule(style="rule", title="Generating experiment-config.yaml")
@@ -226,15 +227,18 @@ def main(
         pyear_step=pyear_step,
         nsamps=nsamps,
         location_file=location_file,
-        module_specific_inputs=module_specific_inputs,
-        experiment_specific_inputs=supplied_climate_step_data,
-        shared_inputs=shared_inputs,
+        module_specific_input_data=module_specific_input_data,
+        experiment_specific_input_data=supplied_climate_step_data,
+        shared_input_data=shared_input_data,
     )
 
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
     metadata_path = experiment_path / "experiment-config.yaml"
-    write_metadata_yaml_jinja2(experiment, metadata_path)
+    registry_version = ModuleRegistry.default().get_version()
+    write_metadata_yaml_jinja2(
+        experiment, metadata_path, module_registry_version=registry_version
+    )
     console.print(
         f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
     )
@@ -243,14 +247,12 @@ def main(
     console.rule(
         style="rule", title="[success]✨ Experiment directory setup complete![/success]"
     )
-    # console.print("[success]✨ Experiment directory setup complete![/success]")
     console.print("\n[primary]Next steps:[/primary]")
     console.print(f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]")
     console.print(
         "     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]"
     )
-    console.print("  [muted]2.[/muted] Generate Docker Compose:")
-    console.print(f"     [accent]uv run generate-compose {experiment_path}[/accent]")
+    console.print("  [muted]2.[/muted] Generate Docker Compose file.")
 
 
 def _check_required_experiment_step(
@@ -286,7 +288,7 @@ def _check_for_required_args(
     experiment_name,
     climate_step,
     supplied_climate_step_data,
-    sealevel_step,
+    # sealevel_step,
     supplied_totaled_sealevel_step_data,
 ):
     if not experiment_name:
@@ -419,8 +421,8 @@ def print_global_params_info(
     pyear_step: int,
     nsamps: int,
     location_file: str,
-    module_specific_inputs: str,
-    shared_inputs: str,
+    module_specific_input_data: str,
+    shared_input_data: str,
 ):
     """Prints some CLI info about the global parameters provided."""
     # Print some CLI info
@@ -434,8 +436,8 @@ def print_global_params_info(
             pyear_step,
             nsamps,
             location_file,
-            module_specific_inputs,
-            shared_inputs,
+            module_specific_input_data,
+            shared_input_data,
         ]
     ):
         console.print(

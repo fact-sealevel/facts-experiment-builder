@@ -106,7 +106,7 @@ def hydrate_experiment(skeleton: ExperimentSkeleton) -> tuple:
     return climate_step, sealevel_step, totaling_step, extreme_sealevel_step
 
 
-def setup_new_experiment_fs(
+def setup_experiment_fs(
     experiment_name: str,
 ):
     """Given an experiment name, resolves path to the sub-directory for that experiment.
@@ -143,9 +143,9 @@ def experiment_skeleton_to_facts_experiment(
     pyear_step: Optional[int] = None,
     nsamps: Optional[int] = None,
     location_file: Optional[str] = None,
-    module_specific_inputs: Optional[str] = None,
-    experiment_specific_inputs: Optional[str] = None,
-    shared_inputs: Optional[str] = None,
+    module_specific_input_data: Optional[str] = None,
+    experiment_specific_input_data: Optional[str] = None,
+    shared_input_data: Optional[str] = None,
 ) -> FactsExperiment:
     """
     Load module YAMLs from a skeleton and assemble a fully-formed FactsExperiment.
@@ -192,12 +192,14 @@ def experiment_skeleton_to_facts_experiment(
 
     paths = {
         "module-specific-input-data": create_metadata_bundle(
-            "Module-specific input data", module_specific_inputs
+            "Module-specific input data", module_specific_input_data
         ),
-        "shared-input-data": create_metadata_bundle("Shared input data", shared_inputs),
+        "shared-input-data": create_metadata_bundle(
+            "Shared input data", shared_input_data
+        ),
         "experiment-specific-input-data": create_metadata_bundle(
             "Experiment-specific input data (eg. alternative FAIR data)",
-            experiment_specific_inputs,
+            experiment_specific_input_data,
         ),
         "output-data-location": create_metadata_bundle(
             "Output path",

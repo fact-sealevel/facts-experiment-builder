@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate SVG assets for the README from actual CLI Rich output.
 
-Runs setup-new-experiment with the example command from the README,
+Runs setup-experiment with the example command from the README,
 captures the Rich-formatted terminal output, and writes SVGs to imgs/.
 
 Usage:
@@ -18,7 +18,7 @@ from click.testing import CliRunner
 from rich.console import Console
 
 from facts_experiment_builder.cli.theme import lapaz_theme
-from facts_experiment_builder.cli.setup_new_experiment_cli import main as setup_main
+from facts_experiment_builder.cli.setup_experiment_cli import main as setup_main
 from facts_experiment_builder.cli.generate_compose_cli import main as compose_main
 
 # ── README example command args ───────────────────────────────────────────────
@@ -63,7 +63,7 @@ SETUP_ARGS = [
 ]
 
 SETUP_COMMAND_LINES = [
-    "uv run setup-new-experiment \\",
+    "uv run setup-experiment \\",
     "--experiment-name facts_experiment --climate-step fair-temperature \\",
     "--sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,kopp14-verticallandmotion,ssp-landwaterstorage \\",
     "--total-all-modules True --totaling-step facts-total \\",
@@ -101,7 +101,7 @@ def _make_recording_console(temp_prefix_ref: list) -> Console:
 
 
 def generate_setup_svg() -> None:
-    """Run setup-new-experiment and export the Rich output as an SVG."""
+    """Run setup-experiment and export the Rich output as an SVG."""
     temp_prefix_ref = [None]
     recording_console = _make_recording_console(temp_prefix_ref)
 
@@ -147,7 +147,7 @@ def generate_setup_svg() -> None:
             )
         return
 
-    svg = recording_console.export_svg(title="setup-new-experiment")
+    svg = recording_console.export_svg(title="setup-experiment")
     out = IMGS_DIR / "cli_output_setup_new_experiment.svg"
     out.write_text(svg)
     print(f"Written: {out}")
