@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] 
 
+### Changed
+
+- Move module registry to external repository; rename `setup-new-experiment` -> `setup-experiment` ([PR #60](https://github.com/fact-sealevel/facts-experiment-builder/pull/60), [@e-marshall](https://github.com/e-marshall))
 
 
 ## [0.2.0]

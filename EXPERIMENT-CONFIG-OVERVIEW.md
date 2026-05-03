@@ -7,9 +7,9 @@ This page is an overview of the `experiment-config.yml` file created by `feb set
 
 Content dumped from README to add here: 
 > [!NOTE]
-> If you copy and paste the `setup-new-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--shared-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-config.yaml` that is created.
+> If you copy and paste the `setup-experiment` command above, pass the paths to your input data directories via `--module-specific-inputs` and `--shared-inputs` (see [setup.md](setup.md)), or fill in those fields manually in the `experiment-config.yaml` that is created.
 
-- If passed at the `uv run setup-new-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. If not, specify them here.
+- If passed at the `uv run setup-experiment` step, values for `scenario`,`pyear-start/stop/step`,etc. will be prepopulated. If not, specify them here.
 - You shouldn't need to make any more edits to this file but you can review to see the full experiment specification before generating a compose file.
 
 
