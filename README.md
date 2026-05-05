@@ -3,15 +3,17 @@
 # facts-experiment-builder
 
 > [!CAUTION]
-> This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases.
+> 🚧🚧 This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases. This repo, including documentation, is still in draft form. If you encounter any issuse or have questions, feel free to raise an issue or email [emarshall@rhg.com](emarshall@rhg.com). 🚧🚧
+
+
 
 ## Overview
-`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that is used to run the experiment. FEB offers a CLI tool with commands to configure an experiment and write an experiment configuration file (`feb setup-experiment`) and generate an executable experiment script (`feb generate-compose`) from an experiment configuration file. If you are familiar with FACTS1, a FACTS2 `experiment-config.yml` is similar to a `config.yml` file that was used to define experiments in the previous framework. 
+`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that are used to run the experiment. FEB offers a CLI tool with commands to configure an experiment and write an experiment configuration file (`feb setup-experiment`) and generate an executable experiment script (`feb generate-compose`) from an experiment configuration file. If you are familiar with FACTS1, a FACTS2 `experiment-config.yaml` is similar to a `config.yaml` file that was used to define experiments in the previous framework. 
 
 An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
 
 >[!IMPORTANT]
-> Experiment configuration files are not executable files. They only specify an experiment, while implementation files such as `experiment-compose.yml` created by `generate-compose` function as execution scripts. 
+> Experiment configuration files are not executable files. They only specify an experiment, while implementation files such as `experiment-compose.yaml` created by `generate-compose` function as execution scripts. 
 
 ## Outline 
 This README is organized as follows:
@@ -65,26 +67,26 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 - The required arguments are:
   - `--experiment-name`,
   - Either `--climate-step` (the module to run at the climate step) or `--supplied-climate-data-step` (data to bypass running a module at the climate step). 
--  Any fields that are not passed at the CLI must be manually added to the `experiment-config.yml` file that is created after running `setup-experiment`. 
+-  Any fields that are not passed at the CLI must be manually added to the `experiment-config.yaml` file that is created after running `setup-experiment`. 
 
 You can see the full list of options by running `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment --help`. 
 
 >[!NOTE]
 > You can see which modules are available to use in an experiment by running `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main list-modules`.
 
-If you included multiple modules at the sea-level step, you will see ClI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary] for more detail on this.
+If you included multiple modules at the sea-level step, you will see ClI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary](FACTS_GLOSSARY.md) for more detail on this.
 
-Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
+Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yaml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
 
 Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [experiment configuration file overview](EXPERIMENT-CONFIG-OVERVIEW.md) page. 
 
 ## Run an experiment
 
-In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yml` in our experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
+In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
 
 FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we only provide a [Docker Compose](https://docs.docker.com/compose/) implementation. If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
 
-facts-experiment-builder provides a command, `feb generate-compose`, to generate an executable Docker Compose file from an `experiment-config.yml` that wil be used to run your experiment. The command writes the file, `experiment-compose.yml`, to your experiment's sub-directory just like `experiment-config.yml`. For more detail on the experiment compose file, see the [overview](EXPERIMENT-COMPOSE-OVERVIEW.md) page.
+facts-experiment-builder provides a command, `feb generate-compose`, to generate an executable Docker Compose file from an `experiment-config.yaml` that wil be used to run your experiment. The command writes the file, `experiment-compose.yaml`, to your experiment's sub-directory just like `experiment-config.yaml`. For more detail on the experiment compose file, see the [overview](EXPERIMENT-COMPOSE-OVERVIEW.md) page.
 
 Create the file by specifying the name of the experiment:
 ```shell
@@ -93,7 +95,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 
 Inspect the compose file and when you are ready to run the experiment, execute it like this:
 ```shell
-docker compose -f experiments/my_first_experiment/experiment-compose.yaml
+docker compose -f experiments/my_first_experiment/experiment-compose.yaml up
 ```
 
 **Not yet implemented: async-flow equivalent of `generate-compose`.**
@@ -191,7 +193,7 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main se
 --extremesealevel-step extremesealevel-pointsoverthreshold
 ```
 
-(NOTE: add more examples of possible configurations here/ possibly move to its own page).
+ 🚧 Check back soon for more. 🚧
 
 ## Support
 

@@ -441,7 +441,7 @@ def print_global_params_info(
         ]
     ):
         console.print(
-            "[muted]  CLI arguments provided will be included in experiment-config.yml[/muted]"
+            "[muted]  CLI arguments provided will be included in experiment-config.yaml[/muted]"
         )
 
 
