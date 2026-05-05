@@ -3,7 +3,7 @@
 # facts-experiment-builder
 
 > [!CAUTION]
-> 🚧🚧 This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases. This repo, including documentation, is still in draft form. If you encounter any issuse or have questions, feel free to raise an issue or email [emarshall@rhg.com](emarshall@rhg.com). 🚧🚧
+> 🚧🚧 This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases. This repo, including documentation, is still in draft form. If you encounter any issuse or have questions, feel free to raise an issue or email emarshall@rhg.com. 🚧🚧
 
 
 
