@@ -124,7 +124,7 @@ def _validate_climate_file_inputs(
             f"input key) in the inputs section for each sealevel module."
         )
 
-    
+
 def _collect_workflow_output_paths_by_type(
     metadata: Dict[str, Any],
     wf: Workflow,
@@ -152,36 +152,54 @@ def _collect_workflow_output_paths_by_type(
             if isinstance(v, dict) and "value" in v:
                 p = v.get("value") or ""
                 ot = v.get("output_type", "")
-            #elif isinstance(v, str):
+            # elif isinstance(v, str):
             #    p = v
             #    ot = "local"
 
             else:
                 continue
             if p and isinstance(p, str) and ot == output_type:
-                if "wais" in p:   #TODO this is a hacky fix, should prob be handled in module registry entry
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                if (
+                    "wais" in p
+                ):  # TODO this is a hacky fix, should prob be handled in module registry entry
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "eais" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "pen" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "smb" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "SMB" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "WAIS" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "EAIS" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 elif "PEN" in p:
-                    print(f'{p}: This output is component of a larger unit and is already represented elsewhere; skipping.')
+                    print(
+                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                    )
                     continue
                 paths.append(f"{prefix}/{p.strip()}")
     return paths
