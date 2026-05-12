@@ -376,7 +376,9 @@ def build_module_service_spec(
         image_url = image_data.get("image_url", image_data.get("url", ""))
         image_tag = image_data.get("image_tag", image_data.get("tag", "latest"))
     else:
-        raise ValueError(f"Invalid image format in {module_context}")
+        raise ValueError(
+            f"Invalid image format in {module_context}, received: {image_data}"
+        )
 
     image = ModuleContainerImage(image_url=image_url, image_tag=image_tag)
 
