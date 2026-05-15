@@ -95,3 +95,49 @@ def test_validate_climate_file_inputs_raises_when_nonstandard_key_missing(
             generate_compose._validate_climate_file_inputs(
                 metadata, ["test-module"], tmp_path
             )
+
+
+# ---------------------------------------------------------------------------
+# projection_scale == "global" suppression
+# ---------------------------------------------------------------------------
+
+
+def _make_workflow_metadata(mod: str = "tlm-sterodynamics") -> dict:
+    """Minimal metadata dict for _collect_workflow_output_paths_by_type tests."""
+    return {
+        mod: {
+            "outputs": {
+                "output-gslr-file": {
+                    "value": f"{mod}/gslr.nc",
+                    "output_type": "global",
+                },
+                "output-lslr-file": {"value": f"{mod}/lslr.nc", "output_type": "local"},
+            }
+        }
+    }
+
+
+def test_collect_workflow_output_paths_global_only():
+    """Only global outputs are collected when output_type='global'."""
+    from facts_experiment_builder.core.workflow.workflow import Workflow
+
+    wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
+    metadata = _make_workflow_metadata()
+    paths = generate_compose._collect_workflow_output_paths_by_type(
+        metadata, wf, "global"
+    )
+    assert len(paths) == 1
+    assert "gslr.nc" in paths[0]
+
+
+def test_collect_workflow_output_paths_local_only():
+    """Only local outputs are collected when output_type='local'."""
+    from facts_experiment_builder.core.workflow.workflow import Workflow
+
+    wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
+    metadata = _make_workflow_metadata()
+    paths = generate_compose._collect_workflow_output_paths_by_type(
+        metadata, wf, "local"
+    )
+    assert len(paths) == 1
+    assert "lslr.nc" in paths[0]

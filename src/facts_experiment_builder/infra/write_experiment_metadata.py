@@ -34,6 +34,9 @@ YAML_TEMPLATE = """
 experiment_name:
 {{ format_value(experiment.experiment_name) }}
 
+projection_scale:
+{{ format_value(experiment.projection_scale) }}
+
 ##----- Top-level params -----##
 {% for key, value in experiment.top_level_params.items() %}
 {{ key }}:

@@ -4,6 +4,29 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
 
+def parse_module_regions(module_regions_args: tuple) -> Dict[str, List[str]]:
+    """Parse a tuple of 'module-name=R1,R2' strings into {module: [regions]}.
+
+    Accepts the raw value from a Click multiple=True option.
+    Example: ("emulandice2-glaciers=RGI01,RGI02",) -> {"emulandice2-glaciers": ["RGI01", "RGI02"]}
+    """
+    result: Dict[str, List[str]] = {}
+    for entry in module_regions_args or ():
+        if "=" not in entry:
+            raise ValueError(
+                f"Invalid --module-regions format '{entry}'. "
+                "Expected 'module-name=REGION1,REGION2'."
+            )
+        module_name, regions_str = entry.split("=", 1)
+        regions = [r.strip() for r in regions_str.split(",") if r.strip()]
+        if not regions:
+            raise ValueError(
+                f"No regions specified for module '{module_name}' in --module-regions."
+            )
+        result[module_name.strip()] = regions
+    return result
+
+
 @dataclass(frozen=True)
 class ExperimentSkeleton:
     """Captures module names / data paths and workflows from CLI inputs.
@@ -22,6 +45,7 @@ class ExperimentSkeleton:
     totaling_module: Optional[str] = None  # None if no totaling step
     extremesealevel_module: Optional[str] = None  # None if no ESL step
     workflows: Dict[str, str] = field(default_factory=dict)
+    module_regions: Dict[str, List[str]] = field(default_factory=dict)
 
     @classmethod
     def from_cli_inputs(
@@ -31,6 +55,7 @@ class ExperimentSkeleton:
         sealevel_step: Optional[str],
         supplied_totaled_sealevel_step_data: Optional[str],
         extremesealevel_step: Optional[str],
+        module_regions: Optional[Dict[str, List[str]]] = None,
     ) -> "ExperimentSkeleton":
         """Build a skeleton by parsing comma-separated CLI module strings."""
         from facts_experiment_builder.core.experiment.module_name_validation import (
@@ -76,8 +101,9 @@ class ExperimentSkeleton:
             climate_data=supplied_climate_step_data,
             sealevel_modules=sealevel_modules,
             supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-            totaling_module=totaling_module,  # totaling_modules[0] if totaling_modules else None,
+            totaling_module=totaling_module,
             extremesealevel_module=esl_modules[0] if esl_modules else None,
+            module_regions=module_regions or {},
         )
 
     @property

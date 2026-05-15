@@ -1,6 +1,5 @@
 import click
 from pathlib import Path
-from typing import Optional
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose_from_metadata,
@@ -13,6 +12,10 @@ from facts_experiment_builder.infra.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
 )
+import logging
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -28,11 +31,22 @@ from facts_experiment_builder.infra.write_compose import (
     default=None,
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
+@click.option(
+    "--debug",
+    default=False,
+    is_flag=True,
+    help="Enable debug mode",
+)
 def main(
     experiment_name,
-    custom_output_path: Optional[str] = None,
+    custom_output_path,
+    debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
+
+    if debug:
+        logger.setLevel(logging.INFO)
+
     console.rule(style="rule")
     console.rule(
         style="rule", title="Generating Docker Compose file for specified experiment"
@@ -67,7 +81,6 @@ def main(
         compose_content=yaml_content,
         output_path=output_path,
     )
-    console.print("[primary]Step 6:[/primary] Print success message...")
     console.print(
         f"[success]✓ Generated Docker Compose file:[/success] [secondary]{output_path}[/secondary]"
     )

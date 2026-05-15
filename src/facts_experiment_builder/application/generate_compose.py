@@ -40,6 +40,19 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
+def _base_module_name(module_name: str, metadata: Dict[str, Any]) -> str:
+    """Return the base module name for a (possibly region-instance) service name.
+
+    Region instances store '_base_module' in their metadata section.
+    E.g. 'emulandice2-glaciers-RGI01' -> 'emulandice2-glaciers'.
+    Falls back to module_name itself if no _base_module key is present.
+    """
+    section = metadata.get(module_name)
+    if isinstance(section, dict):
+        return section.get("_base_module") or module_name
+    return module_name
+
+
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
     """Extract a flat list of all module names from the experiment manifest keys."""
     names: List[str] = []
@@ -95,7 +108,8 @@ def _validate_climate_file_inputs(
     missing_climate_files = []
 
     for module_name in sealevel_modules:
-        module_yaml_path = find_module_yaml_path(module_name)
+        base = _base_module_name(module_name, metadata)
+        module_yaml_path = find_module_yaml_path(base)
         module_schema = load_facts_module_from_yaml(yaml_path=module_yaml_path)
 
         if not module_schema.uses_climate_file:
@@ -141,6 +155,19 @@ def _collect_workflow_output_paths_by_type(
     """
     paths: List[str] = []
     prefix = container_prefix.rstrip("/")
+
+    # List of substrings to skip to not include sub-regional outputs that are part of larger outputs
+    subregion_strings_to_skip = [
+        "wais",
+        "eais",
+        "pen",
+        "smb",
+        "SMB",
+        "WAIS",
+        "EAIS",
+        "PEN",
+    ]
+
     for mod in wf.module_names:
         out_section = metadata.get(mod, {}) or {}
         if not isinstance(out_section, dict):
@@ -158,49 +185,15 @@ def _collect_workflow_output_paths_by_type(
 
             else:
                 continue
+
             if p and isinstance(p, str) and ot == output_type:
-                if (
-                    "wais" in p
-                ):  # TODO this is a hacky fix, should prob be handled in module registry entry
+                # Do not pass through outputs that are components of a larger output unit
+                if p in subregion_strings_to_skip:
                     print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
+                        f"{p}: This output is a component of a larger unit and is already represented elsewhere; skipping."
                     )
                     continue
-                elif "eais" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
-                elif "pen" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
-                elif "smb" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
-                elif "SMB" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
-                elif "WAIS" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
-                elif "EAIS" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
-                elif "PEN" in p:
-                    print(
-                        f"{p}: This output is component of a larger unit and is already represented elsewhere; skipping."
-                    )
-                    continue
+
                 paths.append(f"{prefix}/{p.strip()}")
     return paths
 
@@ -328,13 +321,20 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     # Step 2: Build FactsExperiment — derive key sets from module schemas
     _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
-    _schemas = [load_facts_module_by_name(m) for m in _manifest_module_names]
+    _schemas = [
+        load_facts_module_by_name(_base_module_name(m, metadata))
+        for m in _manifest_module_names
+    ]
     _top_level_keys = set(collect_metadata_param_keys(_schemas, "top_level"))
     _fp_keys = set(collect_metadata_param_keys(_schemas, "fingerprint_params"))
     experiment = FactsExperiment.from_metadata_dict(
         metadata,
         top_level_keys=_top_level_keys,
         fingerprint_keys=_fp_keys,
+    )
+
+    _suppress_output_types: set = (
+        {"local"} if experiment.projection_scale == "global" else set()
     )
 
     temperature_module_name = experiment.climate_step.module_name or "NONE"
@@ -384,11 +384,14 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Create sea level modules if specified
     for module_name in sealevel_module_names:
         try:
+            base = _base_module_name(module_name, metadata)
+            sl_yaml_path = find_module_yaml_path(base) if base != module_name else None
             module = create_module_service_spec_from_metadata(
                 metadata_path,
                 module_name=module_name,
                 module_type="sealevel_module",
                 metadata=metadata,
+                module_yaml_path=sl_yaml_path,
             )
             # modules.append(module)
             modules["sealevel_modules"][module_name] = module
@@ -466,7 +469,8 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     for module_name, module in modules["sealevel_modules"].items():
         service_name = module.module_name
         compose_service = module.generate_compose_service(
-            temperature_service_name=temperature_module_name
+            temperature_service_name=temperature_module_name,
+            suppress_output_types=_suppress_output_types,
         )
         services[service_name] = compose_service
 
@@ -486,6 +490,11 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
             for output_type in facts_total_config.get(
                 "output_types", ["global", "local"]
             ):
+                if output_type == "local" and experiment.projection_scale == "global":
+                    print(
+                        f"ℹ Skipping local facts-total for {wf_name} (projection_scale=global)"
+                    )
+                    continue
                 section = _build_facts_total_section_for_workflow(
                     wf, facts_total_image, output_type
                 )
@@ -511,7 +520,9 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
                     )
 
         # One ESL service per workflow when both workflows and esl_modules are specified
-        if esl_module_names:
+        if esl_module_names and experiment.projection_scale == "global":
+            print("ℹ Skipping per-workflow ESL services (projection_scale=global)")
+        elif esl_module_names:
             for esl_module_name in esl_module_names:
                 try:
                     esl_yaml_path = find_module_yaml_path(esl_module_name)
@@ -580,7 +591,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
                         )
 
     # When there are no workflows, add a single ESL service per ESL module
-    if not workflows:
+    if not workflows and experiment.projection_scale != "global":
         for _esl_name, esl_module in modules["esl_modules"].items():
             service_name = esl_module.module_name
             services[service_name] = esl_module.generate_compose_service()

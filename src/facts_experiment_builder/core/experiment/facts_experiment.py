@@ -41,7 +41,7 @@ _STRUCTURAL_KEYS: Set[str] = (
     set(MANIFEST_KEYS)
     | set(PATH_KEYS_PRIMARY)
     | {k for alts in PATH_KEYS_ALTERNATIVES.values() for k in alts}
-    | {"experiment_name", "workflows"}
+    | {"experiment_name", "workflows", "projection_scale"}
 )
 
 
@@ -71,6 +71,7 @@ class FactsExperiment:
         extreme_sealevel_step: ExtremeSealevelStep,
         paths: Dict[str, Any],
         fingerprint_params: Dict[str, Any],
+        projection_scale: Optional[str] = "local",
         extra: Optional[Dict[str, Any]] = None,
         workflows: Optional[Dict[str, str]] = None,
     ):
@@ -84,6 +85,7 @@ class FactsExperiment:
         self._fingerprint_params = dict(fingerprint_params)
         self._extra = dict(extra) if extra is not None else {}
         self._workflows = dict(workflows) if workflows is not None else {}
+        self._projection_scale = projection_scale
         self.date_created = datetime.now()
         self.feb_version = None
         self.fmr_version = None
@@ -115,6 +117,11 @@ class FactsExperiment:
     @property
     def extreme_sealevel_step(self) -> ExtremeSealevelStep:
         return self._extreme_sealevel_step
+
+    @property
+    def projection_scale(self) -> Optional[str]:
+        """The projection scale for this experiment."""
+        return self._projection_scale
 
     def list_all_steps(self) -> List[ExperimentStep]:
         """All experiment steps in order: climate → sealevel → totaling → ESL."""
@@ -248,6 +255,8 @@ class FactsExperiment:
             steps_from_metadata(manifest, module_sections)
         )
 
+        projection_scale = metadata.get("projection_scale")
+
         return cls(
             experiment_name=experiment_name,
             top_level_params=top_level_params,
@@ -259,4 +268,5 @@ class FactsExperiment:
             fingerprint_params=fingerprint_params,
             extra=extra,
             workflows=workflows,
+            projection_scale=projection_scale,
         )

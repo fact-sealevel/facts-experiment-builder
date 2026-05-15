@@ -41,15 +41,46 @@ class ModuleSchema:
 
     def get_file_outputs(self) -> List[Dict[str, Any]]:
         """File outputs (have filename + output_type)."""
-        return list(self.arguments.get("outputs", {}).get("files") or [])
+
+        outputs = self.arguments.get("outputs", {})
+        if not isinstance(outputs, dict):
+            raise ValueError(
+                f"Module '{self.module_name}': 'arguments.outputs' must be a dict "
+                f" with 'files'/'other' keys, but got {type(outputs).__name__}. "
+                f" Check the module YAML for '{self.module_name}' and ensure it has correct structure."
+            )
+        return list(outputs.get("files") or [])
+        # return list(self.arguments.get("outputs", {}).get("files") or [])
 
     def get_other_outputs(self) -> List[Dict[str, Any]]:
         """Non-file outputs (directories, string paths, etc.)."""
-        return list(self.arguments.get("outputs", {}).get("other") or [])
+        outputs = self.arguments.get("outputs") or {}
+        if not isinstance(outputs, dict):
+            raise ValueError(
+                f"Module '{self.module_name}': 'arguments.outputs' must be a dict "
+                f" with 'files'/'other' keys, but got {type(outputs).__name__}. "
+                f" Check the module YAML for '{self.module_name}' and ensure it has correct structure."
+            )
+        return list(outputs.get("other") or [])
+        # return list(self.arguments.get("outputs", {}).get("other") or [])
 
-    def get_outputs_list(self) -> List[Dict[str, Any]]:
-        """All outputs as a flat list (file and other combined)."""
-        return self.get_file_outputs() + self.get_other_outputs()
+    def get_outputs_list(
+        self, suppress_output_types: Optional[set] = None
+    ) -> List[Dict[str, Any]]:
+        """All outputs as a flat list (file and other combined).
+
+        Args:
+            suppress_output_types: Set of output_type values to exclude (e.g. {"local"}).
+                When None or empty, all outputs are returned.
+        """
+        all_outputs = self.get_file_outputs() + self.get_other_outputs()
+        if not suppress_output_types:
+            return all_outputs
+        return [
+            spec
+            for spec in all_outputs
+            if spec.get("output_type") not in suppress_output_types
+        ]
 
     def _output_volume_key(self) -> Optional[str]:
         """The key in self.volumes that maps tot he shared output directory, or none."""

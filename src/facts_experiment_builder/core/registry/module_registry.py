@@ -6,6 +6,10 @@ class ModuleRegistry:
     def __init__(self, registry_dir: Path):
         self._registry_dir = registry_dir
 
+    @property
+    def registry_dir(self) -> Path:
+        return self._registry_dir
+
     @classmethod
     def default(cls) -> "ModuleRegistry":
         registry_dir = Path.cwd() / "facts-module-registry"

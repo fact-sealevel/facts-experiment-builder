@@ -1,4 +1,4 @@
-"""Minimal pytest suite for setup_new_experiment_cli."""
+"""Minimal pytest suite for setup_experiment_cli."""
 
 from click.testing import CliRunner
 import click
@@ -45,7 +45,7 @@ def test_cli_fails_without_required_args():
     )
 
 
-def test_setup_new_experiment_fails_with_invalid_module_name():
+def test_setup_experiment_fails_with_invalid_module_name():
     result = runner.invoke(
         main,
         [

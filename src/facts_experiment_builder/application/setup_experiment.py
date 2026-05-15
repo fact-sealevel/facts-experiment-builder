@@ -32,6 +32,9 @@ from facts_experiment_builder.infra.experiment_manager import (
     create_experiment_directory,
     create_experiment_directory_files,
 )
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
@@ -57,13 +60,22 @@ def validate_skeleton_modules(skeleton: ExperimentSkeleton):
 
 def hydrate_sealevel_step(skeleton) -> SealevelStep:
     if skeleton.sealevel_modules:
-        sealevel_schemas = [
-            load_facts_module_by_name(m) for m in skeleton.sealevel_modules
-        ]
+        logger.info("In hydrating sealevel step // loading module schemas.")
+
+        sealevel_schemas = []
+        for m in skeleton.sealevel_modules:
+            logger.info("Loading module schema for: %s", m)
+            sealevel_schemas.append(load_facts_module_by_name(m))
+
+        # sealevel_schemas = [
+        #    load_facts_module_by_name(m) for m in skeleton.sealevel_modules
+        # ]
         climate_data_file = skeleton.climate_data
 
         sealevel_step = SealevelStep.from_module_schemas(
-            sealevel_schemas, climate_data_file=climate_data_file
+            sealevel_schemas,
+            climate_data_file=climate_data_file,
+            module_regions=skeleton.module_regions,
         )
     else:
         sealevel_step = SealevelStep(
@@ -146,6 +158,7 @@ def experiment_skeleton_to_facts_experiment(
     module_specific_input_data: Optional[str] = None,
     experiment_specific_input_data: Optional[str] = None,
     shared_input_data: Optional[str] = None,
+    projection_scale: str = "local",
 ) -> FactsExperiment:
     """
     Load module YAMLs from a skeleton and assemble a fully-formed FactsExperiment.
@@ -155,15 +168,15 @@ def experiment_skeleton_to_facts_experiment(
 
     # validate skeleton first
     validate_skeleton_modules(skeleton)
-
+    logger.info("Validated skeleton modules.")
     # hydrate skeleton to create steps
     climate_step, sealevel_step, totaling_step, extreme_sealevel_step = (
         hydrate_experiment(skeleton)
     )
-
+    logger.info("Hydrated experiment steps.")
     # Load schemas to derive which top-level and fingerprint keys this experiment needs
     schemas = [load_facts_module_by_name(m) for m in skeleton.all_module_names]
-
+    logger.info("Loaded module schemas.")
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
     cli_values: Dict[str, object] = {
         "pipeline-id": pipeline_id,
@@ -233,4 +246,5 @@ def experiment_skeleton_to_facts_experiment(
         paths=paths,
         fingerprint_params=fingerprint_params,
         workflows=skeleton.workflows,
+        projection_scale=projection_scale,
     )

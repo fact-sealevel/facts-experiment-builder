@@ -20,6 +20,15 @@ FILE_OUTPUT_SPEC = {
     "mount": {"volume": "output", "container_path": "/mnt/out"},
 }
 
+LOCAL_FILE_OUTPUT_SPEC = {
+    "name": "output-lslr-file",
+    "type": "file",
+    "source": "module_inputs.outputs.output_lslr_file",
+    "filename": "output-lslr.nc",
+    "output_type": "local",
+    "mount": {"volume": "output", "container_path": "/mnt/out"},
+}
+
 OTHER_OUTPUT_SPEC = {
     "name": "output-glacier-dir",
     "type": "str",
@@ -93,6 +102,33 @@ def test_get_outputs_list_returns_all():
 def test_get_outputs_list_empty_outputs():
     schema = _schema({})
     assert schema.get_outputs_list() == []
+
+
+def test_get_outputs_list_suppresses_local_output_type():
+    schema = _schema({"files": [FILE_OUTPUT_SPEC, LOCAL_FILE_OUTPUT_SPEC]})
+    result = schema.get_outputs_list(suppress_output_types={"local"})
+    assert len(result) == 1
+    assert result[0]["name"] == "output-gslr-file"
+
+
+def test_get_outputs_list_unchanged_when_suppress_empty_set():
+    schema = _schema({"files": [FILE_OUTPUT_SPEC, LOCAL_FILE_OUTPUT_SPEC]})
+    result = schema.get_outputs_list(suppress_output_types=set())
+    assert len(result) == 2
+
+
+def test_get_outputs_list_unchanged_when_suppress_none():
+    schema = _schema({"files": [FILE_OUTPUT_SPEC, LOCAL_FILE_OUTPUT_SPEC]})
+    result = schema.get_outputs_list(suppress_output_types=None)
+    assert len(result) == 2
+
+
+def test_get_outputs_list_other_outputs_unaffected_by_suppress():
+    """'other' outputs have no output_type and should never be suppressed."""
+    schema = _schema({"files": [LOCAL_FILE_OUTPUT_SPEC], "other": [OTHER_OUTPUT_SPEC]})
+    result = schema.get_outputs_list(suppress_output_types={"local"})
+    assert len(result) == 1
+    assert result[0]["name"] == "output-glacier-dir"
 
 
 # ---------------------------------------------------------------------------

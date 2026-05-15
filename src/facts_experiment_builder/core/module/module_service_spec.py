@@ -97,7 +97,9 @@ class ModuleServiceSpec:
         }
         return resolve_source_value(source, context)
 
-    def _build_command_args(self) -> List[str]:
+    def _build_command_args(
+        self, suppress_output_types: Optional[set] = None
+    ) -> List[str]:
         """
         Build command arguments from YAML configuration.
 
@@ -148,7 +150,9 @@ class ModuleServiceSpec:
                     command_args.append(f"--{arg_spec['name']}={value}")
 
         # Process outputs
-        for arg_spec in self.module_definition.get_outputs_list():
+        for arg_spec in self.module_definition.get_outputs_list(
+            suppress_output_types=suppress_output_types
+        ):
             value = self._process_output_argument(arg_spec)
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
@@ -440,7 +444,9 @@ class ModuleServiceSpec:
         return environment
 
     def generate_compose_service(
-        self, temperature_service_name: Optional[str] = None
+        self,
+        temperature_service_name: Optional[str] = None,
+        suppress_output_types: Optional[set] = None,
     ) -> Dict[str, Any]:
         """
         Generate Docker Compose service configuration.
@@ -454,7 +460,7 @@ class ModuleServiceSpec:
         image_str = (
             f"{self.components.image.image_url}:{self.components.image.image_tag}"
         )
-        command = self._build_command_args()
+        command = self._build_command_args(suppress_output_types=suppress_output_types)
         volumes = self._build_volumes()
         depends_on = self._build_depends_on(
             temperature_service_name=temperature_service_name
