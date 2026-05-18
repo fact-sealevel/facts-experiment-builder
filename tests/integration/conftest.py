@@ -2,6 +2,7 @@ import pytest
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
+REGISTRY_SOURCE = REPO_ROOT / "facts-module-registry"
 
 
 ## shared fixtures
@@ -13,10 +14,10 @@ def experiment_name():
 
 @pytest.fixture
 def project_root(tmp_path):
+    if not REGISTRY_SOURCE.exists():
+        pytest.skip("facts-module-registry not present — clone it to run integration tests")
     (tmp_path / "experiments").mkdir()
-    (tmp_path / "facts-module-registry").symlink_to(
-        REPO_ROOT / "facts-module-registry", target_is_directory=True
-    )
+    (tmp_path / "facts-module-registry").symlink_to(REGISTRY_SOURCE, target_is_directory=True)
     return tmp_path
 
 

@@ -1,9 +1,17 @@
+from pathlib import Path
+
 from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
 )
 
 import pytest
+
+_REGISTRY_DIR = Path(__file__).resolve().parent.parent.parent / "facts-module-registry"
+pytestmark = pytest.mark.skipif(
+    not _REGISTRY_DIR.exists(),
+    reason="facts-module-registry not present — clone it to run registry tests",
+)
 
 
 def test_validate_module_names_passes_for_valid():
