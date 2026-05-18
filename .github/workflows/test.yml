@@ -9,15 +9,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Clone module registry
+        run: git clone https://github.com/fact-sealevel/facts-module-registry.git
+
+      - uses: astral-sh/setup-uv@v5
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: pip install -e ".[dev]"
+        run: uv sync
 
       - name: Run tests with coverage
-        run: pytest tests/unit --ignore tests/unit/test_module_name_validation.py --ignore=tests/unit/test_module_registry.py --cov=src/facts_experiment_builder --cov-report=xml
+        run: uv run pytest tests/ --cov=src/facts_experiment_builder --cov-report=xml
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
