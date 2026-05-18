@@ -22,7 +22,9 @@ from facts_experiment_builder.cli.init_cli import init
 
 
 def test_ensure_experiments_dir_creates(tmp_path):
-    from facts_experiment_builder.application.init_workspace import ensure_experiments_dir
+    from facts_experiment_builder.application.init_workspace import (
+        ensure_experiments_dir,
+    )
 
     result = ensure_experiments_dir(tmp_path)
     assert result.status == StepStatus.CREATED
@@ -30,7 +32,9 @@ def test_ensure_experiments_dir_creates(tmp_path):
 
 
 def test_ensure_experiments_dir_already_exists(tmp_path):
-    from facts_experiment_builder.application.init_workspace import ensure_experiments_dir
+    from facts_experiment_builder.application.init_workspace import (
+        ensure_experiments_dir,
+    )
 
     (tmp_path / "experiments").mkdir()
     result = ensure_experiments_dir(tmp_path)
@@ -95,7 +99,10 @@ def test_ensure_workspace_marker_creates(tmp_path):
 
 
 def test_ensure_workspace_marker_already_exists(tmp_path):
-    original = {"initialized_at": "2024-01-01T00:00:00+00:00", "registry_url": REGISTRY_URL}
+    original = {
+        "initialized_at": "2024-01-01T00:00:00+00:00",
+        "registry_url": REGISTRY_URL,
+    }
     marker_path = tmp_path / WORKSPACE_MARKER_FILENAME
     marker_path.write_text(yaml.dump(original))
 
@@ -128,7 +135,12 @@ def test_init_workspace_idempotent(tmp_path):
     (tmp_path / "facts-module-registry").mkdir()
     marker_path = tmp_path / WORKSPACE_MARKER_FILENAME
     marker_path.write_text(
-        yaml.dump({"initialized_at": "2026-01-01T00:00:00+00:00", "registry_url": REGISTRY_URL})
+        yaml.dump(
+            {
+                "initialized_at": "2026-01-01T00:00:00+00:00",
+                "registry_url": REGISTRY_URL,
+            }
+        )
     )
 
     with patch("subprocess.run") as mock_run:
@@ -189,7 +201,9 @@ def test_init_cli_clone_failure_exits_nonzero(tmp_path):
         with patch(
             "facts_experiment_builder.application.init_workspace.subprocess.run"
         ) as mock_run:
-            mock_run.return_value = MagicMock(returncode=1, stderr="fatal: network error")
+            mock_run.return_value = MagicMock(
+                returncode=1, stderr="fatal: network error"
+            )
             result = runner.invoke(init, [])
     assert result.exit_code != 0
 
