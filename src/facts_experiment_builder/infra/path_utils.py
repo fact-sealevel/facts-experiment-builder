@@ -21,14 +21,19 @@ def _registry_module_names() -> frozenset:
 
 def expand_path(path_str: Any, context: str = "") -> str:
     """
-    Expand environment variables and ~ in path strings.
+    Expand environment variables and ~ in path strings, then resolve to an absolute path.
+
+    Resolving to absolute ensures all downstream path operations (volume mounts,
+    container path computation) work correctly regardless of the working directory
+    FEB is invoked from. Users can provide either absolute paths or paths relative
+    to their working directory in the experiment config.
 
     Args:
         path_str: Path string to expand (or list with first element used)
         context: Optional context for error messages
 
     Returns:
-        Expanded path string
+        Absolute path string
 
     Raises:
         ValueError: If path_str is None or invalid type
@@ -48,7 +53,7 @@ def expand_path(path_str: Any, context: str = "") -> str:
         raise ValueError(
             f"Path string has invalid type: expected str, got {type(path_str)}{context_msg}"
         )
-    return os.path.expandvars(os.path.expanduser(path_str))
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(path_str)))
 
 
 def _resolve_module_input_dir(module_specific_input_dir: str, module_name: str) -> str:
