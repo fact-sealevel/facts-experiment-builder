@@ -60,21 +60,12 @@ def validate_skeleton_modules(skeleton: ExperimentSkeleton):
 
 def hydrate_sealevel_step(skeleton) -> SealevelStep:
     if skeleton.sealevel_modules:
-        logger.info("In hydrating sealevel step // loading module schemas.")
-
-        sealevel_schemas = []
-        for m in skeleton.sealevel_modules:
-            logger.info("Loading module schema for: %s", m)
-            sealevel_schemas.append(load_facts_module_by_name(m))
-
-        # sealevel_schemas = [
-        #    load_facts_module_by_name(m) for m in skeleton.sealevel_modules
-        # ]
-        climate_data_file = skeleton.climate_data
-
+        sealevel_schemas = [
+            load_facts_module_by_name(m) for m in skeleton.sealevel_modules
+        ]
         sealevel_step = SealevelStep.from_module_schemas(
             sealevel_schemas,
-            climate_data_file=climate_data_file,
+            climate_data_file=skeleton.climate_data,
             module_regions=skeleton.module_regions,
         )
     else:
@@ -168,15 +159,12 @@ def experiment_skeleton_to_facts_experiment(
 
     # validate skeleton first
     validate_skeleton_modules(skeleton)
-    logger.info("Validated skeleton modules.")
     # hydrate skeleton to create steps
     climate_step, sealevel_step, totaling_step, extreme_sealevel_step = (
         hydrate_experiment(skeleton)
     )
-    logger.info("Hydrated experiment steps.")
     # Load schemas to derive which top-level and fingerprint keys this experiment needs
     schemas = [load_facts_module_by_name(m) for m in skeleton.all_module_names]
-    logger.info("Loaded module schemas.")
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
     cli_values: Dict[str, object] = {
         "pipeline-id": pipeline_id,
