@@ -165,8 +165,6 @@ def main(
         - If facts-total passed, collects workflows w/ user prompts
 
     """
-    # if debug:
-    #    logging.root.setLevel(logging.INFO)
     if debug_target:
         configure_logging(debug_target)
     elif debug:
@@ -260,8 +258,6 @@ def main(
     console.rule(style="rule", title="Generating experiment-config.yaml")
 
     # Step 2: Create FactsExperiment from template
-
-    # try:
     experiment = experiment_skeleton_to_facts_experiment(
         experiment_name=experiment_name,
         skeleton=skeleton,
@@ -278,13 +274,6 @@ def main(
         shared_input_data=shared_input_data,
         projection_scale=projection_scale,
     )
-    # except Exception as e:
-    #    raise click.ClickException(
-    #        f"Experiment config generation failed: {e} \n\n"
-    #        f"The experiment directory was created at: {experiment_path}"
-    #        f" But the experiment-config.yaml was NOT written. "
-    #        f" Delete this directory and re-run setup-experiment after fixing the issue listed above."
-    #    )
 
     # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
