@@ -6,26 +6,6 @@ from facts_experiment_builder.core.module.module_experiment_spec import (
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.steps.base import ExperimentStep
-import logging
-
-logger = logging.getLogger(__name__)
-
-
-def _validate_regions(schema: ModuleSchema, regions: List[str]) -> None:
-    """Raise ValueError if any region is not in the schema's allowed_values for 'region'."""
-    allowed: Optional[List[str]] = None
-    for opt_spec in schema.arguments.get("options", []):
-        if opt_spec.get("name") == "region" and "allowed_values" in opt_spec:
-            allowed = opt_spec["allowed_values"]
-            break
-    if allowed is None:
-        return  # module has no allowed_values constraint; accept anything
-    invalid = [r for r in regions if r not in allowed]
-    if invalid:
-        raise ValueError(
-            f"Invalid region(s) {invalid} for module '{schema.module_name}'. "
-            f"Allowed values: {allowed}"
-        )
 
 
 @dataclass
@@ -46,15 +26,14 @@ class SealevelStep(ExperimentStep):
             schemas: Module schemas for each sealevel module.
             climate_data_file: Pre-filled climate data file path, if known.
             module_regions: Optional dict mapping module names to a list of
-                regions (e.g. {"emulandice2-glaciers": ["RGI01", "RGI02"]}).
-                Modules listed here are expanded into one spec per region,
-                named '<module>-<region>'.  Modules not in this dict produce
-                a single spec as normal.
+                region values (e.g. {"emulandice2-glaciers": ["RGI01", "RGI02"]}).
+                When provided, pre-fills the region option for that module so the
+                experiment-config renders a list value that generates multiple
+                ``--region`` flags in the compose command.
         """
         module_regions = module_regions or {}
         specs = []
         for schema in schemas:
-            logger.info("Hydrating sealevel module: %s", schema.module_name)
             prefilled: Dict[str, str] = {}
             if climate_data_file and schema.uses_climate_file:
                 output_vol_keys = schema.get_output_volume_input_keys()
@@ -64,25 +43,14 @@ class SealevelStep(ExperimentStep):
                 prefilled = {k: climate_data_file for k in climate_keys}
 
             regions = module_regions.get(schema.module_name)
-            if regions:
-                _validate_regions(schema, regions)
-                for region in regions:
-                    instance_name = f"{schema.module_name}-{region}"
-                    logger.info("  Creating region instance: %s", instance_name)
-                    specs.append(
-                        ModuleExperimentSpec.from_module_schema(
-                            schema,
-                            prefilled_inputs=prefilled,
-                            region=region,
-                            instance_name=instance_name,
-                        )
-                    )
-            else:
-                specs.append(
-                    ModuleExperimentSpec.from_module_schema(
-                        schema, prefilled_inputs=prefilled
-                    )
+            prefilled_options = {"region": regions} if regions else None
+            specs.append(
+                ModuleExperimentSpec.from_module_schema(
+                    schema,
+                    prefilled_inputs=prefilled,
+                    prefilled_options=prefilled_options,
                 )
+            )
         return cls(module_specs_list=specs)
 
     @classmethod
