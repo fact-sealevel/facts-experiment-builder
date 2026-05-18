@@ -40,19 +40,6 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 
-def _base_module_name(module_name: str, metadata: Dict[str, Any]) -> str:
-    """Return the base module name for a (possibly region-instance) service name.
-
-    Region instances store '_base_module' in their metadata section.
-    E.g. 'emulandice2-glaciers-RGI01' -> 'emulandice2-glaciers'.
-    Falls back to module_name itself if no _base_module key is present.
-    """
-    section = metadata.get(module_name)
-    if isinstance(section, dict):
-        return section.get("_base_module") or module_name
-    return module_name
-
-
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
     """Extract a flat list of all module names from the experiment manifest keys."""
     names: List[str] = []
@@ -108,8 +95,7 @@ def _validate_climate_file_inputs(
     missing_climate_files = []
 
     for module_name in sealevel_modules:
-        base = _base_module_name(module_name, metadata)
-        module_yaml_path = find_module_yaml_path(base)
+        module_yaml_path = find_module_yaml_path(module_name)
         module_schema = load_facts_module_from_yaml(yaml_path=module_yaml_path)
 
         if not module_schema.uses_climate_file:
@@ -321,10 +307,7 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
 
     # Step 2: Build FactsExperiment — derive key sets from module schemas
     _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
-    _schemas = [
-        load_facts_module_by_name(_base_module_name(m, metadata))
-        for m in _manifest_module_names
-    ]
+    _schemas = [load_facts_module_by_name(m) for m in _manifest_module_names]
     _top_level_keys = set(collect_metadata_param_keys(_schemas, "top_level"))
     _fp_keys = set(collect_metadata_param_keys(_schemas, "fingerprint_params"))
     experiment = FactsExperiment.from_metadata_dict(
@@ -384,16 +367,12 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
     # Create sea level modules if specified
     for module_name in sealevel_module_names:
         try:
-            base = _base_module_name(module_name, metadata)
-            sl_yaml_path = find_module_yaml_path(base) if base != module_name else None
             module = create_module_service_spec_from_metadata(
                 metadata_path,
                 module_name=module_name,
                 module_type="sealevel_module",
                 metadata=metadata,
-                module_yaml_path=sl_yaml_path,
             )
-            # modules.append(module)
             modules["sealevel_modules"][module_name] = module
             print(f"✓ Created {module_name} module")
         except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
