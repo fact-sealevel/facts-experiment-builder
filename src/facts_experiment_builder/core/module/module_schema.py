@@ -50,7 +50,6 @@ class ModuleSchema:
                 f" Check the module YAML for '{self.module_name}' and ensure it has correct structure."
             )
         return list(outputs.get("files") or [])
-        # return list(self.arguments.get("outputs", {}).get("files") or [])
 
     def get_other_outputs(self) -> List[Dict[str, Any]]:
         """Non-file outputs (directories, string paths, etc.)."""
@@ -62,7 +61,6 @@ class ModuleSchema:
                 f" Check the module YAML for '{self.module_name}' and ensure it has correct structure."
             )
         return list(outputs.get("other") or [])
-        # return list(self.arguments.get("outputs", {}).get("other") or [])
 
     def get_outputs_list(
         self, suppress_output_types: Optional[set] = None

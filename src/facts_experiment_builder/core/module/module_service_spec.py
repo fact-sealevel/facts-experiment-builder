@@ -131,7 +131,11 @@ class ModuleServiceSpec:
         for arg_spec in arguments_config.get("options", []):
             value = self._process_argument(arg_spec)
             if value is not None:
-                command_args.append(f"--{arg_spec['name']}={value}")
+                if isinstance(value, list):
+                    for v in value:
+                        command_args.append(f"--{arg_spec['name']}={v}")
+                else:
+                    command_args.append(f"--{arg_spec['name']}={value}")
 
         # Process inputs (skip args that are handled via environment variable)
         for arg_spec in arguments_config.get("inputs", []):

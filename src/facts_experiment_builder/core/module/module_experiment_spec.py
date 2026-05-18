@@ -64,7 +64,6 @@ def _build_section_from_fields(
 
     for field_spec in fields:
         source = field_spec.get("source", "")
-        logger.info(f"Processing field: {field_spec.get('name', 'unknown')}")
         if "." not in source:
             continue
         # Pull out the last part of this obj
@@ -74,13 +73,13 @@ def _build_section_from_fields(
         default_value = field_spec.get("default_value")
         if default_value:
             bundle["default_value"] = default_value
-            logger.info("...default: %s", default_value)
+            logger.info("default: %s", default_value)
 
         if include_filename:
             filename = _resolve_filename(field_spec, options_context)
             if filename:
                 bundle["filename"] = filename
-            logger.info("...filename: %s", filename)
+            logger.info("filename: %s", filename)
         result[underscore_name] = bundle
 
     return result
@@ -104,7 +103,6 @@ class ModuleExperimentSpec:
     outputs: Dict[str, Any] = field(default_factory=dict)
     fingerprint_params: Dict[str, Any] = field(default_factory=dict)
     image: str = ""
-    base_module_name: Optional[str] = None  # set when module_name is a region instance
 
     # Constructors
     @classmethod
@@ -112,29 +110,29 @@ class ModuleExperimentSpec:
         cls,
         module_schema: ModuleSchema,
         prefilled_inputs: Optional[Dict[str, str]] = None,
-        region: Optional[str] = None,
-        instance_name: Optional[str] = None,
+        prefilled_options: Optional[Dict[str, Any]] = None,
     ) -> "ModuleExperimentSpec":
         """Build an initial spec with clue,value,default,filename placeholders.
 
         Args:
             module_schema: The base module schema.
             prefilled_inputs: Input values to pre-fill (e.g. climate_data_file).
-            region: When set, resolves filename_map entries and pre-sets the
-                region option as a plain value (not a clue/value bundle).
-            instance_name: Service/spec name to use instead of module_schema.module_name
-                (e.g. 'emulandice2-glaciers-RGI01'). Required when region is set.
+            prefilled_options: Option values to write as plain values instead of
+                clue/value bundles (e.g. {"region": ["RGI01", "RGI02"]} or
+                {"region": "RGI01"}).  The options_context used for filename_map
+                resolution is seeded from schema defaults; scalar values in
+                prefilled_options additionally override that context.
         """
         prefilled_inputs = prefilled_inputs or {}
-        effective_name = instance_name or module_schema.module_name
+        prefilled_options = prefilled_options or {}
 
-        logger.info("Building module experiment spec for: %s", effective_name)
-
-        # Build options context for filename_map resolution.
-        # If a specific region was supplied, it takes precedence over the schema default.
+        # Build options context for filename_map resolution, starting from schema defaults.
+        # Scalar values from prefilled_options override the defaults.
         options_context = _options_defaults_from_schema(module_schema)
-        if region:
-            options_context["region"] = region
+        for k, v in prefilled_options.items():
+            if not isinstance(v, list):
+                options_context[k] = v
+                options_context[k.replace("-", "_")] = v
 
         module_inputs = _build_section_from_fields(
             module_schema.arguments.get("inputs", []),
@@ -154,10 +152,10 @@ class ModuleExperimentSpec:
         options.update(
             _build_section_from_fields(module_schema.arguments.get("options", []))
         )
-        # When a region is specified, overwrite the region bundle with a plain value
-        # so the experiment-config renders 'region: RGI01' instead of a clue/placeholder.
-        if region and "region" in options:
-            options["region"] = region
+        # Overwrite clue/value bundles with pre-supplied plain values where provided.
+        for k, v in prefilled_options.items():
+            if k in options:
+                options[k] = v
 
         fingerprint_params = _build_section_from_fields(
             module_schema.arguments.get("fingerprint_params", []),
@@ -183,23 +181,22 @@ class ModuleExperimentSpec:
                     "required 'output_type' key in module YAML (arguments.outputs)."
                 )
             module_outputs[arg_name] = {
-                "value": f"{effective_name}/{filename}",
+                "value": f"{module_schema.module_name}/{filename}",
                 "output_type": output_type,
             }
         for arg_spec in module_schema.get_other_outputs():
             arg_name = arg_spec.get("name", "")
             if not arg_name:
                 continue
-            module_outputs[arg_name] = {"value": effective_name}
+            module_outputs[arg_name] = {"value": module_schema.module_name}
 
         return cls(
-            module_name=effective_name,
+            module_name=module_schema.module_name,
             inputs=module_inputs,
             options=options,
             outputs=module_outputs,
             fingerprint_params=fingerprint_params,
             image=module_schema.container_image,
-            base_module_name=module_schema.module_name if instance_name else None,
         )
 
     @classmethod
@@ -211,7 +208,6 @@ class ModuleExperimentSpec:
             outputs=dict(d.get("outputs") or {}),
             fingerprint_params=dict(d.get("fingerprint_params") or {}),
             image=d.get("image", ""),
-            base_module_name=d.get("_base_module") or None,
         )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -224,6 +220,4 @@ class ModuleExperimentSpec:
         }
         if self.fingerprint_params:
             d["fingerprint_params"] = dict(self.fingerprint_params)
-        if self.base_module_name:
-            d["_base_module"] = self.base_module_name
         return d
