@@ -1,5 +1,6 @@
 import click
 
+from facts_experiment_builder.cli.init_cli import init
 from facts_experiment_builder.cli.setup_experiment_cli import (
     main as setup_new_experiment_group,
 )
@@ -14,6 +15,7 @@ def main():
     pass
 
 
+main.add_command(init, name="init")
 main.add_command(setup_new_experiment_group, name="setup-experiment")
 main.add_command(generate_compose_group, name="generate-compose")
 main.add_command(list_modules, name="list-modules")
