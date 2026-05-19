@@ -9,9 +9,10 @@ This page contains instructions for getting started working with FACTS2. Configu
 
 1. **`feb init`** — initialize your workspace (creates `experiments/`, clones module registry)
 2. **Download input data** — see section ii below
-3. **`feb setup-experiment`** — configure an experiment and write `experiment-config.yaml`
-4. **`feb generate-compose`** — generate the Docker Compose run script
-5. **`docker compose ... up`** — run the experiment
+3. **`feb check-data`** — verify that all expected input files are present before running
+4. **`feb setup-experiment`** — configure an experiment and write `experiment-config.yaml`
+5. **`feb generate-compose`** — generate the Docker Compose run script
+6. **`docker compose ... up`** — run the experiment
 
 ---
 
@@ -31,6 +32,20 @@ This single command:
 3. Writes a `.facts-workspace` marker file
 
 It is safe to re-run on an already-initialized workspace — existing directories and files will not be overwritten.
+
+After running `feb init`, your workspace should look like this:
+
+```
+my-facts-workspace/
+├── .facts-workspace                  # marker file written by feb init
+├── experiments/                      # your experiment directories will go here
+└── facts-module-registry/            # cloned from GitHub
+    ├── fair-temperature/
+    │   └── fair_temperature_module.yaml
+    ├── bamber19-icesheets/
+    │   └── bamber19_icesheets_module.yaml
+    └── ... (one directory per module)
+```
 
 ---
 
@@ -68,44 +83,104 @@ The input data for each module is available at the Zenodo records shown below. Y
 > For copy & paste scripts to download input data for individual modules, head to the [module-specific input data downloads](module_input_data_downloads.md) page.
 
 ```bash
-mkdir -p data/module_specific_input_data/fair-temperature data/module_specific_input_data/fair2-climate data/module_specific_input_data/fittedismip-gris data/module_specific_input_data/bamber19-icesheets data/module_specific_input_data/deconto21-ais data/module_specific_input_data/ipccar5-glaciers data/module_specific_input_data/ipccar5-icesheets data/module_specific_input_data/larmip-ais data/module_specific_input_data/ssp-landwaterstorage data/module_specific_input_data/tlm-sterodynamics data/module_specific_input_data/ebm3-thermalexpansion
-
+# Create a sub-directory for each module & download that module's data
+# note: some modules, such as ipccar5 and emulandice2, share common input directories for multiple commands, ie. input data for both ipccar5-glaciers and ipccar5-icesheets is in ipccar5
+mkdir -p data/module_specific_input_data/fair-temperature
 curl -L https://zenodo.org/record/7478192/files/fair_temperature_fit_data.tgz -o data/module_specific_input_data/fair-temperature/fair_temperature_fit_data.tgz
 tar -xzf data/module_specific_input_data/fair-temperature/fair_temperature_fit_data.tgz -C data/module_specific_input_data/fair-temperature
 curl -L https://zenodo.org/record/7478192/files/fair_temperature_preprocess_data.tgz -o data/module_specific_input_data/fair-temperature/fair_temperature_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/fair-temperature/fair_temperature_preprocess_data.tgz -C data/module_specific_input_data/fair-temperature
 
+mkdir -p data/module_specific_input_data/fair2-climate
 curl -L https://zenodo.org/records/11506798/files/fair2_climate_project_data.tgz -o data/module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz
 tar -xzf data/module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz -C data/module_specific_input_data/fair2-climate
 
+mkdir -p data/module_specific_input_data/fittedismip-gris
 curl -L https://zenodo.org/record/7478192/files/FittedISMIP_icesheet_fit_data.tgz -o data/module_specific_input_data/fittedismip-gris/FittedISMIP_icesheet_fit_data.tgz
 tar -xzf data/module_specific_input_data/fittedismip-gris/FittedISMIP_icesheet_fit_data.tgz -C data/module_specific_input_data/fittedismip-gris
 
+mkdir -p data/module_specific_input_data/bamber19-icesheets
 curl -L https://zenodo.org/record/7478192/files/bamber19_icesheets_preprocess_data.tgz -o data/module_specific_input_data/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz -C data/module_specific_input_data/bamber19-icesheets
 
+mkdir -p data/module_specific_input_data/deconto21-ais
 curl -L https://zenodo.org/record/7478192/files/deconto21_AIS_preprocess_data.tgz -o data/module_specific_input_data/deconto21-ais/deconto21_AIS_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/deconto21-ais/deconto21_AIS_preprocess_data.tgz -C data/module_specific_input_data/deconto21-ais
 
+mkdir -p data/module_specific_input_data/ipccar5
 curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o data/module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz
 tar -xzf data/module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz -C data/module_specific_input_data/ipccar5-glaciers
 
+mkdir -p data/module_specific_input_data/ipccar5
 curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o data/module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz
 tar -xzf data/module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz -C data/module_specific_input_data/ipccar5-icesheets
 
+mkdir -p data/module_specific_input_data/larmip-ais
 curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_fit_data.tgz -o data/module_specific_input_data/larmip-ais/larmip_icesheet_fit_data.tgz
 tar -xzf data/module_specific_input_data/larmip-ais/larmip_icesheet_fit_data.tgz -C data/module_specific_input_data/larmip-ais
 curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_project_data.tgz -o data/module_specific_input_data/larmip-ais/larmip_icesheet_project_data.tgz
 tar -xzf data/module_specific_input_data/larmip-ais/larmip_icesheet_project_data.tgz -C data/module_specific_input_data/larmip-ais
 
+mkdir -p data/module_specific_input_data/ssp-landwaterstorage
 curl -L https://zenodo.org/record/7478192/files/ssp_landwaterstorage_preprocess_data.tgz -o data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz -C data/module_specific_input_data/ssp-landwaterstorage
 
+mkdir -p data/module_specific_input_data/tlm-sterodynamics
 curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_preprocess_data.tgz -o data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
 
+mkdir -p data/module_specific_input_data/ebm3-thermalexpansion
 curl -L https://zenodo.org/records/11506798/files/ebm3_thermal_expansion_data.tgz -o data/module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz
 tar -xzf data/module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz -C data/module_specific_input_data/ebm3-thermalexpansion
+
+mkdir -p data/module_specific_input_data/kopp14-verticallandmotion
+curl -L https://zenodo.org/record/7478192/files/kopp14_verticallandmotion_preprocess_data.tgz -o data/module_specific_input_data/kopp14-verticallandmotion/kopp14_verticallandmotion_preprocess_data.tgz
+tar -xzf data/module_specific_input_data/kopp14-verticallandmotion/kopp14_verticallandmotion_preprocess_data.tgz -C data/module_specific_input_data/kopp14-verticallandmotion
+
+mkdir -p data/module_specific_input_data/oelsmann24-verticallandmotion
+curl -L https://zenodo.org/records/18199757/files/oelsmann24_vlm_data.tar.gz -o data/module_specific_input_data/oelsmann24-verticallandmotion/oelsmann24_vlm_data.tar.gz
+tar -xzf data/module_specific_input_data/oelsmann24-verticallandmotion/oelsmann24_vlm_data.tar.gz -C data/module_specific_input_data/oelsmann24-verticallandmotion
+
+mkdir -p data/module_specific_input_data/nzinsargps-verticallandmotion
+curl -L https://zenodo.org/record/7478192/files/NZInsarGPS_verticallandmotion_preprocess_data.tgz -o data/module_specific_input_data/nzinsargps-verticallandmotion/NZInsarGPS_verticallandmotion_preprocess_data.tgz
+tar -xzf data/module_specific_input_data/nzinsargps-verticallandmotion/NZInsarGPS_verticallandmotion_preprocess_data.tgz -C data/module_specific_input_data/nzinsargps-verticallandmotion
 ```
 
-You are now ready to start creating FACTS2 experiments! Head back to the facts-experiment-builder [README](../README.md#create-an-experiment) for an example of how to create a new experiment with `feb setup-experiment`.
+---
+
+## iii. Verifying your data with `feb check-data`
+
+After downloading input data, run `feb check-data` from your workspace root to verify that all expected files are present before setting up an experiment:
+
+```shell
+feb check-data --data-dir data
+```
+
+This scans `data/module_specific_input_data/` for any module directories you have downloaded, checks that every expected input file is present according to the module registry, and also checks `data/shared_input_data/`. It reports a ✓ or ✗ per module, lists any missing files by path, and flags any subdirectories that don't correspond to a known module.
+
+Example output:
+
+```
+- - - - - - - - -  Checking FACTS data directory  - - - - - - - - -
+Module-specific inputs: data/module_specific_input_data
+Shared inputs:          data/shared_input_data
+
+✓ fair-temperature (4/4 files present)
+✗ bamber19-icesheets (0/1 files present)
+  missing: data/module_specific_input_data/bamber19-icesheets/bamber19_icesheets_preprocess_data.tgz
+
+Shared input data:
+✓ shared_input_data (3/3 files present)
+
+To download missing files, see docs/module_input_data_downloads.md in the
+facts-experiment-builder repo. To see exactly which filenames a module expects,
+check the module's YAML in facts-module-registry.
+
+- - - - - - - - -  1 module(s) have missing files  - - - - - - - - -
+
+3 module(s) checked — 2 complete, 1 with missing files
+```
+
+If `--data-dir` is not specified it defaults to `./data`. You can override individual paths with `--module-specific-input-data` and `--shared-input-data` if your data is not in the standard layout.
+
+Once all modules show ✓, you are ready to create experiments. Head to the facts-experiment-builder [README](../README.md#create-an-experiment) for an example of how to create a new experiment with `feb setup-experiment`.
