@@ -115,3 +115,27 @@ mkdir -p data/module_specific_input_data/ebm3-thermalexpansion
 curl -L https://zenodo.org/records/11506798/files/ebm3_thermal_expansion_data.tgz -o data/module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz
 tar -xzf data/module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz -C data/module_specific_input_data/ebm3-thermalexpansion
 ```
+
+### kopp14-verticallandmotion
+
+```bash
+mkdir -p data/module_specific_input_data/kopp14-verticallandmotion
+curl -L https://zenodo.org/record/7478192/files/kopp14_verticallandmotion_preprocess_data.tgz -o data/module_specific_input_data/kopp14-verticallandmotion/kopp14_verticallandmotion_preprocess_data.tgz
+tar -xzf data/module_specific_input_data/kopp14-verticallandmotion/kopp14_verticallandmotion_preprocess_data.tgz -C data/module_specific_input_data/kopp14-verticallandmotion
+```
+
+### oelsmann24-verticallandmotion
+
+```bash
+mkdir -p data/module_specific_input_data/oelsmann24-verticallandmotion
+curl -L https://zenodo.org/records/18199757/files/oelsmann24_vlm_data.tar.gz -o data/module_specific_input_data/oelsmann24-verticallandmotion/oelsmann24_vlm_data.tar.gz
+tar -xzf data/module_specific_input_data/oelsmann24-verticallandmotion/oelsmann24_vlm_data.tar.gz -C data/module_specific_input_data/oelsmann24-verticallandmotion
+```
+
+### nzinsargps-verticallandmotion
+
+```bash
+mkdir -p data/module_specific_input_data/nzinsargps-verticallandmotion
+curl -L https://zenodo.org/record/7478192/files/NZInsarGPS_verticallandmotion_preprocess_data.tgz -o data/module_specific_input_data/nzinsargps-verticallandmotion/NZInsarGPS_verticallandmotion_preprocess_data.tgz
+tar -xzf data/module_specific_input_data/nzinsargps-verticallandmotion/NZInsarGPS_verticallandmotion_preprocess_data.tgz -C data/module_specific_input_data/nzinsargps-verticallandmotion
+```
