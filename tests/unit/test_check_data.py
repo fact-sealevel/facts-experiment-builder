@@ -1,7 +1,6 @@
 """Unit tests for application/check_data.py."""
 
 import yaml
-import pytest
 from pathlib import Path
 
 from facts_experiment_builder.application.check_data import (
@@ -23,9 +22,7 @@ def _write_module_yaml(registry_dir: Path, module_name: str, inputs: list) -> No
     module_dir.mkdir(parents=True, exist_ok=True)
     snake = module_name.replace("-", "_")
     yaml_path = module_dir / f"{snake}_module.yaml"
-    yaml_path.write_text(
-        yaml.dump({"arguments": {"inputs": inputs}})
-    )
+    yaml_path.write_text(yaml.dump({"arguments": {"inputs": inputs}}))
 
 
 def _write_module_yaml_with_args(

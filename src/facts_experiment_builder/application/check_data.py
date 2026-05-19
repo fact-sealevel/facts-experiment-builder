@@ -270,6 +270,8 @@ def check_module_data(
             )
 
     discovered_names = [r.module_name for r in result.module_results]
-    result.shared_checks = check_shared_data(discovered_names, shared_input_dir, registry)
+    result.shared_checks = check_shared_data(
+        discovered_names, shared_input_dir, registry
+    )
 
     return result

@@ -84,7 +84,9 @@ def check_data(
 
     for module_result in result.module_results:
         if module_result.n_checkable == 0:
-            console.print(f"[muted]{module_result.module_name}: no checkable inputs[/muted]")
+            console.print(
+                f"[muted]{module_result.module_name}: no checkable inputs[/muted]"
+            )
             continue
 
         n_present = module_result.n_present
@@ -139,7 +141,9 @@ def check_data(
 
     if result.unrecognized_dirs:
         console.print()
-        console.print("[warning]Unrecognized directories (not in module registry):[/warning]")
+        console.print(
+            "[warning]Unrecognized directories (not in module registry):[/warning]"
+        )
         for d in result.unrecognized_dirs:
             console.print(f"  [muted]{d}[/muted]")
 
@@ -149,7 +153,9 @@ def check_data(
 
     console.print()
     if n_issues == 0:
-        console.rule(style="rule", title="[success]All checked modules look good![/success]")
+        console.rule(
+            style="rule", title="[success]All checked modules look good![/success]"
+        )
     else:
         console.rule(
             style="rule",
