@@ -8,7 +8,7 @@
 
 
 ## Overview
-`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that are used to run the experiment. FEB offers a CLI tool with commands to configure an experiment and write an experiment configuration file (`feb setup-experiment`) and generate an executable experiment script (`feb generate-compose`) from an experiment configuration file. If you are familiar with FACTS1, a FACTS2 `experiment-config.yaml` is similar to a `config.yaml` file that was used to define experiments in the previous framework. 
+`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that are used to run the experiment. FEB offers a CLI with three main commands: `feb init` to set up a workspace, `feb setup-experiment` to configure an experiment and write an experiment configuration file, and `feb generate-compose` to generate an executable experiment script from that configuration file. If you are familiar with FACTS1, a FACTS2 `experiment-config.yaml` is similar to a `config.yaml` file that was used to define experiments in the previous framework.
 
 An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
 
@@ -36,9 +36,24 @@ Other important pages:
 
 ## Getting started
 
-Check out our [quickstart](QUICKSTART.md) guide for instructions on how to begin creating FACTS2 experiments. This page will show you how to download and organize input data used in FACTS2 modules and how to access the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry), which holds information about all of the modules available to use in FACTS2 experiments with FEB. 
+### Initialize your workspace
 
-Once you have downloaded and organized input data for the modules you'd like to use and cloned the module registry to your local project workspace, you can proceed to the next section that demonstrates how to configure and run an experiment using `facts-experiment-builder`. 
+Before creating experiments, run `feb init` from your project directory to set up a FACTS workspace:
+
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb init
+```
+
+This command:
+- Creates an `experiments/` subdirectory
+- Clones the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry) into your workspace
+- Writes a `.facts-workspace` marker file
+
+It is safe to re-run on an already-initialized workspace — existing directories and files will not be overwritten.
+
+After initializing, download input data for the modules you plan to use. Check out our [quickstart](QUICKSTART.md) guide for instructions on downloading and organizing module input data.
+
+Once you have downloaded and organized input data, you can proceed to the next section that demonstrates how to configure and run an experiment using `facts-experiment-builder`.
 
 The rest of the examples in this page will demonstrate how to create and run a facts experiment called `my_first_experiment`. You can see the files associated with this experiment in `./experiments/my_first_experiment/`. 
 
@@ -101,7 +116,25 @@ docker compose -f experiments/my_first_experiment/experiment-compose.yaml up
 **Not yet implemented: async-flow equivalent of `generate-compose`.**
 
 ## Features
-facts-experiment-builder is a command line application with two main functions:
+facts-experiment-builder is a command line application with three main commands:
+
+**`init`**
+Initialize a FACTS workspace in the current directory. Creates the `experiments/` subdirectory, clones the module registry, and writes a `.facts-workspace` marker. Safe to re-run.
+
+```shell
+Usage: feb init [OPTIONS]
+
+  Initialize a FACTS workspace in the current directory.
+
+  Creates experiments/, clones the module registry, and writes a
+  .facts-workspace marker file. Safe to re-run on an already-initialized
+  workspace.
+
+Options:
+  --registry-url TEXT  Git URL of the facts-module-registry to clone.
+                       [default: https://github.com/fact-sealevel/facts-module-registry.git]
+  -h, --help           Show this message and exit.
+```
 
 **`setup-experiment`**
 Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
@@ -111,9 +144,9 @@ Each step accepts either a module name or a path to pre-existing data:
 - `--sealevel-step` / `--supplied-totaled-sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
 
 ```shell
-Usage: setup-experiment [OPTIONS]
+Usage: feb setup-experiment [OPTIONS]
 
-  Set up a new experiment with setup-experiment CLI command. This function
+  Set up a new experiment with setup-new-experiment CLI command. This function
   includes a number of steps:
 
       - Creates a sub-directory in experiments/ for this experiment. Raises
@@ -152,12 +185,24 @@ Options:
   --pyear-end INTEGER             Projection year end
   --pyear-step INTEGER            Projection year step
   --nsamps INTEGER                Number of samples
-  --location-file TEXT            Location file name
-  --module-specific-inputs TEXT   Path to module-specific input data (written
-                                  to experiment metadata)
-  --shared-inputs TEXT            Path to shared input data (written to
-                                  experiment metadata)
-  --debug / --no-debug
+  --location-file TEXT            Location file name (Must be in 'shared-
+                                  input-data' directory).
+  --module-specific-input-data TEXT
+                                  Absolute path to module-specific input data
+                                  to use in experiment.
+  --shared-input-data TEXT        Absolute path to shared input data to use in
+                                  experiment.
+  --projection-scale [global|local|both]
+                                  Projection scale for this experiment:
+                                  'global', 'local', or 'both'.  [default:
+                                  local]
+  --module-regions TEXT           Specify regions for a module, format:
+                                  module-name=REGION1,REGION2. Repeatable.
+                                  Example: --module-regions
+                                  emulandice2-glaciers=RGI01,RGI02
+  --debug                         Enable debug logging globally.
+  --debug-target TEXT             enable debug logging for a specific module
+                                  only.
   -h, --help                      Show this message and exit.
 ```
 
