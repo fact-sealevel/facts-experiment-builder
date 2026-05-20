@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- `feb init` command that initializes a facts workspace directory by creating a blank `experiments/` dir and cloning the module registry repo ([PR #72](https://github.com/fact-sealevel/facts-experiment-builder/pull/72), [@e-marshall](https://github.com/e-marshall))
+- `feb check-data` command that checks to see which modules have input data downloaded at a provided location and if the contents match the expected structure and the files expected (as specified in the module registry) ([PR #72](https://github.com/fact-sealevel/facts-experiment-builder/pull/72), [@e-marshall](https://github.com/e-marshall)).
+
+- Initial support for emulandice2. Still does not correctly handle all region options or write localized outputs ([PR #72](https://github.com/fact-sealevel/facts-experiment-builder/pull/72), [@e-marshall](https://github.com/e-marshall)).
+
 ### Fixed
 - Correct outputs now passed to totaling step ([PR #67](https://github.com/fact-sealevel/facts-experiment-builder/pull/67), [@e-marshall](https://github.com/e-marshall))
 
