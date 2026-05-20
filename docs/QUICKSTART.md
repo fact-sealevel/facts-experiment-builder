@@ -183,4 +183,4 @@ check the module's YAML in facts-module-registry.
 
 If `--data-dir` is not specified it defaults to `./data`. You can override individual paths with `--module-specific-input-data` and `--shared-input-data` if your data is not in the standard layout.
 
-Once all modules show ✓, you are ready to create experiments. Head to the facts-experiment-builder [README](../README.md#create-an-experiment) for an example of how to create a new experiment with `feb setup-experiment`.
+Once all modules that you plan to run show ✓, you are ready to create experiments. Head to the facts-experiment-builder [README](../README.md#create-an-experiment) for an example of how to create a new experiment with `feb setup-experiment`.
