@@ -1,5 +1,6 @@
 import subprocess
 import warnings
+import os
 from pathlib import Path
 from typing import List, Optional
 
@@ -14,6 +15,9 @@ class ModuleRegistry:
 
     @classmethod
     def default(cls) -> "ModuleRegistry":
+        env_dir = os.environ.get("FEB_MODULE_REGISTRY_DIR")
+        if env_dir:
+            return cls(Path(env_dir))
         workspace_dir = Path.cwd() / "facts-module-registry"
         if workspace_dir.exists():
             _warn_if_registry_dirty(workspace_dir)
