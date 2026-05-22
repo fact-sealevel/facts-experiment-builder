@@ -189,6 +189,58 @@ def test_hydrate_sealevel_step_skips_merge_for_modules_without_climate_file(mock
     assert "climate_data_file" not in inputs
 
 
+# --- top_level_context threading ---
+
+
+@patch(
+    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+)
+def test_hydrate_sealevel_step_passes_top_level_context_to_specs(mock_load):
+    """top_level_context (e.g. pyear_end) must reach ModuleExperimentSpec so
+    multi-key filename_map resolution can use it."""
+    schema = ModuleSchema(
+        module_name="emulandice2-ais",
+        container_image="test/image:latest",
+        arguments={
+            "inputs": [
+                {
+                    "name": "emu-file",
+                    "source": "module_inputs.inputs.emu_file",
+                    "optional": True,
+                    "help": "Emulation file",
+                    "filename_map": {
+                        "keys": ["pyear_end", "region"],
+                        "map": {2300: {"ALL": "AIS_ALL_2300.RData"}},
+                    },
+                    "mount": {"volume": "mod_in", "container_path": "/mnt/in"},
+                }
+            ],
+            "options": [
+                {
+                    "name": "region",
+                    "source": "module_inputs.options.region",
+                    "optional": False,
+                    "default_value": "ALL",
+                }
+            ],
+            "outputs": {"files": [], "other": []},
+            "top_level": [],
+            "fingerprint_params": [],
+        },
+        volumes={},
+    )
+    mock_load.return_value = schema
+    skeleton = make_skeleton(sealevel_modules=["emulandice2-ais"])
+
+    step = hydrate_sealevel_step(
+        skeleton,
+        top_level_context={"pyear_end": 2300, "pyear-end": 2300},
+    )
+
+    emu_bundle = step.module_specs_list[0].inputs.get("emu_file", {})
+    assert emu_bundle.get("filename") == "AIS_ALL_2300.RData"
+
+
 # --- collect_metadata_param_keys ---
 
 

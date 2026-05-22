@@ -124,7 +124,17 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
             else:
                 lines.append(f"{indent_str}  {cli_value}  # user specified value")
         elif filename:
-            if isinstance(filename, str) and ("/" in filename or " " in filename):
+            if isinstance(filename, list):
+                for f in filename:
+                    if isinstance(f, str) and ("/" in f or " " in f):
+                        lines.append(
+                            f'{indent_str}  - "{f}"  # filename from module defaults'
+                        )
+                    else:
+                        lines.append(
+                            f"{indent_str}  - {f}  # filename from module defaults"
+                        )
+            elif isinstance(filename, str) and ("/" in filename or " " in filename):
                 lines.append(
                     f'{indent_str}  "{filename}"  # filename from module defaults'
                 )
