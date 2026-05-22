@@ -19,6 +19,7 @@ class SealevelStep(ExperimentStep):
         schemas: List[ModuleSchema],
         climate_data_file: Optional[str] = None,
         module_regions: Optional[Dict[str, List[str]]] = None,
+        top_level_context: Optional[Dict[str, Any]] = None,
     ) -> "SealevelStep":
         """Build a SealevelStep from module schemas.
 
@@ -30,6 +31,9 @@ class SealevelStep(ExperimentStep):
                 When provided, pre-fills the region option for that module so the
                 experiment-config renders a list value that generates multiple
                 ``--region`` flags in the compose command.
+            top_level_context: Top-level experiment params (e.g. {"pyear_end": 2300})
+                passed through to ModuleExperimentSpec for multi-key filename_map
+                resolution.
         """
         module_regions = module_regions or {}
         specs = []
@@ -49,6 +53,7 @@ class SealevelStep(ExperimentStep):
                     schema,
                     prefilled_inputs=prefilled,
                     prefilled_options=prefilled_options,
+                    top_level_context=top_level_context,
                 )
             )
         return cls(module_specs_list=specs)
