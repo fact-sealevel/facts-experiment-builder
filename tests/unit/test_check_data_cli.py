@@ -3,10 +3,14 @@
 import pytest
 import click
 
-from facts_experiment_builder.cli.check_data_cli import resolve_input_paths, check_provided_paths
+from facts_experiment_builder.cli.check_data_cli import (
+    resolve_input_paths,
+    check_provided_paths,
+)
 
 
 # --- resolve_input_paths: data_dir-only cases ---
+
 
 def test_resolve_fails_when_both_subdirs_missing(tmp_path):
     with pytest.raises(ValueError, match="Expected subdirectory not found:"):
@@ -15,13 +19,17 @@ def test_resolve_fails_when_both_subdirs_missing(tmp_path):
 
 def test_resolve_fails_when_module_subdir_missing(tmp_path):
     (tmp_path / "shared_input_data").mkdir()
-    with pytest.raises(ValueError, match="Expected subdirectory not found:.*module_specific_input_data"):
+    with pytest.raises(
+        ValueError, match="Expected subdirectory not found:.*module_specific_input_data"
+    ):
         resolve_input_paths(tmp_path, None, None)
 
 
 def test_resolve_fails_when_shared_subdir_missing(tmp_path):
     (tmp_path / "module_specific_input_data").mkdir()
-    with pytest.raises(ValueError, match="Expected subdirectory not found:.*shared_input_data"):
+    with pytest.raises(
+        ValueError, match="Expected subdirectory not found:.*shared_input_data"
+    ):
         resolve_input_paths(tmp_path, None, None)
 
 
@@ -50,6 +58,7 @@ def test_resolve_data_dir_only_returns_derived_paths(tmp_path):
 
 # --- resolve_input_paths: explicit path cases ---
 
+
 def test_resolve_explicit_paths_returned_directly(tmp_path):
     module_path = tmp_path / "my_modules"
     shared_path = tmp_path / "my_shared"
@@ -66,7 +75,9 @@ def test_resolve_fails_when_explicit_module_path_missing(tmp_path):
     shared_path = tmp_path / "shared"
     shared_path.mkdir()
 
-    with pytest.raises(ValueError, match="Module-specific input data directory not found"):
+    with pytest.raises(
+        ValueError, match="Module-specific input data directory not found"
+    ):
         resolve_input_paths(tmp_path, tmp_path / "does_not_exist", shared_path)
 
 
@@ -79,6 +90,7 @@ def test_resolve_fails_when_explicit_shared_path_missing(tmp_path):
 
 
 # --- resolve_input_paths: mixed (one explicit, one derived) ---
+
 
 def test_resolve_explicit_module_overrides_data_dir(tmp_path):
     explicit_module = tmp_path / "custom_modules"
@@ -103,6 +115,7 @@ def test_resolve_explicit_shared_overrides_data_dir(tmp_path):
 
 
 # --- check_provided_paths: verifies ValueError is wrapped as click.UsageError ---
+
 
 def test_check_provided_paths_wraps_as_usage_error(tmp_path):
     with pytest.raises(click.UsageError):

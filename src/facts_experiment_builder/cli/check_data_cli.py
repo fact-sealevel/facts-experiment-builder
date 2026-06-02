@@ -62,9 +62,12 @@ def check_provided_paths(
     shared_input_data: Path | None,
 ) -> tuple[Path, Path]:
     try:
-        return resolve_input_paths(data_dir, module_specific_input_data, shared_input_data)
+        return resolve_input_paths(
+            data_dir, module_specific_input_data, shared_input_data
+        )
     except ValueError as e:
         raise click.UsageError(str(e))
+
 
 def check_registry_accessible():
     try:
@@ -77,6 +80,8 @@ def check_registry_accessible():
             "If not, cd there and re-run. If you haven't set up a workspace yet, "
             "run `feb init` first."
         )
+
+
 def check_data(
     data_dir: Path,
     module_specific_input_data: Path | None,
