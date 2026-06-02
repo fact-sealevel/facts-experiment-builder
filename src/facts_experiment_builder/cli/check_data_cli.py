@@ -5,8 +5,7 @@ from pathlib import Path
 
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.check_data import check_module_data
-from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
-
+from facts_experiment_builder.cli.utils import check_registry_accessible
 
 def resolve_input_paths(
     data_dir: Path,
@@ -67,19 +66,6 @@ def check_provided_paths(
         )
     except ValueError as e:
         raise click.UsageError(str(e))
-
-
-def check_registry_accessible():
-    try:
-        registry = ModuleRegistry.default()
-        return registry
-    except FileNotFoundError as e:
-        raise click.UsageError(
-            f"{e}\n"
-            "Are you running this from your FACTS workspace root? "
-            "If not, cd there and re-run. If you haven't set up a workspace yet, "
-            "run `feb init` first."
-        )
 
 
 def check_data(

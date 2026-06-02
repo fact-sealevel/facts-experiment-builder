@@ -1,20 +1,12 @@
 import click
-from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.cli.theme import console
-
+from facts_experiment_builder.cli.utils import check_registry_accessible
 
 @click.command()
 def list_modules():
     """List all modules in the registry. These are all of the modules that can be included in experiments built with facts-experiment-builder."""
-    try:
-        module_registry = ModuleRegistry.default()
-    except FileNotFoundError as e:
-        raise click.UsageError(
-            f"{e}\n"
-            "Are you running this from your FACTS workspace root? "
-            "If not, cd there and re-run. If you haven't set up a workspace yet, "
-            "run `feb init` first."
-        )
+    
+    module_registry = check_registry_accessible()
 
     console.rule(characters="- - ", style="rule", title="list-modules")
     console.print(
