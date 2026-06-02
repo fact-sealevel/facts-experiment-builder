@@ -78,7 +78,7 @@ echo "New_York	12	40.70	-74.01" > data/shared_input_data/location.lst
 
 ### Downloading module-specific input data for all modules
 
-The input data for each module is available at the Zenodo records shown below. You can also find this information in the README.md of each module in https://github.com/fact-sealevel.
+The input data for each module is available at the Zenodo records shown below. You can also find this information in the README.md of each module in https://github.com/fact-sealevel and in the module's entry in the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry).
 
 > [!NOTE]
 > For copy & paste scripts to download input data for individual modules, head to the [module-specific input data downloads](module_input_data_downloads.md) page.

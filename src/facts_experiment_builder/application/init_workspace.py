@@ -16,6 +16,7 @@ import yaml
 
 
 REGISTRY_URL = "https://github.com/fact-sealevel/facts-module-registry.git"
+REGISTRY_DIR_NAME = "facts-module-registry"
 WORKSPACE_MARKER_FILENAME = ".facts-workspace"
 
 
@@ -36,6 +37,7 @@ class InitStepResult:
 class WorkspaceInitResult:
     experiments_dir: InitStepResult
     registry: InitStepResult
+    gitignore: InitStepResult
     marker_file: InitStepResult
 
 
@@ -57,7 +59,7 @@ def ensure_registry_cloned(
     Returns CREATED, ALREADY_EXISTS, or FAILED. Never raises — failure is
     encoded in the return value so the CLI layer decides how to handle it.
     """
-    registry_dir = workspace_dir / "facts-module-registry"
+    registry_dir = workspace_dir / REGISTRY_DIR_NAME
     if registry_dir.exists():
         return InitStepResult(
             StepStatus.ALREADY_EXISTS, "Already exists.", registry_dir
@@ -81,6 +83,27 @@ def ensure_registry_cloned(
             registry_dir,
         )
     return InitStepResult(StepStatus.CREATED, "Cloned.", registry_dir)
+
+
+def ensure_gitignore(workspace_dir: Path) -> InitStepResult:
+    """Add facts-module-registry/ to .gitignore, creating the file if needed.
+
+    Prevents the cloned registry from being accidentally staged if the user
+    later runs `git init` in their workspace.
+    """
+    gitignore_path = workspace_dir / ".gitignore"
+    entry = f"{REGISTRY_DIR_NAME}/"
+
+    if gitignore_path.exists():
+        existing = gitignore_path.read_text()
+        if entry in existing.splitlines():
+            return InitStepResult(StepStatus.ALREADY_EXISTS, "Entry already present.", gitignore_path)
+        separator = "" if existing.endswith("\n") else "\n"
+        gitignore_path.write_text(existing + separator + entry + "\n")
+        return InitStepResult(StepStatus.CREATED, "Entry added.", gitignore_path)
+
+    gitignore_path.write_text(entry + "\n")
+    return InitStepResult(StepStatus.CREATED, "Created.", gitignore_path)
 
 
 def ensure_workspace_marker(
@@ -111,6 +134,7 @@ def init_workspace(
     """
     experiments_result = ensure_experiments_dir(workspace_dir)
     registry_result = ensure_registry_cloned(workspace_dir, registry_url)
+    gitignore_result = ensure_gitignore(workspace_dir)
 
     if registry_result.status == StepStatus.FAILED:
         marker_result = InitStepResult(
@@ -123,5 +147,6 @@ def init_workspace(
     return WorkspaceInitResult(
         experiments_dir=experiments_result,
         registry=registry_result,
+        gitignore=gitignore_result,
         marker_file=marker_result,
     )
