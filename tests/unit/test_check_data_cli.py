@@ -2,7 +2,6 @@
 
 import pytest
 import click
-
 from facts_experiment_builder.cli.check_data_cli import (
     resolve_input_paths,
     check_provided_paths,
