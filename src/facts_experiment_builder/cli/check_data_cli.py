@@ -95,6 +95,8 @@ def check_data(
     you have downloaded data for will be checked.
     """
 
+    # Check that provided paths are valid
+    # Resolve paths checks if valid, check_provided_paths raises error if not
     module_dir, shared_dir = check_provided_paths(
         data_dir=data_dir,
         module_specific_input_data=module_specific_input_data,
@@ -105,6 +107,7 @@ def check_data(
     console.print(f"[muted]Module-specific inputs: {module_dir}[/muted]")
     console.print(f"[muted]Shared inputs:           {shared_dir}[/muted]\n")
 
+    # Check if the module registry is accessible to program in expected loc
     registry = check_registry_accessible()
 
     result = check_module_data(
