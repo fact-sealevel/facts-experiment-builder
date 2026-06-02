@@ -7,6 +7,7 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.check_data import check_module_data
 from facts_experiment_builder.cli.utils import check_registry_accessible
 
+
 def resolve_input_paths(
     data_dir: Path,
     module_specific_input_data: Path | None,

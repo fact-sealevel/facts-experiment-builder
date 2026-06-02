@@ -2,10 +2,11 @@ import click
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.utils import check_registry_accessible
 
+
 @click.command()
 def list_modules():
     """List all modules in the registry. These are all of the modules that can be included in experiments built with facts-experiment-builder."""
-    
+
     module_registry = check_registry_accessible()
 
     console.rule(characters="- - ", style="rule", title="list-modules")

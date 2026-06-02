@@ -3,6 +3,7 @@
 import click
 from facts_experiment_builder.core.registry import ModuleRegistry
 
+
 def check_registry_accessible():
     try:
         registry = ModuleRegistry.default()
