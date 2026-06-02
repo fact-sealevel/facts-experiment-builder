@@ -47,6 +47,7 @@ my-facts-workspace/
     └── ... (one directory per module)
 ```
 
+For more detail on the `experiments/` directory, head [here](EXPERIMENTS.md)
 ---
 
 ## ii. Downloading module input data

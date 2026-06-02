@@ -98,6 +98,9 @@ tar -xzf data/module_specific_input_data/larmip-ais/larmip_icesheet_project_data
 mkdir -p data/module_specific_input_data/ssp-landwaterstorage
 curl -L https://zenodo.org/record/7478192/files/ssp_landwaterstorage_preprocess_data.tgz -o data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz -C data/module_specific_input_data/ssp-landwaterstorage
+
+curl -sL https://zenodo.org/record/7478192/files/ssp_landwaterstorage_postprocess_data.tgz -o data/module_specific_input_data/ssp-landwaterstoage/ssp_landwaterstorage_postprocess_data.tgz
+tar -zx data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_postprocess_data.tgz -C data/module_specific_input_data/ssp-landwaterstorage
 ```
 
 ### tlm-sterodynamics
@@ -106,6 +109,9 @@ tar -xzf data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstora
 mkdir -p data/module_specific_input_data/tlm-sterodynamics
 curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_preprocess_data.tgz -o data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
+
+curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_cmip6_data.tgz -o data/module_specific_iput_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz
+tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
 ```
 
 ### ebm3-thermalexpansion
