@@ -164,6 +164,8 @@ def _build_section_from_fields(
             filename = _resolve_filename(field_spec, options_context)
             if filename:
                 bundle["filename"] = filename
+                if isinstance(filename, list) and field_spec.get("multiple", False) and bundle.get("value") is None:
+                    bundle["value"] = filename
             logger.info("filename: %s", filename)
         result[underscore_name] = bundle
 
