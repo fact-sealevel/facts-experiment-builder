@@ -229,7 +229,6 @@ class ModuleExperimentSpec:
             prefilled_values=prefilled_inputs,
             options_context=options_context,
         )
-
         options: Dict[str, Any] = {}
         top_level_names = [
             arg.get("name", "") for arg in module_schema.arguments.get("top_level", [])

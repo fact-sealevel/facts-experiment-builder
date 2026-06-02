@@ -8,32 +8,75 @@ from facts_experiment_builder.application.check_data import check_module_data
 from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 
 
-@click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option(
-    "--data-dir",
-    type=click.Path(path_type=Path),
-    default=Path("data"),
-    show_default=True,
-    help=(
-        "Root data directory. Expects module_specific_input_data/ and "
-        "shared_input_data/ subdirectories. Overridden by --module-specific-input-data "
-        "and --shared-input-data if provided."
-    ),
-)
-@click.option(
-    "--module-specific-input-data",
-    "module_specific_input_data",
-    type=click.Path(path_type=Path),
-    default=None,
-    help="Path to module-specific input data directory. Overrides --data-dir derived path.",
-)
-@click.option(
-    "--shared-input-data",
-    "shared_input_data",
-    type=click.Path(path_type=Path),
-    default=None,
-    help="Path to shared input data directory. Overrides --data-dir derived path.",
-)
+def resolve_input_paths(
+    data_dir: Path,
+    module_specific_input_data: Path | None,
+    shared_input_data: Path | None,
+) -> tuple[Path, Path]:
+    """Resolve and validate module-specific and shared input data paths.
+
+    Valid combinations:
+        - data_dir only: expects module_specific_input_data/ and shared_input_data/ subdirs
+        - Either or both explicit paths: override the corresponding data_dir-derived subdir
+        - Both explicit paths: data_dir is ignored for resolution
+
+    Raises:
+        ValueError: if a resolved path does not exist on disk
+    """
+    module_dir = module_specific_input_data or data_dir / "module_specific_input_data"
+    shared_dir = shared_input_data or data_dir / "shared_input_data"
+
+    if not module_dir.exists():
+        if module_specific_input_data:
+            raise ValueError(
+                f"Module-specific input data directory not found: {module_dir}\n"
+                "Create it and download module input data first. See the quickstart guide."
+            )
+        existing_subdirs = [p.name for p in data_dir.iterdir() if p.is_dir()]
+        raise ValueError(
+            f"Expected subdirectory not found: {data_dir}/module_specific_input_data\n"
+            f"Existing subdirectories at {data_dir}: {existing_subdirs}. "
+            "Names MUST match 'module_specific_input_data' and 'shared_input_data'\n"
+            "Either create this subdirectory and add module data, or specify the correct "
+            "path with --module-specific-input-data."
+        )
+
+    if not shared_dir.exists():
+        if shared_input_data:
+            raise ValueError(
+                f"Shared input data directory not found: {shared_dir}\n"
+                "Create it and add shared input data first. See the quickstart guide."
+            )
+        raise ValueError(
+            f"Expected subdirectory not found: {data_dir}/shared_input_data\n"
+            "Either create this subdirectory and add shared data, or specify the correct "
+            "path with --shared-input-data."
+        )
+
+    return module_dir, shared_dir
+
+
+def check_provided_paths(
+    data_dir: Path,
+    module_specific_input_data: Path | None,
+    shared_input_data: Path | None,
+) -> tuple[Path, Path]:
+    try:
+        return resolve_input_paths(data_dir, module_specific_input_data, shared_input_data)
+    except ValueError as e:
+        raise click.UsageError(str(e))
+
+def check_registry_accessible():
+    try:
+        registry = ModuleRegistry.default()
+        return registry
+    except FileNotFoundError as e:
+        raise click.UsageError(
+            f"{e}\n"
+            "Are you running this from your FACTS workspace root? "
+            "If not, cd there and re-run. If you haven't set up a workspace yet, "
+            "run `feb init` first."
+        )
 def check_data(
     data_dir: Path,
     module_specific_input_data: Path | None,
@@ -46,28 +89,18 @@ def check_data(
     Modules are detected automatically from subdirectory names — only modules
     you have downloaded data for will be checked.
     """
-    module_dir = module_specific_input_data or data_dir / "module_specific_input_data"
-    shared_dir = shared_input_data or data_dir / "shared_input_data"
+
+    module_dir, shared_dir = check_provided_paths(
+        data_dir=data_dir,
+        module_specific_input_data=module_specific_input_data,
+        shared_input_data=shared_input_data,
+    )
 
     console.rule(characters="- - ", style="rule", title="Checking FACTS data directory")
     console.print(f"[muted]Module-specific inputs: {module_dir}[/muted]")
     console.print(f"[muted]Shared inputs:           {shared_dir}[/muted]\n")
 
-    try:
-        registry = ModuleRegistry.default()
-    except FileNotFoundError as e:
-        raise click.UsageError(
-            f"{e}\n"
-            "Are you running this from your FACTS workspace root? "
-            "If not, cd there and re-run. If you haven't set up a workspace yet, "
-            "run `feb init` first."
-        )
-
-    if not module_dir.exists():
-        raise click.UsageError(
-            f"Module-specific input data directory not found: {module_dir}\n"
-            "Create it and download module input data first. See the quickstart guide."
-        )
+    registry = check_registry_accessible()
 
     result = check_module_data(
         module_specific_input_dir=module_dir,
