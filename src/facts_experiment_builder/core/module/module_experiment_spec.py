@@ -122,19 +122,81 @@ def _resolve_filename(arg_spec: dict, options_context: Dict[str, Any]) -> Option
     return arg_spec.get("filename")
 
 
-def _options_defaults_from_schema(module_schema: ModuleSchema) -> Dict[str, Any]:
+def _options_defaults_from_schema(options_specs: list[dict]) -> Dict[str, Any]:
     """Extract {option-name: default_value} from the schema's options specs.
 
     Both kebab-case and snake_case keys are included so filename_map lookups
     work regardless of which form appears in the map.
     """
     context: Dict[str, Any] = {}
-    for opt_spec in module_schema.arguments.get("options", []):
+    for opt_spec in options_specs:
         name = opt_spec.get("name", "")
         if name and "default_value" in opt_spec:
             context[name] = opt_spec["default_value"]
             context[name.replace("-", "_")] = opt_spec["default_value"]
     return context
+
+
+def _build_options_context(
+    schema_defaults: Dict[str, Any],
+    prefilled_options: Dict[str, Any],
+    top_level_context: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Merge options context with priority: top_level < schema defaults < prefilled_options.
+
+    Both kebab-case and snake_case forms of prefilled_options keys are included.
+    """
+    context = {**top_level_context}
+    context.update(schema_defaults)
+    for k, v in prefilled_options.items():
+        context[k] = v
+        context[k.replace("-", "_")] = v
+    return context
+
+
+def _build_outputs(
+    file_outputs: list[dict],
+    other_outputs: list[dict],
+    module_name: str,
+    options_context: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Build the outputs dict for a module spec.
+
+    Raises ValueError if a file output is missing filename/filename_map or output_type.
+    """
+    outputs: Dict[str, Any] = {}
+    for arg_spec in file_outputs:
+        arg_name = arg_spec.get("name", "")
+        if not arg_name:
+            continue
+        filename = _resolve_filename(arg_spec, options_context)
+        if not filename:
+            raise ValueError(
+                f"Module {module_name} output '{arg_name}' is missing "
+                "a 'filename' or 'filename_map' key in module YAML (arguments.outputs)."
+            )
+        output_type = arg_spec.get("output_type", "")
+        if not output_type:
+            raise ValueError(
+                f"Module {module_name} output '{arg_name}' is missing "
+                "required 'output_type' key in module YAML (arguments.outputs)."
+            )
+        if isinstance(filename, list):
+            outputs[arg_name] = {
+                "value": [f"{module_name}/{f}" for f in filename],
+                "output_type": output_type,
+            }
+        else:
+            outputs[arg_name] = {
+                "value": f"{module_name}/{filename}",
+                "output_type": output_type,
+            }
+    for arg_spec in other_outputs:
+        arg_name = arg_spec.get("name", "")
+        if not arg_name:
+            continue
+        outputs[arg_name] = {"value": module_name}
+    return outputs
 
 
 def _build_section_from_fields(
@@ -220,14 +282,13 @@ class ModuleExperimentSpec:
         prefilled_inputs = prefilled_inputs or {}
         prefilled_options = prefilled_options or {}
 
-        # Build options context for filename_map resolution.
-        # Priority (lowest → highest): top_level_context < schema defaults < prefilled_options.
-        # List values from prefilled_options are included so multi-key maps can iterate them.
-        options_context = {**(top_level_context or {})}
-        options_context.update(_options_defaults_from_schema(module_schema))
-        for k, v in prefilled_options.items():
-            options_context[k] = v
-            options_context[k.replace("-", "_")] = v
+        options_context = _build_options_context(
+            schema_defaults=_options_defaults_from_schema(
+                module_schema.arguments.get("options", [])
+            ),
+            prefilled_options=prefilled_options,
+            top_level_context=top_level_context or {},
+        )
 
         module_inputs = _build_section_from_fields(
             module_schema.arguments.get("inputs", []),
@@ -257,38 +318,12 @@ class ModuleExperimentSpec:
             options_context=options_context,
         )
 
-        module_outputs: Dict[str, Any] = {}
-        for arg_spec in module_schema.get_file_outputs():
-            arg_name = arg_spec.get("name", "")
-            if not arg_name:
-                continue
-            filename = _resolve_filename(arg_spec, options_context)
-            if not filename:
-                raise ValueError(
-                    f"Module {module_schema.module_name} output '{arg_name}' is missing "
-                    "a 'filename' or 'filename_map' key in module YAML (arguments.outputs)."
-                )
-            output_type = arg_spec.get("output_type", "")
-            if not output_type:
-                raise ValueError(
-                    f"Module {module_schema.module_name} output '{arg_name}' is missing "
-                    "required 'output_type' key in module YAML (arguments.outputs)."
-                )
-            if isinstance(filename, list):
-                module_outputs[arg_name] = {
-                    "value": [f"{module_schema.module_name}/{f}" for f in filename],
-                    "output_type": output_type,
-                }
-            else:
-                module_outputs[arg_name] = {
-                    "value": f"{module_schema.module_name}/{filename}",
-                    "output_type": output_type,
-                }
-        for arg_spec in module_schema.get_other_outputs():
-            arg_name = arg_spec.get("name", "")
-            if not arg_name:
-                continue
-            module_outputs[arg_name] = {"value": module_schema.module_name}
+        module_outputs = _build_outputs(
+            file_outputs=module_schema.get_file_outputs(),
+            other_outputs=module_schema.get_other_outputs(),
+            module_name=module_schema.module_name,
+            options_context=options_context,
+        )
 
         return cls(
             module_name=module_schema.module_name,

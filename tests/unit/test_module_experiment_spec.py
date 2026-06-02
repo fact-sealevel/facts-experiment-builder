@@ -1,6 +1,9 @@
 import pytest
 from facts_experiment_builder.core.module.module_experiment_spec import (
     _resolve_filename,
+    _options_defaults_from_schema,
+    _build_options_context,
+    _build_outputs,
     ModuleExperimentSpec,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
@@ -178,3 +181,117 @@ def test_from_module_schema_top_level_context_lower_priority_than_schema_default
         prefilled_options={"region": "ALL"},  # prefilled_options wins
     )
     assert spec.options.get("region") == "ALL"
+
+
+# ---------------------------------------------------------------------------
+# _options_defaults_from_schema
+# ---------------------------------------------------------------------------
+
+
+def test_options_defaults_empty_list():
+    assert _options_defaults_from_schema([]) == {}
+
+
+def test_options_defaults_extracts_default_value():
+    specs = [{"name": "region", "default_value": "ALL", "source": "..."}]
+    result = _options_defaults_from_schema(specs)
+    assert result["region"] == "ALL"
+
+
+def test_options_defaults_emits_both_case_forms():
+    specs = [{"name": "pyear-end", "default_value": 2300}]
+    result = _options_defaults_from_schema(specs)
+    assert result["pyear-end"] == 2300
+    assert result["pyear_end"] == 2300
+
+
+def test_options_defaults_ignores_specs_without_default():
+    specs = [{"name": "region", "source": "..."}]
+    assert _options_defaults_from_schema(specs) == {}
+
+
+# ---------------------------------------------------------------------------
+# _build_options_context
+# ---------------------------------------------------------------------------
+
+
+def test_build_options_context_empty_inputs():
+    assert _build_options_context({}, {}, {}) == {}
+
+
+def test_build_options_context_priority_prefilled_over_schema_defaults():
+    result = _build_options_context(
+        schema_defaults={"region": "ALL"},
+        prefilled_options={"region": "WAIS"},
+        top_level_context={},
+    )
+    assert result["region"] == "WAIS"
+
+
+def test_build_options_context_priority_schema_defaults_over_top_level():
+    result = _build_options_context(
+        schema_defaults={"region": "ALL"},
+        prefilled_options={},
+        top_level_context={"region": "WAIS"},
+    )
+    assert result["region"] == "ALL"
+
+
+def test_build_options_context_kebab_prefilled_emits_snake_key():
+    result = _build_options_context(
+        schema_defaults={},
+        prefilled_options={"pyear-end": 2300},
+        top_level_context={},
+    )
+    assert result["pyear-end"] == 2300
+    assert result["pyear_end"] == 2300
+
+
+# ---------------------------------------------------------------------------
+# _build_outputs
+# ---------------------------------------------------------------------------
+
+
+def test_build_outputs_empty():
+    assert _build_outputs([], [], "my-module", {}) == {}
+
+
+def test_build_outputs_file_output_prefixes_module_name():
+    file_outputs = [
+        {"name": "output-file", "filename": "out.nc", "output_type": "global"}
+    ]
+    result = _build_outputs(file_outputs, [], "my-module", {})
+    assert result["output-file"]["value"] == "my-module/out.nc"
+    assert result["output-file"]["output_type"] == "global"
+
+
+def test_build_outputs_file_output_list_filename():
+    file_outputs = [
+        {
+            "name": "output-file",
+            "filename_map": {"region": {"EAIS": "eais.nc", "WAIS": "wais.nc"}},
+            "output_type": "global",
+        }
+    ]
+    result = _build_outputs(file_outputs, [], "my-module", {"region": "EAIS"})
+    assert result["output-file"]["value"] == "my-module/eais.nc"
+
+
+def test_build_outputs_raises_when_filename_missing():
+    file_outputs = [{"name": "output-file", "output_type": "global"}]
+    with pytest.raises(ValueError, match="missing.*filename"):
+        _build_outputs(file_outputs, [], "my-module", {})
+
+
+def test_build_outputs_raises_when_output_type_missing():
+    file_outputs = [{"name": "output-file", "filename": "out.nc"}]
+    with pytest.raises(ValueError, match="output_type"):
+        _build_outputs(file_outputs, [], "my-module", {})
+
+
+def test_build_outputs_other_output_uses_module_name():
+    other_outputs = [
+        {"name": "output-dir", "source": "module_inputs.outputs.output_dir"}
+    ]
+    result = _build_outputs([], other_outputs, "my-module", {})
+    assert result["output-dir"] == {"value": "my-module"}
