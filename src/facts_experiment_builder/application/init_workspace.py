@@ -97,7 +97,9 @@ def ensure_gitignore(workspace_dir: Path) -> InitStepResult:
     if gitignore_path.exists():
         existing = gitignore_path.read_text()
         if entry in existing.splitlines():
-            return InitStepResult(StepStatus.ALREADY_EXISTS, "Entry already present.", gitignore_path)
+            return InitStepResult(
+                StepStatus.ALREADY_EXISTS, "Entry already present.", gitignore_path
+            )
         separator = "" if existing.endswith("\n") else "\n"
         gitignore_path.write_text(existing + separator + entry + "\n")
         return InitStepResult(StepStatus.CREATED, "Entry added.", gitignore_path)
