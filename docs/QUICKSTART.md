@@ -109,12 +109,12 @@ curl -L https://zenodo.org/record/7478192/files/deconto21_AIS_preprocess_data.tg
 tar -xzf data/module_specific_input_data/deconto21-ais/deconto21_AIS_preprocess_data.tgz -C data/module_specific_input_data/deconto21-ais
 
 mkdir -p data/module_specific_input_data/ipccar5
-curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o data/module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz
-tar -xzf data/module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz -C data/module_specific_input_data/ipccar5-glaciers
+curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o data/module_specific_input_data/ipccar5/ipccar5_glaciers_project_data.tgz
+tar -xzf data/module_specific_input_data/ipccar5/ipccar5_glaciers_project_data.tgz -C data/module_specific_input_data/ipccar5
 
 mkdir -p data/module_specific_input_data/ipccar5
-curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o data/module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz
-tar -xzf data/module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz -C data/module_specific_input_data/ipccar5-icesheets
+curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o data/module_specific_input_data/ipccar5/ipccar5_icesheets_project_data.tgz
+tar -xzf data/module_specific_input_data/ipccar5/ipccar5_icesheets_project_data.tgz -C data/module_specific_input_data/ipccar5
 
 mkdir -p data/module_specific_input_data/larmip-ais
 curl -L https://zenodo.org/record/7478192/files/larmip_icesheet_fit_data.tgz -o data/module_specific_input_data/larmip-ais/larmip_icesheet_fit_data.tgz

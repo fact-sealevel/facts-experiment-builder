@@ -87,12 +87,6 @@ The examples below demonstrate creating and running a FACTS experiment called `m
 
 ## Create an experiment
 
->[!NOTE]
-> Before choosing modules, you can see all available modules by running `feb list-modules`. This prints the names of all modules in your local `facts-module-registry` — these are the valid values for `--climate-step`, `--sealevel-step`, and `--extremesealevel-step`.
-> ```shell
-> uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb list-modules
-> ```
-
 Use the `feb setup-experiment` command like this: 
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment \
@@ -109,12 +103,12 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 - Not all of these options must be passed to `setup-experiment`.
 - The required arguments are:
   - `--experiment-name`,
-  - Either `--climate-step` (the module to run at the climate step) or `--supplied-climate-data-step` (data to bypass running a module at the climate step). 
+  - Either `--climate-step` (the module to run at the climate step) or `--supplied-climate-step-data` (data to bypass running a module at the climate step). 
 -  Any fields that are not passed at the CLI must be manually added to the `experiment-config.yaml` file that is created after running `setup-experiment`. 
 
 You can see the full list of options by running `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment --help`. 
 
-If you included multiple modules at the sea-level step, you will see ClI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary](docs/FACTS_GLOSSARY.md) for more detail on this.
+If you included multiple modules at the sea-level step, you will see CLI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary](docs/FACTS_GLOSSARY.md) for more detail on this.
 
 Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yaml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
 
@@ -126,7 +120,7 @@ In the previous section, we created an experiment with the `feb setup-experiment
 
 FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we only provide a [Docker Compose](https://docs.docker.com/compose/) implementation. If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
 
-facts-experiment-builder provides a command, `feb generate-compose`, to generate an executable Docker Compose file from an `experiment-config.yaml` that wil be used to run your experiment. The command writes the file, `experiment-compose.yaml`, to your experiment's sub-directory just like `experiment-config.yaml`. For more detail on the experiment compose file, see the [overview](EXPERIMENT-COMPOSE-OVERVIEW.md) page.
+facts-experiment-builder provides a command, `feb generate-compose`, to generate an executable Docker Compose file from an `experiment-config.yaml` that wil be used to run your experiment. The command writes the file, `experiment-compose.yaml`, to your experiment's sub-directory just like `experiment-config.yaml`. For more detail on the experiment compose file, see the [overview](docs/EXPERIMENT-COMPOSE-OVERVIEW.md) page.
 
 Create the file by specifying the name of the experiment:
 ```shell
@@ -161,6 +155,12 @@ Options:
   -h, --help           Show this message and exit.
 ```
 
+>[!NOTE]
+> After running `feb init`, you can see all available modules by running `feb list-modules`. This prints the names of all modules in your local `facts-module-registry` — these are the valid values for `--climate-step`, `--sealevel-step`, and `--extremesealevel-step`.
+> ```shell
+> uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb list-modules
+> ```
+
 **`setup-experiment`**
 Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
 
@@ -169,7 +169,7 @@ Each step accepts either a module name or a path to pre-existing data:
 - `--sealevel-step` / `--supplied-totaled-sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
 
 ```shell
-Usage: feb setup-experiment [OPTIONS]
+Usage: setup-experiment [OPTIONS]
 
   Set up a new experiment with setup-new-experiment CLI command. This function
   includes a number of steps:

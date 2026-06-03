@@ -69,17 +69,17 @@ tar -xzf data/module_specific_input_data/deconto21-ais/deconto21_AIS_preprocess_
 ### ipccar5-glaciers
 
 ```bash
-mkdir -p data/module_specific_input_data/ipccar5-glaciers
-curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o data/module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz
-tar -xzf data/module_specific_input_data/ipccar5-glaciers/ipccar5_glaciers_project_data.tgz -C data/module_specific_input_data/ipccar5-glaciers
+mkdir -p data/module_specific_input_data/ipccar5
+curl -L https://zenodo.org/record/7478192/files/ipccar5_glaciers_project_data.tgz -o data/module_specific_input_data/ipccar5/ipccar5_glaciers_project_data.tgz
+tar -xzf data/module_specific_input_data/ipccar5/ipccar5_glaciers_project_data.tgz -C data/module_specific_input_data/ipccar5
 ```
 
 ### ipccar5-icesheets
 
 ```bash
-mkdir -p data/module_specific_input_data/ipccar5-icesheets
-curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o data/module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz
-tar -xzf data/module_specific_input_data/ipccar5-icesheets/ipccar5_icesheets_project_data.tgz -C data/module_specific_input_data/ipccar5-icesheets
+mkdir -p data/module_specific_input_data/ipccar5
+curl -L https://zenodo.org/record/7478192/files/ipccar5_icesheets_project_data.tgz -o data/module_specific_input_data/ipccar5/ipccar5_icesheets_project_data.tgz
+tar -xzf data/module_specific_input_data/ipccar5/ipccar5_icesheets_project_data.tgz -C data/module_specific_input_data/ipccar5
 ```
 
 ### larmip-ais
@@ -99,8 +99,8 @@ mkdir -p data/module_specific_input_data/ssp-landwaterstorage
 curl -L https://zenodo.org/record/7478192/files/ssp_landwaterstorage_preprocess_data.tgz -o data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_preprocess_data.tgz -C data/module_specific_input_data/ssp-landwaterstorage
 
-curl -sL https://zenodo.org/record/7478192/files/ssp_landwaterstorage_postprocess_data.tgz -o data/module_specific_input_data/ssp-landwaterstoage/ssp_landwaterstorage_postprocess_data.tgz
-tar -zx data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_postprocess_data.tgz -C data/module_specific_input_data/ssp-landwaterstorage
+curl -sL https://zenodo.org/record/7478192/files/ssp_landwaterstorage_postprocess_data.tgz -o data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_postprocess_data.tgz
+tar -xzf data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstorage_postprocess_data.tgz -C data/module_specific_input_data/ssp-landwaterstorage
 ```
 
 ### tlm-sterodynamics
@@ -110,7 +110,7 @@ mkdir -p data/module_specific_input_data/tlm-sterodynamics
 curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_preprocess_data.tgz -o data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
 
-curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_cmip6_data.tgz -o data/module_specific_iput_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz
+curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_cmip6_data.tgz -o data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz
 tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
 ```
 

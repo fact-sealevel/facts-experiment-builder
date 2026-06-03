@@ -10,7 +10,7 @@ If you create an experiment with `feb setup-experiment`, this sub-directory is c
 
 ## Example experiments
 
-The FACTS project supplies a number of example experimenst which have been used for past reports and publications. They are stored in the [facts-experiment-catalog](https://github.com/fact-sealevel/facts-experiment-catalog). If you would like to run one of these example experiments, follow the steps below:
+The FACTS project supplies a number of example experiments which have been used for past reports and publications. They are stored in the [facts-experiment-catalog](https://github.com/fact-sealevel/facts-experiment-catalog). If you would like to run one of these example experiments, follow the steps below:
 1. Find the experiment you'd like to replicate in the [experiment catalog](https://github.com/fact-sealevel/facts-experiment-catalog).
 2. Create a sub-directory in `experiments/`, the name of which matches the name entered in the `experiment-name:` field in the experiment config file for that experiment's catalog entry. 
 3. Download the experiment's `experiment-config.yaml` file from the catalog and place it in the experiment sub-directory you created. 
