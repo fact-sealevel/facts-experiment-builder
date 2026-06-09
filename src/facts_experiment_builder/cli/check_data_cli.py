@@ -68,6 +68,7 @@ def check_provided_paths(
     except ValueError as e:
         raise click.UsageError(str(e))
 
+
 @click.command()
 @click.option(
     "--data-dir",
@@ -76,7 +77,7 @@ def check_provided_paths(
     show_default=True,
     help="Base data directory. By default, expects module-specific and shared input data in "
     "module_specific_input_data/ and shared_input_data/ subdirectories. Can be overridden with "
-    "--module-specific-input-data and --shared-input-data.",    
+    "--module-specific-input-data and --shared-input-data.",
 )
 @click.option(
     "--module-specific-input-data",
