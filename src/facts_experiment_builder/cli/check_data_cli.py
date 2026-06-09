@@ -72,7 +72,7 @@ def check_provided_paths(
 @click.option(
     "--data-dir",
     type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
-    default=Path.cwd(),
+    default=Path.cwd() / "data",
     show_default=True,
     help="Base data directory. By default, expects module-specific and shared input data in "
     "module_specific_input_data/ and shared_input_data/ subdirectories. Can be overridden with "
