@@ -131,6 +131,8 @@ tar -xzf data/module_specific_input_data/ssp-landwaterstorage/ssp_landwaterstora
 mkdir -p data/module_specific_input_data/tlm-sterodynamics
 curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_preprocess_data.tgz -o data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz
 tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_preprocess_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
+curl -L https://zenodo.org/record/7478192/files/tlm_sterodynamics_cmip6_data.tgz -o data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz
+tar -xzf data/module_specific_input_data/tlm-sterodynamics/tlm_sterodynamics_cmip6_data.tgz -C data/module_specific_input_data/tlm-sterodynamics
 
 mkdir -p data/module_specific_input_data/ebm3-thermalexpansion
 curl -L https://zenodo.org/records/11506798/files/ebm3_thermal_expansion_data.tgz -o data/module_specific_input_data/ebm3-thermalexpansion/ebm3_thermal_expansion_data.tgz
