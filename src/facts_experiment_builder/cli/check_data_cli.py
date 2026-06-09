@@ -68,7 +68,28 @@ def check_provided_paths(
     except ValueError as e:
         raise click.UsageError(str(e))
 
-
+@click.command()
+@click.option(
+    "--data-dir",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    default=Path.cwd(),
+    show_default=True,
+    help="Base data directory. By default, expects module-specific and shared input data in "
+    "module_specific_input_data/ and shared_input_data/ subdirectories. Can be overridden with "
+    "--module-specific-input-data and --shared-input-data.",    
+)
+@click.option(
+    "--module-specific-input-data",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    default=None,
+    help="Explicit path to module-specific input data directory. Overrides data_dir for this purpose.",
+)
+@click.option(
+    "--shared-input-data",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    default=None,
+    help="Explicit path to shared input data directory. Overrides data_dir for this purpose.",
+)
 def check_data(
     data_dir: Path,
     module_specific_input_data: Path | None,
