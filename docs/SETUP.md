@@ -1,4 +1,4 @@
-# Quickstart Guide
+# Setup Guide
 
 This page contains instructions for getting started working with FACTS2. Configuring and running a FACTS2 experiment involves specifying modules to include in your experiment. This page includes instructions on initializing a workspace, downloading input data required to run different modules, and accessing the module registry.
 

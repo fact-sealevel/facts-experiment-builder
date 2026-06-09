@@ -33,7 +33,7 @@ This README is organized as follows:
 
 Other important pages:
 (some of these might move elsewhere within the facts org eventually, just here for now).
-- [FEB Quickstart](docs/QUICKSTART.md)
+- [FEB Setup Guide](docs/SETUP.md)
 - [Experiment config file overview](docs/EXPERIMENT-CONFIG-OVERVIEW.md)
 - [Experiment compose file overview](docs/EXPERIMENT-COMPOSE-OVERVIEW.md)
 - [FACTS Glossary](docs/FACTS_GLOSSARY.md)
@@ -79,7 +79,7 @@ The examples in this README use the full `uvx` form so they work without any pri
 
 ## Getting started
 
-Before creating experiments you will need to initialize a workspace, download module input data, and verify it. The [Quickstart guide](docs/QUICKSTART.md) walks through these steps. Once your data is in place, come back here to create and run an experiment.
+Before creating experiments you will need to initialize a workspace, download module input data, and verify it. The [Setup guide](docs/SETUP.md) walks through these steps. Once your data is in place, come back here to create and run an experiment.
 
 If you are new to FACTS and the terms associated with it, we recommend reviewing the [FACTS Glossary](docs/FACTS_GLOSSARY.md) before proceeding.
 
