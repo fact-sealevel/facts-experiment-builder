@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import List
 
 from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
-from facts_experiment_builder.infra.module_loader import load_facts_module_from_yaml
+from facts_experiment_builder.infra.module_loader import load_module_schema_from_yaml
 from facts_experiment_builder.infra.path_utils import is_shared_input
 
 
@@ -79,7 +79,7 @@ def _check_module(
 
     try:
         yaml_path = registry.get_module_yaml_path(module_name)
-        schema = load_facts_module_from_yaml(yaml_path)
+        schema = load_module_schema_from_yaml(yaml_path)
     except FileNotFoundError:
         return result
 
@@ -191,7 +191,7 @@ def check_shared_data(
     for module_name in discovered_module_names:
         try:
             yaml_path = registry.get_module_yaml_path(module_name)
-            schema = load_facts_module_from_yaml(yaml_path)
+            schema = load_module_schema_from_yaml(yaml_path)
         except FileNotFoundError:
             continue
 
