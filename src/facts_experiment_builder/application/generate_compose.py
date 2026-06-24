@@ -12,14 +12,17 @@ Usage:
 """
 
 import yaml
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional, Set
 
 from facts_experiment_builder.adapters.module_adapter import (
     create_module_service_spec_from_metadata,
 )
 from facts_experiment_builder.adapters.adapter_utils import get_experiment_paths
 from facts_experiment_builder.core.experiment import FactsExperiment
+from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
+from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.core.workflow.workflow import (
     Workflow,
     workflows_from_metadata,
@@ -28,8 +31,8 @@ from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.path_utils import expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
 from facts_experiment_builder.infra.module_loader import (
-    load_facts_module_from_yaml,
-    load_facts_module_by_name,
+    load_module_schema_by_name,
+    load_module_schema_from_yaml,
 )
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
@@ -38,6 +41,49 @@ import logging
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
+
+_SUCCESS = 25  # custom level between INFO (20) and WARNING (30); must match CLI handler
+
+_REQUIRED_FIELDS = [
+    "experiment_name",
+    "pipeline-id",
+    "nsamps",
+    "scenario",
+    "pyear_start",
+    "pyear_end",
+    "pyear_step",
+    "baseyear",
+    "module-specific-input-data",
+    "shared-input-data",
+    "output-data-location",
+]
+
+
+@dataclass(frozen=True)
+class _ExperimentPlan:
+    """Result of phase 1: parsed experiment structure and module name lists."""
+
+    experiment: FactsExperiment
+    temperature_module_name: Optional[str]
+    sealevel_module_names: List[str]
+    framework_module_names: List[str]
+    esl_module_names: List[str]
+    suppress_output_types: Set[str]
+    workflows: Dict[str, Workflow]
+
+
+@dataclass(frozen=True)
+class _ModuleSpecs:
+    """Result of phase 2: all created ModuleServiceSpec instances."""
+
+    temperature_module: Optional[ModuleServiceSpec]
+    sealevel_modules: Dict[str, ModuleServiceSpec]
+    framework_modules: Dict[str, ModuleServiceSpec]
+    esl_modules: Dict[str, ModuleServiceSpec]
+
+
+def _log_success(msg: str, *args: object) -> None:
+    logger.log(_SUCCESS, msg, *args)
 
 
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
@@ -72,7 +118,7 @@ def _module_requires_climate_file(module_name: str) -> bool:
     # Get path
     module_yaml_path = find_module_yaml_path(module_name)
     # Load module yaml
-    module_yaml = load_facts_module_from_yaml(yaml_path=module_yaml_path)
+    module_yaml = load_module_schema_from_yaml(yaml_path=module_yaml_path)
     # Return uses climate file attr
     return module_yaml.uses_climate_file
 
@@ -96,7 +142,7 @@ def _validate_climate_file_inputs(
 
     for module_name in sealevel_modules:
         module_yaml_path = find_module_yaml_path(module_name)
-        module_schema = load_facts_module_from_yaml(yaml_path=module_yaml_path)
+        module_schema = load_module_schema_from_yaml(yaml_path=module_yaml_path)
 
         if not module_schema.uses_climate_file:
             continue
@@ -175,8 +221,9 @@ def _collect_workflow_output_paths_by_type(
             if p and isinstance(p, str) and ot == output_type:
                 # Do not pass through outputs that are components of a larger output unit
                 if p in subregion_strings_to_skip:
-                    print(
-                        f"{p}: This output is a component of a larger unit and is already represented elsewhere; skipping."
+                    logger.info(
+                        "%s: This output is a component of a larger unit and is already represented elsewhere; skipping.",
+                        p,
                     )
                     continue
 
@@ -237,14 +284,14 @@ def _create_facts_total_compose_service(
     service_name: str,
     wf: Workflow,
     metadata: Dict[str, Any],
-    metadata_path: Path,
+    experiment_dir: Path,
     facts_total_yaml_path: Path,
 ) -> Dict[str, Any]:
     """Build the compose service dict for a facts-total workflow from its synthetic section."""
     metadata_copy = dict(metadata)
     metadata_copy[service_name] = section
     wf_module = create_module_service_spec_from_metadata(
-        metadata_path,
+        experiment_dir,
         module_name=service_name,
         module_type="framework_module",
         metadata=metadata_copy,
@@ -257,69 +304,67 @@ def _create_facts_total_compose_service(
     return compose_svc
 
 
-def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
-    """
-    Generate Docker Compose file from experiment metadata.
+def check_metadata_has_required_fields(metadata_obj, required_fields):
+    """This function accepts a list of required fields and a metadata object and subsets the metadata to required fields."""
+    # Subset
+    required_fields_meta = {
+        k: v for k, v in metadata_obj.items() if k in required_fields
+    }
 
-    This is the main orchestration function that:
-    1. Loads metadata (UI layer)
-    2. Parses manifest to determine which modules to include
-    3. Uses parsers (Adapter layer) to create domain objects (modules)
-    4. Generates docker compose services (Engine/Infrastructure layer)
-
-    Args:
-        metadata_path: Path to experiment-config.yaml
-
-    Returns:
-        Complete Docker Compose file dictionary
-    """
-    if not metadata_path.exists():
-        raise FileNotFoundError(
-            f"When trying to read experiment-metadata file to generate corresponding compose file, metadata file not found: {metadata_path}"
-        )
-
-    # Step 1: Load metadata (UI layer)
-    metadata = load_experiment_metadata(metadata_path)
-    # Check that required fields in experient-config have been completed
-    # TODO do this better in future
-    required_fields = [
-        "experiment_name",
-        "pipeline-id",
-        "nsamps",
-        "scenario",
-        "pyear_start",
-        "pyear_end",
-        "pyear_step",
-        "baseyear",
-        "module-specific-input-data",
-        "shared-input-data",
-        "output-data-location",
-    ]
-    # subset metadata to required fields
-    required_fields_meta = {k: v for k, v in metadata.items() if k in required_fields}
-    # raise error if any are missing a value
+    # R aise error if any are missing a value
     for k, v in required_fields_meta.items():
         if v is None:
             raise ValueError(
-                f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml file have been completed."
+                f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml have been completed."
             )
-    experiment_dir = metadata_path.parent
 
-    # Step 2: Build FactsExperiment — derive key sets from module schemas
+    return None
+
+
+def extract_experiment_dir_from_metadata_path(metadata_path):
+    """This function extracts the experiment directory from the metadata path obj"""
+
+    experiment_dir = metadata_path.parent
+    if experiment_dir == metadata_path:
+        raise ValueError(
+            f"No experiment dir found in the parent path of provided metadata path, {metadata_path}"
+        )
+    return experiment_dir
+
+
+def _parse_experiment(metadata: Dict[str, Any]) -> _ExperimentPlan:
+    """Phase 1 of generating compose:
+    Validate metadata and build a typed experiment plan.
+
+    Ths fn is only data transformation, there should be no filesystem I/O beyond module YAML loading.
+    """
+
+    # This should raise an error if user has not completed necessary fields in experiment-config.yaml
+    check_metadata_has_required_fields(
+        metadata_obj=metadata, required_fields=_REQUIRED_FIELDS
+    )
+
+    # Get the list of modules included in experiment from manifest in exp config
     _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
-    _schemas = [load_facts_module_by_name(m) for m in _manifest_module_names]
+
+    # Use list of modules to load schema for each module
+    _schemas = [load_module_schema_by_name(m) for m in _manifest_module_names]
+
+    # Get keys for top level params and fingerprint params from each module in experiment
     _top_level_keys = set(collect_metadata_param_keys(_schemas, "top_level"))
     _fp_keys = set(collect_metadata_param_keys(_schemas, "fingerprint_params"))
+
+    # Create FactsExperiment obj from metadata dict
     experiment = FactsExperiment.from_metadata_dict(
         metadata,
         top_level_keys=_top_level_keys,
         fingerprint_keys=_fp_keys,
     )
-
-    _suppress_output_types: set = (
+    # Set output (local or global) based on user spec. in experiment config
+    suppress_output_types: Set[str] = (
         {"local"} if experiment.projection_scale == "global" else set()
     )
-
+    # Separate module names by step
     temperature_module_name = experiment.climate_step.module_name or "NONE"
     sealevel_module_names = experiment.sealevel_step.module_names
     framework_module_names = (
@@ -332,131 +377,213 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         if experiment.extreme_sealevel_step.is_present
         else []
     )
-
-    # Step 3: Create ModuleServiceSpec instances using parsers (Adapter layer -> Domain layer)
-    # modules = []
-    modules = {
-        "temperature_module": None,
-        "sealevel_modules": {},
-        "framework_modules": {},
-        "esl_modules": {},
-    }
-
-    # Create temperature module if specified (and not "NONE")
-    if temperature_module_name and temperature_module_name.upper() != "NONE":
-        try:
-            module = create_module_service_spec_from_metadata(
-                metadata_path,
-                module_name=temperature_module_name,
-                module_type="temperature_module",
-                metadata=metadata,
-            )
-            # modules.append(module)
-            modules["temperature_module"] = module
-            print(f"✓ Created {temperature_module_name} module")
-        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-            print(
-                f"⚠ Warning: Failed to create temp module '{temperature_module_name}': {e}"
-            )
-    elif temperature_module_name and temperature_module_name.upper() == "NONE":
-        # No temperature module - validate that sealevel modules have climate file inputs
-        # Only validate modules that have climate_file_required=True
-        print("ℹ No temperature module specified (NONE)")
-        _validate_climate_file_inputs(metadata, sealevel_module_names, experiment_dir)
-
-    # Create sea level modules if specified
-    for module_name in sealevel_module_names:
-        try:
-            module = create_module_service_spec_from_metadata(
-                metadata_path,
-                module_name=module_name,
-                module_type="sealevel_module",
-                metadata=metadata,
-            )
-            modules["sealevel_modules"][module_name] = module
-            print(f"✓ Created {module_name} module")
-        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-            print(f"⚠ Warning: Failed to create sealevel module '{module_name}': {e}")
-
-    # Create framework modules if specified (skip per-workflow modules when workflows exist; we add per-workflow services below)
+    # Make workflow obj from metadata
     workflows = workflows_from_metadata(metadata)
-    for module_name in framework_module_names:
-        if _module_is_per_workflow(module_name) and workflows:
-            continue  # per-workflow modules are added once per workflow below
-        try:
-            module = create_module_service_spec_from_metadata(
-                metadata_path,
-                module_name=module_name,
-                module_type="framework_module",
-                metadata=metadata,
-            )
-            modules["framework_modules"][module_name] = module
-            print(f"✓ Created {module_name} module")
-        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-            print(f"⚠ Warning: Failed to create framework module '{module_name}': {e}")
 
-    # Create ESL modules if specified
-    for module_name in esl_module_names:
-        try:
-            module = create_module_service_spec_from_metadata(
-                metadata_path,
-                module_name=module_name,
-                module_type="extreme_sealevel_module",
-                metadata=metadata,
-            )
-            # modules.append(module)
-            modules["esl_modules"][module_name] = module
-            print(f"✓ Created {module_name} module")
-        except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-            print(f"⚠ Warning: Failed to create ESL module '{module_name}': {e}")
+    # Make an ExperimentPlan obj
+    # (first component of generate compose, used to build module spec objs)
+    return _ExperimentPlan(
+        experiment=experiment,
+        temperature_module_name=temperature_module_name,
+        sealevel_module_names=sealevel_module_names,
+        framework_module_names=framework_module_names,
+        esl_module_names=esl_module_names,
+        suppress_output_types=suppress_output_types,
+        workflows=workflows,
+    )
 
-    if (
-        not modules["temperature_module"]
-        and not modules["sealevel_modules"]
-        and not modules["framework_modules"]
-        and not modules["esl_modules"]
+
+def _build_module_specs(
+    plan: _ExperimentPlan,
+    metadata: Dict[str, Any],
+    experiment_dir: Path,
+) -> _ModuleSpecs:
+    """Phase 2: Create a ModuleServiceSpec for each module in the experiment.
+
+    All filesystem I/O for module YAML loading is isolated here.
+    """
+    temperature_module: Optional[ModuleServiceSpec] = None
+    sealevel_modules: Dict[str, ModuleServiceSpec] = {}
+    framework_modules: Dict[str, ModuleServiceSpec] = {}
+    esl_modules: Dict[str, ModuleServiceSpec] = {}
+
+    if plan.temperature_module_name.upper() != "NONE":
+        temperature_module = create_module_service_spec_from_metadata(
+            experiment_dir,
+            module_name=plan.temperature_module_name,
+            module_type="temperature_module",
+            metadata=metadata,
+        )
+        _log_success("Created %s module", plan.temperature_module_name)
+    else:
+        logger.info("No temperature module specified (NONE)")
+        _validate_climate_file_inputs(
+            metadata, plan.sealevel_module_names, experiment_dir
+        )
+
+    for module_name in plan.sealevel_module_names:
+        sealevel_modules[module_name] = create_module_service_spec_from_metadata(
+            experiment_dir,
+            module_name=module_name,
+            module_type="sealevel_module",
+            metadata=metadata,
+        )
+        _log_success("Created %s module", module_name)
+
+    for module_name in plan.framework_module_names:
+        if _module_is_per_workflow(module_name) and plan.workflows:
+            continue
+        framework_modules[module_name] = create_module_service_spec_from_metadata(
+            experiment_dir,
+            module_name=module_name,
+            module_type="framework_module",
+            metadata=metadata,
+        )
+        _log_success("Created %s module", module_name)
+
+    for module_name in plan.esl_module_names:
+        esl_modules[module_name] = create_module_service_spec_from_metadata(
+            experiment_dir,
+            module_name=module_name,
+            module_type="extreme_sealevel_module",
+            metadata=metadata,
+        )
+        _log_success("Created %s module", module_name)
+
+    # Make _ModuleSpecs obj
+    # This is what's returned by _build_module_specs
+    # and used by _build_compose_servies()
+    specs = _ModuleSpecs(
+        temperature_module=temperature_module,
+        sealevel_modules=sealevel_modules,
+        framework_modules=framework_modules,
+        esl_modules=esl_modules,
+    )
+
+    if not any(
+        [
+            specs.temperature_module,
+            specs.sealevel_modules,
+            specs.framework_modules,
+            specs.esl_modules,
+        ]
     ):
         has_step_data = bool(
             metadata.get("supplied-totaled-sealevel-step-data")
             or metadata.get("experiment-specific-input-data")
         )
-        if has_step_data:
-            print(
-                "ℹ All experiment steps use pre-existing data. No Docker services to generate."
+        if not has_step_data:
+            raise ValueError(
+                "No modules could be created from metadata. "
+                "Please ensure at least one module is specified and has valid configuration."
             )
-            return {"services": {}}
-        raise ValueError(
-            "No modules could be created from metadata. "
-            "Please ensure at least one module is specified and has valid configuration."
+        logger.info(
+            "All experiment steps use pre-existing data. No Docker services to generate."
         )
 
-    # Step 4: Generate Docker Compose services (Engine/Infrastructure layer)
-    services = {}
+    return specs
 
-    # Add temperature module service if present
-    temperature_module = modules["temperature_module"]
-    temperature_module_name = (
-        temperature_module.module_name if temperature_module else None
+
+def _create_esl_workflow_services(
+    esl_module_names: List[str],
+    workflows: Dict[str, Workflow],
+    metadata: Dict[str, Any],
+    experiment_dir: Path,
+    projection_scale: Optional[str],
+) -> Dict[str, Any]:
+    """Build one ESL compose service per workflow, keyed by service name."""
+    services: Dict[str, Any] = {}
+    if not esl_module_names:
+        return services
+    if projection_scale == "global":
+        logger.info("Skipping per-workflow ESL services (projection_scale=global)")
+        return services
+
+    for esl_module_name in esl_module_names:
+        try:
+            esl_yaml_path = find_module_yaml_path(esl_module_name)
+        except FileNotFoundError:
+            logger.warning(
+                "ESL module YAML not found for '%s', skipping per-workflow ESL",
+                esl_module_name,
+            )
+            continue
+        base_section = metadata.get(esl_module_name) or {}
+        if not isinstance(base_section, dict):
+            base_section = {}
+        try:
+            exp_paths = get_experiment_paths(metadata, f"{esl_module_name} module")
+            module_specific_base = expand_path(
+                exp_paths.get("module_specific_input_data"),
+                "module-specific-input-data",
+            )
+        except (KeyError, TypeError):
+            module_specific_base = ""
+        for _wf_name, wf in workflows.items():
+            service_name = f"{esl_module_name}-{wf.name}"
+            base_inputs = dict(base_section.get("inputs") or {})
+            base_inputs["total_localsl_file"] = wf.total_localsl_path_under_output
+            gesla_val = base_inputs.get("gesla_dir")
+            if not gesla_val or (
+                isinstance(gesla_val, dict) and gesla_val.get("value") in (None, "")
+            ):
+                if module_specific_base:
+                    base_inputs["gesla_dir"] = (
+                        f"{module_specific_base}/{esl_module_name}/gesla_data"
+                    )
+            base_outputs = base_section.get("outputs") or {}
+            synthetic_section = {
+                **base_section,
+                "inputs": base_inputs,
+                "outputs": {**base_outputs, "output-dir": "."},
+            }
+            metadata_copy = dict(metadata)
+            metadata_copy[service_name] = synthetic_section
+            esl_module = create_module_service_spec_from_metadata(
+                experiment_dir,
+                module_name=service_name,
+                module_type="extreme_sealevel_module",
+                metadata=metadata_copy,
+                module_yaml_path=esl_yaml_path,
+            )
+            compose_svc = esl_module.generate_compose_service()
+            compose_svc["depends_on"] = {
+                wf.facts_total_service_name_for_type("local"): {
+                    "condition": "service_completed_successfully"
+                }
+            }
+            services[service_name] = compose_svc
+            _log_success("Created %s ESL workflow service", service_name)
+    return services
+
+
+def _build_compose_services(
+    specs: _ModuleSpecs,
+    plan: _ExperimentPlan,
+    metadata: Dict[str, Any],
+    experiment_dir: Path,
+) -> Dict[str, Any]:
+    """Phase 3: Render ModuleServiceSpecs into Docker Compose service dicts."""
+    services: Dict[str, Any] = {}
+
+    temperature_service_name = (
+        specs.temperature_module.module_name if specs.temperature_module else None
     )
-
-    if temperature_module:
-        services[temperature_module_name] = (
-            temperature_module.generate_compose_service()
+    if specs.temperature_module:
+        services[temperature_service_name] = (
+            specs.temperature_module.generate_compose_service()
         )
 
-    # Add sealevel modules directly to services (flat structure for Docker Compose)
-    for module_name, module in modules["sealevel_modules"].items():
+    for _module_name, module in specs.sealevel_modules.items():
         service_name = module.module_name
-        compose_service = module.generate_compose_service(
-            temperature_service_name=temperature_module_name,
-            suppress_output_types=_suppress_output_types,
+        services[service_name] = module.generate_compose_service(
+            temperature_service_name=temperature_service_name,
+            suppress_output_types=plan.suppress_output_types,
         )
-        services[service_name] = compose_service
 
-    # Add one facts-total service per workflow (after sealevel services)
-    if workflows:
+    if plan.workflows:
         per_workflow_fw = [
-            m for m in framework_module_names if _module_is_per_workflow(m)
+            m for m in plan.framework_module_names if _module_is_per_workflow(m)
         ]
         facts_total_name = per_workflow_fw[0] if per_workflow_fw else "facts-total"
         facts_total_yaml_path = find_module_yaml_path(facts_total_name)
@@ -465,13 +592,17 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
         facts_total_image = facts_total_config.get(
             "container_image", "ghcr.io/fact-sealevel/facts-total:v0.1.2"
         )
-        for wf_name, wf in workflows.items():
+        for wf_name, wf in plan.workflows.items():
             for output_type in facts_total_config.get(
                 "output_types", ["global", "local"]
             ):
-                if output_type == "local" and experiment.projection_scale == "global":
-                    print(
-                        f"ℹ Skipping local facts-total for {wf_name} (projection_scale=global)"
+                if (
+                    output_type == "local"
+                    and plan.experiment.projection_scale == "global"
+                ):
+                    logger.info(
+                        "Skipping local facts-total for %s (projection_scale=global)",
+                        wf_name,
                     )
                     continue
                 section = _build_facts_total_section_for_workflow(
@@ -482,101 +613,84 @@ def generate_compose_from_metadata(metadata_path: Path) -> Dict[str, Any]:
                 else:
                     _populate_section_with_local_outputs(section, metadata, wf)
                 service_name = wf.facts_total_service_name_for_type(output_type)
-                try:
-                    compose_svc = _create_facts_total_compose_service(
-                        section,
-                        service_name,
-                        wf,
-                        metadata,
-                        metadata_path,
-                        facts_total_yaml_path,
-                    )
-                    services[service_name] = compose_svc
-                    print(f"✓ Created {service_name} workflow service")
-                except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-                    print(
-                        f"⚠ Warning: Failed to create workflow service '{service_name}': {e}"
-                    )
+                compose_svc = _create_facts_total_compose_service(
+                    section,
+                    service_name,
+                    wf,
+                    metadata,
+                    experiment_dir,
+                    facts_total_yaml_path,
+                )
+                services[service_name] = compose_svc
+                _log_success("Created %s workflow service", service_name)
 
-        # One ESL service per workflow when both workflows and esl_modules are specified
-        if esl_module_names and experiment.projection_scale == "global":
-            print("ℹ Skipping per-workflow ESL services (projection_scale=global)")
-        elif esl_module_names:
-            for esl_module_name in esl_module_names:
-                try:
-                    esl_yaml_path = find_module_yaml_path(esl_module_name)
-                except FileNotFoundError:
-                    print(
-                        f"⚠ Warning: ESL module YAML not found for '{esl_module_name}', skipping per-workflow ESL"
-                    )
-                    continue
-                base_section = metadata.get(esl_module_name) or {}
-                if not isinstance(base_section, dict):
-                    base_section = {}
-                # Resolve module-specific input base so we can set gesla_dir when it's a placeholder
-                try:
-                    exp_paths = get_experiment_paths(
-                        metadata, f"{esl_module_name} module"
-                    )
-                    module_specific_base = expand_path(
-                        exp_paths.get("module_specific_input_data"),
-                        "module-specific-input-data",
-                    )
-                except (KeyError, TypeError):
-                    module_specific_base = ""
-                for wf_name, wf in workflows.items():
-                    service_name = f"{esl_module_name}-{wf.name}"
-                    base_inputs = dict(base_section.get("inputs") or {})
-                    base_inputs["total_localsl_file"] = (
-                        wf.total_localsl_path_under_output
-                    )
-                    # Ensure gesla_dir is a valid path so --gesla-dir appears in the compose command
-                    gesla_val = base_inputs.get("gesla_dir")
-                    if not gesla_val or (
-                        isinstance(gesla_val, dict)
-                        and gesla_val.get("value") in (None, "")
-                    ):
-                        if module_specific_base:
-                            base_inputs["gesla_dir"] = (
-                                f"{module_specific_base}/{esl_module_name}/gesla_data"
-                            )
-                    base_outputs = base_section.get("outputs") or {}
-                    synthetic_section = {
-                        **base_section,
-                        "inputs": base_inputs,
-                        "outputs": {**base_outputs, "output-dir": "."},
-                    }
-                    metadata_copy = dict(metadata)
-                    metadata_copy[service_name] = synthetic_section
-                    try:
-                        esl_module = create_module_service_spec_from_metadata(
-                            metadata_path,
-                            module_name=service_name,
-                            module_type="extreme_sealevel_module",
-                            metadata=metadata_copy,
-                            module_yaml_path=esl_yaml_path,
-                        )
-                        compose_svc = esl_module.generate_compose_service()
-                        compose_svc["depends_on"] = {
-                            wf.facts_total_service_name_for_type("local"): {
-                                "condition": "service_completed_successfully"
-                            }
-                        }
-                        services[service_name] = compose_svc
-                        print(f"✓ Created {service_name} ESL workflow service")
-                    except (FileNotFoundError, ValueError, yaml.YAMLError) as e:
-                        print(
-                            f"⚠ Warning: Failed to create ESL workflow service '{service_name}': {e}"
-                        )
+        services.update(
+            _create_esl_workflow_services(
+                plan.esl_module_names,
+                plan.workflows,
+                metadata,
+                experiment_dir,
+                plan.experiment.projection_scale,
+            )
+        )
 
-    # When there are no workflows, add a single ESL service per ESL module
-    if not workflows and experiment.projection_scale != "global":
-        for _esl_name, esl_module in modules["esl_modules"].items():
+    if not plan.workflows and plan.experiment.projection_scale != "global":
+        for _esl_name, esl_module in specs.esl_modules.items():
             service_name = esl_module.module_name
             services[service_name] = esl_module.generate_compose_service()
-            print(f"✓ Created {service_name} module")
+            _log_success("Created %s module", service_name)
 
-    # Step 5: Build complete Docker Compose file as dict
-    compose_dict = {"services": services}
+    return services
 
-    return compose_dict
+
+def generate_compose(metadata: Dict[str, Any], experiment_dir: Path) -> Dict[str, Any]:
+    """
+    Generate Docker Compose dict from already-loaded experiment metadata.
+
+    Use this when metadata is already loaded (e.g. from a notebook or test).
+    For path-based callers, use generate_compose_from_path().
+
+    Args:
+        metadata: Loaded experiment-config.yaml as a dict
+        experiment_dir: Path to the experiment directory
+
+    Returns:
+        Complete Docker Compose file dictionary
+    """
+    plan = _parse_experiment(metadata)
+    specs = _build_module_specs(plan, metadata, experiment_dir)
+    if not any(
+        [
+            specs.temperature_module,
+            specs.sealevel_modules,
+            specs.framework_modules,
+            specs.esl_modules,
+        ]
+    ):
+        return {"services": {}}
+    services = _build_compose_services(specs, plan, metadata, experiment_dir)
+    return {"services": services}
+
+
+def generate_compose_from_path(metadata_path: Path) -> Dict[str, Any]:
+    """
+    Generate Docker Compose dict from a path to experiment-config.yaml.
+
+    Handles I/O setup then delegates to generate_compose().
+    For callers with metadata already loaded, use generate_compose() directly.
+
+    Args:
+        metadata_path: Path to experiment-config.yaml
+
+    Returns:
+        Complete Docker Compose file dictionary
+    """
+    if not metadata_path.exists():
+        raise FileNotFoundError(
+            f"When trying to read experiment-metadata file to generate corresponding "
+            f"compose file, metadata file not found: {metadata_path}"
+        )
+    ModuleRegistry.default()
+    metadata = load_experiment_metadata(metadata_path)
+    experiment_dir = metadata_path.parent
+    return generate_compose(metadata, experiment_dir)
