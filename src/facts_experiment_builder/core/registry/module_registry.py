@@ -1,8 +1,11 @@
 import subprocess
-import warnings
+import logging
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class ModuleRegistry:
@@ -15,20 +18,7 @@ class ModuleRegistry:
 
     @classmethod
     def default(cls) -> "ModuleRegistry":
-        env_dir = os.environ.get("FEB_MODULE_REGISTRY_DIR")
-        if env_dir:
-            return cls(Path(env_dir))
-        workspace_dir = Path.cwd() / "facts-module-registry"
-        if workspace_dir.exists():
-            _warn_if_registry_dirty(workspace_dir)
-            _warn_if_registry_behind(workspace_dir)
-            return cls(workspace_dir)
-        raise FileNotFoundError(
-            f"Module registry not found. Expected facts-module-registry/ in your "
-            f"project workspace ({Path.cwd()}).\n"
-            f"Clone it with:\n"
-            f"  git clone https://github.com/fact-sealevel/facts-module-registry.git"
-        )
+        return _get_default_registry()
 
     def get_module_yaml_path(self, module_name: str) -> Path:
         """Return path to <module_name>/<snake>_module.yaml in the registry."""
@@ -75,20 +65,38 @@ class ModuleRegistry:
         return [d.name for d in self._registry_dir.iterdir() if d.is_dir()]
 
 
-def _warn_if_registry_behind(registry_dir: Path) -> None:
-    """Warn if the local registry clone is behind its remote tracking branch.
+@lru_cache(maxsize=1)
+def _get_default_registry() -> "ModuleRegistry":
+    """Return the default ModuleRegistry, cached for the lifetime of the process.
+
+    Git health checks (_warn_if_registry_dirty, _warn_if_registry_behind) run
+    exactly once. Call .cache_clear() in tests that change the working directory
+    between cases.
+    """
+    env_dir = os.environ.get("FEB_MODULE_REGISTRY_DIR")
+    if env_dir:
+        return ModuleRegistry(Path(env_dir))
+    workspace_dir = Path.cwd() / "facts-module-registry"
+    if workspace_dir.exists():
+        _warn_if_registry_dirty(workspace_dir)
+        _warn_if_registry_behind(workspace_dir)
+        return ModuleRegistry(workspace_dir)
+    raise FileNotFoundError(
+        f"Module registry not found. Expected facts-module-registry/ in your "
+        f"project workspace ({Path.cwd()}).\n"
+        f"Clone it with:\n"
+        f"  git clone https://github.com/fact-sealevel/facts-module-registry.git"
+    )
+
+
+def _check_if_registry_behind(registry_dir: Path) -> None:
+    """Check if local registry is behind remote.
 
     Runs `git fetch` (no explicit remote name) so that all configured remotes
     are contacted and all tracking refs are updated — regardless of whether the
     remote is named 'origin', 'upstream', or anything else. Then compares HEAD
     to @{u} (the upstream tracking branch) using `git rev-list HEAD..@{u}
-    --count`. If the count is non-zero the user is warned with the number of
-    commits they are behind. If the fetch fails (timeout, git unavailable, or
-    other OS error) a warning is emitted with the underlying error so the user
-    knows the check could not be completed. A non-zero rev-list return code
-    (e.g. no upstream tracking branch configured) is treated as up-to-date and
-    produces no warning.
-    """
+    --count`."""
     try:
         subprocess.run(
             ["git", "fetch"],
@@ -98,10 +106,7 @@ def _warn_if_registry_behind(registry_dir: Path) -> None:
             timeout=5,
         )
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as e:
-        warnings.warn(
-            f"Could not check facts-module-registry for updates: {e}",
-            stacklevel=4,
-        )
+        logger.warning("Could not check facts-module-registry for updates: %s", e)
         return
 
     result = subprocess.run(
@@ -110,29 +115,51 @@ def _warn_if_registry_behind(registry_dir: Path) -> None:
         capture_output=True,
         text=True,
     )
+    return result
+
+
+def _warn_if_registry_behind(registry_dir: Path) -> None:
+    """Warn if the local registry clone is behind its remote tracking branch.
+
+    If the count is non-zero the user is warned with the number of commits they
+    are behind. If the fetch fails (timeout, git unavailable, or other OS error)
+    a warning is emitted by _check_if_registry_behind and None is returned here —
+    in that case we return early. A non-zero rev-list return code (e.g. no
+    upstream tracking branch configured) is treated as up-to-date and produces
+    no warning.
+    """
+    result = _check_if_registry_behind(registry_dir=registry_dir)
+
+    if result is None:
+        return  # warning already emitted by _check_if_registry_behind
+
     if result.returncode == 0 and result.stdout.strip().isdigit():
         count = int(result.stdout.strip())
         if count > 0:
-            warnings.warn(
-                f"facts-module-registry at {registry_dir} is {count} commit(s) behind the remote. "
+            logger.warning(
+                "facts-module-registry at %s is %d commit(s) behind the remote. "
                 "Run `git pull` in that directory to update.",
-                stacklevel=4,
+                registry_dir,
+                count,
             )
+
+
+def _check_if_registry_dirty(registry_dir: Path) -> None:
+    result = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=registry_dir,
+        capture_output=True,
+        text=True,
+    )
+    return result
 
 
 def _warn_if_registry_dirty(registry_dir: Path) -> None:
-    try:
-        result = subprocess.run(
-            ["git", "status", "--porcelain"],
-            cwd=registry_dir,
-            capture_output=True,
-            text=True,
+    result = _check_if_registry_dirty(registry_dir=registry_dir)
+
+    if result.returncode == 0 and result.stdout.strip():
+        logger.warning(
+            "facts-module-registry at %s has uncommitted changes. "
+            "Module definitions may differ from the published registry.",
+            registry_dir,
         )
-        if result.returncode == 0 and result.stdout.strip():
-            warnings.warn(
-                f"facts-module-registry at {registry_dir} has uncommitted changes. "
-                "Module definitions may differ from the published registry.",
-                stacklevel=4,
-            )
-    except Exception:
-        pass
