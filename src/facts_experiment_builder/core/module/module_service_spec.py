@@ -81,7 +81,6 @@ class ModuleServiceSpec:
     @property
     def input_paths(self) -> ModuleInputPaths:
         """Return input paths (module-specific and general dirs)."""
-        print("input paths: ", self.components.input_paths)
         return self.components.input_paths
 
     @property
@@ -142,6 +141,7 @@ class ModuleServiceSpec:
             if arg_spec.get("envvar"):
                 continue
             value = self._process_argument(arg_spec)
+
             if value is not None:
                 # Handle multiple inputs (e.g., --item can be specified multiple times)
                 if arg_spec.get("multiple", False):
@@ -240,7 +240,10 @@ class ModuleServiceSpec:
                 return value.path
             if value.kind == "experiment_specific_in":
                 return f"/mnt/experiment_specific_in/{Path(value.path).name}"
-            return self._host_path_to_container(value.path, arg_spec)
+            result = self._host_path_to_container(value.path, arg_spec)
+            if value.kind == "host_dir":
+                return result.rstrip("/") + "/"
+            return result
         if mount and isinstance(value, list) and len(value) > 0:
             if all(isinstance(v, TypedPath) for v in value):
                 if value[0].kind == "container":
