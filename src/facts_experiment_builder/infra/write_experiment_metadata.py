@@ -157,6 +157,9 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
                 )
     elif isinstance(value, dict):
         # Regular nested dict (like inputs, options, outputs sections)
+        if not value:
+            lines.append(f"{indent_str}{key}: {{}}")
+            return lines
         lines.append(f"{indent_str}{key}:")
         for nested_key, nested_value in value.items():
             if nested_key.startswith("#"):
