@@ -5,7 +5,7 @@ from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.exceptions import ModuleYamlNotFoundError
 
 
-def load_facts_module_from_yaml(yaml_path: Path) -> ModuleSchema:
+def load_module_schema_from_yaml(yaml_path: Path) -> ModuleSchema:
     """
     Load a ModuleSchema from a module YAML file.
 
@@ -23,7 +23,7 @@ def load_facts_module_from_yaml(yaml_path: Path) -> ModuleSchema:
     return ModuleSchema.from_dict(data)
 
 
-def load_facts_module_by_name(module_name: str) -> ModuleSchema:
+def load_module_schema_by_name(module_name: str) -> ModuleSchema:
     """
     Load a ModuleSchema by module name (resolve path then load).
 
@@ -35,4 +35,4 @@ def load_facts_module_by_name(module_name: str) -> ModuleSchema:
         ModuleSchema for the module.
     """
     yaml_path = find_module_yaml_path(module_name)
-    return load_facts_module_from_yaml(yaml_path)
+    return load_module_schema_from_yaml(yaml_path)
