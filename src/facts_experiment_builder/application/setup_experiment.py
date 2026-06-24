@@ -24,7 +24,7 @@ from facts_experiment_builder.core.steps import (
     ExtremeSealevelStep,
 )
 from facts_experiment_builder.infra.module_loader import (
-    load_facts_module_by_name,
+    load_module_schema_by_name,
 )
 from facts_experiment_builder.infra.experiment_manager import (
     resolve_experiment_directory_path,
@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
     """Return the output climate file path for a climate module (e.g. 'fair-temperature/climate.nc')."""
-    schema = load_facts_module_by_name(climate_module_name)
+    schema = load_module_schema_by_name(climate_module_name)
     for output in schema.get_file_outputs():
         if output.get("name") == "output-climate-file":
             filename = output.get("filename", "climate.nc")
@@ -63,7 +63,7 @@ def hydrate_sealevel_step(
 ) -> SealevelStep:
     if skeleton.sealevel_modules:
         sealevel_schemas = [
-            load_facts_module_by_name(m) for m in skeleton.sealevel_modules
+            load_module_schema_by_name(m) for m in skeleton.sealevel_modules
         ]
         sealevel_step = SealevelStep.from_module_schemas(
             sealevel_schemas,
@@ -89,7 +89,7 @@ def hydrate_experiment(
     """
     if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
         climate_step = ClimateStep.from_module_schema(
-            load_facts_module_by_name(skeleton.climate_module)
+            load_module_schema_by_name(skeleton.climate_module)
         )
     elif skeleton.supplied_totaled_sealevel_step_data:
         climate_step = ClimateStep.not_needed()
@@ -100,14 +100,14 @@ def hydrate_experiment(
 
     if skeleton.totaling_module:
         totaling_step = TotalingStep.from_module_schema(
-            load_facts_module_by_name(skeleton.totaling_module)
+            load_module_schema_by_name(skeleton.totaling_module)
         )
     else:
         totaling_step = TotalingStep()
 
     if skeleton.extremesealevel_module:
         extreme_sealevel_step = ExtremeSealevelStep.from_module_schema(
-            load_facts_module_by_name(skeleton.extremesealevel_module)
+            load_module_schema_by_name(skeleton.extremesealevel_module)
         )
     else:
         extreme_sealevel_step = ExtremeSealevelStep()
@@ -166,7 +166,7 @@ def experiment_skeleton_to_facts_experiment(
     # validate skeleton first
     validate_skeleton_modules(skeleton)
     # Load schemas to derive which top-level and fingerprint keys this experiment needs
-    schemas = [load_facts_module_by_name(m) for m in skeleton.all_module_names]
+    schemas = [load_module_schema_by_name(m) for m in skeleton.all_module_names]
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
     cli_values: Dict[str, object] = {
         "pipeline-id": pipeline_id,
