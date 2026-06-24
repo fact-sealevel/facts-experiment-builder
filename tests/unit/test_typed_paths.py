@@ -3,7 +3,11 @@
 from facts_experiment_builder.core.typed_path import (
     TypedPath,
     HostPath,
+    HostDirPath,
     ContainerPath,
+)
+from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import (
+    _dir_input_keys,
 )
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
@@ -18,7 +22,7 @@ from facts_experiment_builder.infra.path_utils import (
 
 
 def test_typed_path_construction():
-    """TypedPath, HostPath, ContainerPath have correct path and kind."""
+    """TypedPath, HostPath, ContainerPath, HostDirPath have correct path and kind."""
     tp = TypedPath(path="/mnt/out/a.nc", kind="container")
     assert tp.path == "/mnt/out/a.nc"
     assert tp.kind == "container"
@@ -30,6 +34,10 @@ def test_typed_path_construction():
     c = ContainerPath("/mnt/out/b.nc")
     assert c.path == "/mnt/out/b.nc"
     assert c.kind == "container"
+
+    d = HostDirPath("/host/path/cmip6/zos")
+    assert d.path == "/host/path/cmip6/zos"
+    assert d.kind == "host_dir"
 
 
 def test_container_path_list_pass_through():
@@ -220,3 +228,155 @@ def test_generate_compose_service_includes_environment():
     service = spec.generate_compose_service()
     assert "environment" in service
     assert "EMULANDICE_FORCING_HEAD_PATH" in service["environment"]
+
+
+def test_dir_input_keys_returns_keys_with_type_dir():
+    """_dir_input_keys returns field names for inputs declared type: 'dir'."""
+    module_def = ModuleSchema(
+        module_name="test-mod",
+        container_image="img:tag",
+        arguments={
+            "top_level": [],
+            "options": [],
+            "fingerprint_params": [],
+            "inputs": [
+                {
+                    "name": "zosdir",
+                    "type": "dir",
+                    "source": "module_inputs.inputs.zosdir",
+                    "mount": {
+                        "volume": "module_specific_in",
+                        "container_path": "/mnt/module_specific_in",
+                    },
+                },
+                {
+                    "name": "expansion-coefficients-file",
+                    "type": "file",
+                    "source": "module_inputs.inputs.expansion_coefficients_file",
+                    "mount": {
+                        "volume": "input",
+                        "container_path": "/mnt/module_specific_in",
+                    },
+                },
+                {
+                    "name": "seed",
+                    "type": "int",
+                    "source": "module_inputs.options.seed",
+                },
+            ],
+            "outputs": {},
+        },
+        volumes={},
+    )
+    keys = _dir_input_keys(module_def)
+    assert keys == {"zosdir"}
+
+
+def test_host_dir_path_gets_trailing_slash_in_command():
+    """A HostDirPath input produces a container path with a trailing slash."""
+    input_paths = build_module_input_paths(
+        module_specific_input_dir="/data/module-specific/ebm3-sterodynamics",
+        shared_input_dir="/data/shared",
+        module_name="ebm3-sterodynamics",
+    )
+    output_paths = build_module_output_paths(
+        "/data/output/ebm3-sterodynamics", "global", module_name="ebm3-sterodynamics"
+    )
+    components = ModuleServiceSpecComponents(
+        module_name="ebm3-sterodynamics",
+        options={},
+        input_paths=input_paths,
+        output_paths=output_paths,
+        fingerprint_params={},
+        inputs={
+            "zosdir": HostDirPath("/data/module-specific/ebm3-sterodynamics/cmip6/zos")
+        },
+        outputs={},
+        image=ModuleContainerImage(image_url="img", image_tag="tag"),
+        metadata={},
+        output_container_base=None,
+    )
+    module_def = ModuleSchema(
+        module_name="ebm3-sterodynamics",
+        container_image="img:tag",
+        arguments={
+            "top_level": [],
+            "options": [],
+            "fingerprint_params": [],
+            "inputs": [
+                {
+                    "name": "zosdir",
+                    "type": "dir",
+                    "source": "module_inputs.inputs.zosdir",
+                    "mount": {
+                        "volume": "module_specific_in",
+                        "container_path": "/mnt/module_specific_in",
+                    },
+                }
+            ],
+            "outputs": {},
+        },
+        volumes={},
+    )
+    spec = ModuleServiceSpec(components=components, module_definition=module_def)
+    command = spec._build_command_args()
+    zosdir_arg = next((a for a in command if a.startswith("--zosdir=")), None)
+    assert zosdir_arg is not None
+    assert zosdir_arg.endswith("/"), f"Expected trailing slash, got: {zosdir_arg}"
+
+
+def test_host_path_does_not_get_trailing_slash_in_command():
+    """A regular HostPath input does not have a trailing slash added."""
+    input_paths = build_module_input_paths(
+        module_specific_input_dir="/data/module-specific/test-mod",
+        shared_input_dir="/data/shared",
+        module_name="test-mod",
+    )
+    output_paths = build_module_output_paths(
+        "/data/output/test-mod", "global", module_name="test-mod"
+    )
+    components = ModuleServiceSpecComponents(
+        module_name="test-mod",
+        options={},
+        input_paths=input_paths,
+        output_paths=output_paths,
+        fingerprint_params={},
+        inputs={
+            "expansion_coefficients_file": HostPath(
+                "/data/module-specific/test-mod/coefs.nc"
+            )
+        },
+        outputs={},
+        image=ModuleContainerImage(image_url="img", image_tag="tag"),
+        metadata={},
+        output_container_base=None,
+    )
+    module_def = ModuleSchema(
+        module_name="test-mod",
+        container_image="img:tag",
+        arguments={
+            "top_level": [],
+            "options": [],
+            "fingerprint_params": [],
+            "inputs": [
+                {
+                    "name": "expansion-coefficients-file",
+                    "type": "file",
+                    "source": "module_inputs.inputs.expansion_coefficients_file",
+                    "mount": {
+                        "volume": "input",
+                        "container_path": "/mnt/module_specific_in",
+                    },
+                }
+            ],
+            "outputs": {},
+        },
+        volumes={},
+    )
+    spec = ModuleServiceSpec(components=components, module_definition=module_def)
+    command = spec._build_command_args()
+    file_arg = next(
+        (a for a in command if a.startswith("--expansion-coefficients-file=")), None
+    )
+    assert file_arg is not None
+    assert not file_arg.endswith("/"), f"Did not expect trailing slash, got: {file_arg}"

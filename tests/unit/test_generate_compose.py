@@ -2,7 +2,10 @@
 
 import pytest
 from facts_experiment_builder.application import generate_compose
-from unittest.mock import patch
+from facts_experiment_builder.application.generate_compose import (
+    check_metadata_has_required_fields,
+)
+from unittest.mock import MagicMock, patch
 from pathlib import Path
 
 
@@ -141,3 +144,128 @@ def test_collect_workflow_output_paths_local_only():
     )
     assert len(paths) == 1
     assert "lslr.nc" in paths[0]
+
+
+def test_check_metadata_has_required_fields():
+    required_fields = {
+        "experiment-name": "my-test-exp",
+        "pipeline-id": "abc123",
+        "nsamps": 100,
+    }
+    metadata_complete = {
+        "experiment-name": "my-test-exp",
+        "pipeline-id": "abc123",
+        "nsamps": 100,
+        "scenario": "ssp585",
+    }
+    metadata_incomplete = {
+        "pipeline-id": "abc123",
+        "nsamps": 100,
+        "experiment-name": None,
+    }
+    check_metadata_has_required_fields(metadata_complete, required_fields)
+
+    with pytest.raises(ValueError, match="experiment-name"):
+        check_metadata_has_required_fields(
+            metadata_incomplete, required_fields=["experiment-name"]
+        )
+
+
+def test_extract_experiment_dir_from_metadata_path():
+    metadata_path = Path("/experiments/my-exp/experiment-config.yaml")
+    result = generate_compose.extract_experiment_dir_from_metadata_path(metadata_path)
+    assert result == Path("/experiments/my-exp")
+
+
+def test_extract_experiment_dir_raises_for_root_path():
+    with pytest.raises(ValueError, match="No experiment dir"):
+        generate_compose.extract_experiment_dir_from_metadata_path(Path("/"))
+
+
+def test_extract_all_module_names_returns_all_modules():
+    metadata = {
+        "temperature_module": "fair-temperature",
+        "sealevel_modules": ["bamber19-icesheets", "tlm-sterodynamics"],
+        "framework_modules": ["facts-total"],
+        "esl_modules": ["extremesealevel-pointsoverthreshold"],
+    }
+    result = generate_compose._extract_all_module_names_from_manifest(metadata)
+    assert result == [
+        "fair-temperature",
+        "bamber19-icesheets",
+        "tlm-sterodynamics",
+        "facts-total",
+        "extremesealevel-pointsoverthreshold",
+    ]
+
+
+def test_extract_all_module_names_excludes_none_temperature():
+    metadata = {
+        "temperature_module": "NONE",
+        "sealevel_modules": ["tlm-sterodynamics"],
+        "framework_modules": [],
+        "esl_modules": [],
+    }
+    result = generate_compose._extract_all_module_names_from_manifest(metadata)
+    assert result == ["tlm-sterodynamics"]
+
+
+def test_extract_all_module_names_excludes_lowercase_none_temperature():
+    metadata = {"temperature_module": "none", "sealevel_modules": ["tlm-sterodynamics"]}
+    result = generate_compose._extract_all_module_names_from_manifest(metadata)
+    assert result == ["tlm-sterodynamics"]
+
+
+def test_extract_all_module_names_empty_metadata():
+    result = generate_compose._extract_all_module_names_from_manifest({})
+    assert result == []
+
+
+def test_parse_experiment_returns_plan_with_correct_module_names():
+    """_parse_experiment is independently testable — no filesystem needed beyond patching the module loader."""
+    metadata = {
+        "experiment_name": "test-exp",
+        "pipeline-id": "abc123",
+        "nsamps": 100,
+        "scenario": "ssp585",
+        "pyear_start": 2020,
+        "pyear_end": 2100,
+        "pyear_step": 10,
+        "baseyear": 2005,
+        "module-specific-input-data": "/data/module",
+        "shared-input-data": "/data/shared",
+        "output-data-location": "/data/output",
+        "temperature_module": "fair-temperature",
+        "sealevel_modules": ["tlm-sterodynamics"],
+    }
+
+    mock_experiment = MagicMock()
+    mock_experiment.climate_step.module_name = "fair-temperature"
+    mock_experiment.sealevel_step.module_names = ["tlm-sterodynamics"]
+    mock_experiment.totaling_step.is_present = False
+    mock_experiment.totaling_step.module_name = None
+    mock_experiment.extreme_sealevel_step.is_present = False
+    mock_experiment.extreme_sealevel_step.module_name = None
+    mock_experiment.projection_scale = None
+
+    with (
+        patch(
+            "facts_experiment_builder.application.generate_compose.load_module_schema_by_name",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "facts_experiment_builder.application.generate_compose.FactsExperiment.from_metadata_dict",
+            return_value=mock_experiment,
+        ),
+        patch(
+            "facts_experiment_builder.application.generate_compose.workflows_from_metadata",
+            return_value={},
+        ),
+    ):
+        plan = generate_compose._parse_experiment(metadata)
+
+    assert plan.temperature_module_name == "fair-temperature"
+    assert plan.sealevel_module_names == ["tlm-sterodynamics"]
+    assert plan.framework_module_names == []
+    assert plan.esl_module_names == []
+    assert plan.workflows == {}

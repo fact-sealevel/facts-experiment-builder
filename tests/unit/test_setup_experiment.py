@@ -55,7 +55,7 @@ def test_hydrate_experiment_no_modules_returns_none_steps():
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_experiment_climate_module_produces_module_spec(mock_load):
     mock_load.return_value = make_module_schema("fair-temperature")
@@ -68,7 +68,7 @@ def test_hydrate_experiment_climate_module_produces_module_spec(mock_load):
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_experiment_totaling_module_produces_module_spec(mock_load):
     mock_load.return_value = make_module_schema("facts-total")
@@ -81,7 +81,7 @@ def test_hydrate_experiment_totaling_module_produces_module_spec(mock_load):
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_experiment_esl_module_produces_module_spec(mock_load):
     mock_load.return_value = make_module_schema("extremesealevel-pointsoverthreshold")
@@ -108,7 +108,7 @@ def test_hydrate_sealevel_step_no_modules_uses_supplied_totaled_sealevel_step_da
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_sealevel_step_loads_schemas_for_each_module(mock_load):
     mock_load.side_effect = [
@@ -125,7 +125,7 @@ def test_hydrate_sealevel_step_loads_schemas_for_each_module(mock_load):
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_sealevel_step_merges_climate_data_using_module_specific_input_key(
     mock_load,
@@ -171,7 +171,7 @@ def test_hydrate_sealevel_step_merges_climate_data_using_module_specific_input_k
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_sealevel_step_skips_merge_for_modules_without_climate_file(mock_load):
     mock_load.side_effect = [
@@ -193,7 +193,7 @@ def test_hydrate_sealevel_step_skips_merge_for_modules_without_climate_file(mock
 
 
 @patch(
-    "facts_experiment_builder.application.setup_experiment.load_facts_module_by_name"
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
 )
 def test_hydrate_sealevel_step_passes_top_level_context_to_specs(mock_load):
     """top_level_context (e.g. pyear_end) must reach ModuleExperimentSpec so
