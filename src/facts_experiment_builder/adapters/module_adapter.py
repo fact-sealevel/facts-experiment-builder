@@ -11,7 +11,7 @@ from facts_experiment_builder.infra.experiment_loader import load_experiment_met
 
 
 def create_module_service_spec_from_metadata(
-    metadata_path: Path,
+    experiment_dir: Path,
     module_name: str,
     module_type: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
@@ -21,18 +21,18 @@ def create_module_service_spec_from_metadata(
     Create a single module service spec from experiment metadata.
 
     Args:
-        metadata_path: Path to experiment-config.yaml
+        experiment_dir: Path to dir containing experiment-config.yaml
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
         module_type: Optional category (e.g. 'temperature_module', 'sealevel_module')
-        metadata: Optional pre-loaded metadata (if provided, metadata_path is used only for experiment_dir)
+        metadata: Optional pre-loaded metadata. If provided, skips loading from disk.
         module_yaml_path: Optional path to module YAML (e.g. for facts-total workflow services)
 
     Returns:
         ModuleServiceSpec
     """
+    metadata_path = Path(experiment_dir, "experiment-config.yaml")
     if metadata is None:
         metadata = load_experiment_metadata(metadata_path)
-    experiment_dir = metadata_path.parent
 
     try:
         return build_module_service_spec(

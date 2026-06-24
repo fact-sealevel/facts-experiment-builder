@@ -22,11 +22,12 @@ from facts_experiment_builder.core.module.module_service_spec import (
 from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
 from facts_experiment_builder.core.typed_path import (
     HostPath,
+    HostDirPath,
     ContainerPath,
     ExperimentSpecificInputPath,
 )
 from facts_experiment_builder.infra.module_loader import (
-    load_facts_module_from_yaml,
+    load_module_schema_from_yaml,
     find_module_yaml_path,
 )
 
@@ -50,6 +51,18 @@ def _registry_module_names() -> frozenset:
 
         _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
     return _KNOWN_MODULE_NAMES
+
+
+def _dir_input_keys(module_definition: Any) -> Set[str]:
+    """Return set of input field names declared as directory paths (type: 'dir') in the module YAML."""
+    keys: Set[str] = set()
+    for arg_spec in module_definition.arguments.get("inputs", []):
+        if arg_spec.get("type") != "dir":
+            continue
+        source = arg_spec.get("source", "")
+        if "." in source:
+            keys.add(source.split(".")[-1])
+    return keys
 
 
 def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
@@ -102,7 +115,7 @@ def build_module_service_spec(
     else:
         # this is climate + sea level module steps
         resolved_yaml_path = find_module_yaml_path(module_name)
-    module_definition = load_facts_module_from_yaml(resolved_yaml_path)
+    module_definition = load_module_schema_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
     scenario_name = get_required_field(metadata, "scenario", module_context)
@@ -190,6 +203,7 @@ def build_module_service_spec(
     output_root_relative_inputs = module_definition.get_output_volume_input_keys()
 
     multiple_file_input_keys = _multiple_file_input_keys(module_definition)
+    dir_input_keys = _dir_input_keys(module_definition)
 
     inputs_dict = {}
     for key, value in module_inputs_section.items():
@@ -278,7 +292,11 @@ def build_module_service_spec(
                     module_name,
                     module_context,
                 )
-                inputs_dict[key] = HostPath(resolved_path)
+                inputs_dict[key] = (
+                    HostDirPath(resolved_path)
+                    if key in dir_input_keys
+                    else HostPath(resolved_path)
+                )
             except (ValueError, KeyError, TypeError) as e:
                 error_msg = str(e)
                 if "None" in error_msg or "NoneType" in error_msg:
