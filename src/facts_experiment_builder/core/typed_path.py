@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import List, Literal, Union
 
-PathKind = Literal["host", "container", "experiment_specific_in"]
+PathKind = Literal["host", "host_dir", "container", "experiment_specific_in"]
 
 
 @dataclass(frozen=True)
@@ -13,6 +13,9 @@ class TypedPath:
     Kinds:
     - "host": host path routed to a standard module input volume; container destination
       determined by the module YAML mount spec.
+    - "host_dir": host path to a directory; like "host" but the builder appends a
+      trailing slash to the container path. Use for inputs declared type: "dir" in the
+      module YAML (e.g. zosdir, model-dir).
     - "container": already a container path; used as-is.
     - "experiment_specific_in": host path for user-supplied experiment data (e.g.
       climate data passed via --supplied-climate-step-data); always routed to
@@ -29,6 +32,11 @@ class TypedPath:
 def HostPath(path: str) -> TypedPath:
     """Path on the host filesystem; builder will rewrite to container path via module YAML mount spec."""
     return TypedPath(path=path, kind="host")
+
+
+def HostDirPath(path: str) -> TypedPath:
+    """Host path to a directory; builder rewrites to container path and appends a trailing slash."""
+    return TypedPath(path=path, kind="host_dir")
 
 
 def ContainerPath(path: str) -> TypedPath:
