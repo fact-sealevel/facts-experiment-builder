@@ -2,7 +2,7 @@ import click
 from pathlib import Path
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
-    generate_compose_from_metadata,
+    generate_compose_from_path,
 )
 from facts_experiment_builder.infra.path_manager import (
     find_experiment_metadata_file,
@@ -15,7 +15,34 @@ from facts_experiment_builder.infra.write_compose import (
 import logging
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+
+
+_SUCCESS = 25  # must match application layer value
+logging.addLevelName(_SUCCESS, "SUCCESS")
+
+
+class _ClickEchoHandler(logging.Handler):
+    def emit(self, record: logging.LogRecord) -> None:
+        msg = record.getMessage()
+        if record.levelno >= logging.WARNING:
+            console.print(f"⚠ [danger]Warning: [/danger]{msg}")
+        elif record.levelno == _SUCCESS:
+            console.print(f"✓ [success]{msg}[/success]")
+        else:  # INFO
+            console.print(f"ℹ [accent]{msg}[/accent]")
+
+
+def _configure_feb_logging() -> None:
+    """Wire the ClickEchoHandler onto the facts_experiment_builder namespace logger.
+
+    Called at CLI invocation time (not import time) so that tests importing from
+    sibling modules don't accidentally install the handler and break caplog capture.
+    """
+    feb_logger = logging.getLogger("facts_experiment_builder")
+    if not any(isinstance(h, _ClickEchoHandler) for h in feb_logger.handlers):
+        feb_logger.addHandler(_ClickEchoHandler())
+    feb_logger.setLevel(logging.INFO)
+    feb_logger.propagate = False
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -44,6 +71,8 @@ def main(
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
 
+    _configure_feb_logging()
+
     if debug:
         logger.setLevel(logging.INFO)
 
@@ -63,7 +92,11 @@ def main(
     console.print(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
-    compose_dict = generate_compose_from_metadata(metadata_path)
+    try:
+        compose_dict = generate_compose_from_path(metadata_path)
+    except (FileNotFoundError, ValueError) as e:
+        console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
+        raise SystemExit(1)
 
     # Step 3: Resolve output path for compose file
     console.print(
