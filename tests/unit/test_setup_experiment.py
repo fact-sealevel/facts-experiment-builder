@@ -1,8 +1,10 @@
+import yaml
 from unittest.mock import patch
 from facts_experiment_builder.application.setup_experiment import (
     hydrate_experiment,
     hydrate_sealevel_step,
 )
+from facts_experiment_builder.infra.write_experiment_metadata import format_module_value
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
     ExperimentSkeleton,
 )
@@ -333,3 +335,17 @@ def test_collect_metadata_param_keys_empty_when_no_metadata_sources():
     )
     result = collect_metadata_param_keys([schema], "fingerprint_params")
     assert result == {}
+
+
+def test_format_module_value_empty_dict_roundtrips_as_empty_dict():
+    """An empty dict value (e.g. outputs: {}) must serialise as 'key: {}' so YAML
+    reads it back as an empty dict rather than None.
+
+    Regression test for the bug where extremesealevel-pointsoverthreshold.outputs
+    (which has no outputs) was serialised as a bare 'outputs:' key, causing YAML
+    to parse it as None and the adapter to raise a ValueError.
+    """
+    lines = format_module_value("outputs", {})
+    rendered = "\n".join(lines)
+    parsed = yaml.safe_load(rendered)
+    assert parsed == {"outputs": {}}, f"Expected {{'outputs': {{}}}}, got: {parsed}"
