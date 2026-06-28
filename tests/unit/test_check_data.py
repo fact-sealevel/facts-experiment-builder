@@ -1,39 +1,13 @@
 """Unit tests for application/check_data.py."""
 
-import yaml
-from pathlib import Path
-
 from facts_experiment_builder.application.check_data import (
     _check_module,
     _dir_to_module_names,
     check_module_data,
+    ModuleCheckResult,
 )
 from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _write_module_yaml(registry_dir: Path, module_name: str, inputs: list) -> None:
-    """Write a minimal module YAML into a registry-style directory structure."""
-    module_dir = registry_dir / module_name
-    module_dir.mkdir(parents=True, exist_ok=True)
-    snake = module_name.replace("-", "_")
-    yaml_path = module_dir / f"{snake}_module.yaml"
-    yaml_path.write_text(yaml.dump({"arguments": {"inputs": inputs}}))
-
-
-def _write_module_yaml_with_args(
-    registry_dir: Path, module_name: str, arguments: dict
-) -> None:
-    """Write a module YAML with an arbitrary arguments dict."""
-    module_dir = registry_dir / module_name
-    module_dir.mkdir(parents=True, exist_ok=True)
-    snake = module_name.replace("-", "_")
-    yaml_path = module_dir / f"{snake}_module.yaml"
-    yaml_path.write_text(yaml.dump({"arguments": arguments}))
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
 # ---------------------------------------------------------------------------
@@ -58,146 +32,61 @@ def test_dir_to_module_names_unrecognized():
 
 
 # ---------------------------------------------------------------------------
-# _check_module — filename as a list (regression test for TypeError)
-# ---------------------------------------------------------------------------
-
-
-def test_check_module_filename_list_does_not_raise(tmp_path):
-    """filename as a list should produce one InputFileCheck per entry, not raise TypeError."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml(
-        registry_dir,
-        "my-module",
-        inputs=[
-            {
-                "name": "data-file",
-                "filename": ["file_a.nc", "file_b.nc"],
-                "mount": {"volume": "module_specific_in"},
-            }
-        ],
-    )
-    registry = ModuleRegistry(registry_dir)
-    module_input_dir = tmp_path / "module_specific_input_data" / "my-module"
-    module_input_dir.mkdir(parents=True)
-
-    result = _check_module(
-        module_name="my-module",
-        module_input_dir=module_input_dir,
-        registry=registry,
-    )
-
-    assert len(result.checks) == 2
-    assert all(not c.skipped for c in result.checks)
-    assert all(not c.exists for c in result.checks)  # files not created, so missing
-
-
-def test_check_module_filename_list_detects_present_and_missing(tmp_path):
-    """Each file in a filename list is checked independently."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml(
-        registry_dir,
-        "my-module",
-        inputs=[
-            {
-                "name": "data-file",
-                "filename": ["present.nc", "missing.nc"],
-                "mount": {"volume": "module_specific_in"},
-            }
-        ],
-    )
-    registry = ModuleRegistry(registry_dir)
-    module_input_dir = tmp_path / "module_specific_input_data" / "my-module"
-    module_input_dir.mkdir(parents=True)
-    (module_input_dir / "present.nc").touch()
-
-    result = _check_module(
-        module_name="my-module",
-        module_input_dir=module_input_dir,
-        registry=registry,
-    )
-
-    assert len(result.checks) == 2
-    present = [c for c in result.checks if c.exists]
-    missing = [c for c in result.checks if not c.exists and not c.skipped]
-    assert len(present) == 1
-    assert len(missing) == 1
-
-
-# ---------------------------------------------------------------------------
 # _check_module — other behaviours
 # ---------------------------------------------------------------------------
 
 
-def test_check_module_skips_output_volume(tmp_path):
+def test_check_module_skips_output_volume(
+    tmp_path,
+    climate_data_file_arg_spec,
+):
     """Inputs with mount.volume == 'output' are skipped (inter-module dependencies)."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml(
-        registry_dir,
-        "my-module",
-        inputs=[
-            {
-                "name": "climate-data-file",
-                "filename": "climate.nc",
-                "mount": {"volume": "output"},
-            }
-        ],
-    )
-    registry = ModuleRegistry(registry_dir)
-
-    result = _check_module(
+    schema = ModuleSchema(
         module_name="my-module",
-        module_input_dir=tmp_path / "module_data",
-        registry=registry,
+        container_image="img:tag",
+        arguments={"inputs": [climate_data_file_arg_spec.model_dump()], "outputs": {}},
+        volumes={},
     )
+    result = ModuleCheckResult(module_name="my-module")
+    result = _check_module(result, schema, tmp_path / "module_data")
 
     assert len(result.checks) == 1
     assert result.checks[0].skipped
     assert result.n_checkable == 0
 
 
-def test_check_module_skips_missing_filename(tmp_path):
-    """Inputs with no filename field are skipped."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml(
-        registry_dir,
-        "my-module",
-        inputs=[{"name": "some-input", "mount": {"volume": "module_specific_in"}}],
-    )
-    registry = ModuleRegistry(registry_dir)
-
-    result = _check_module(
+def test_check_module_skips_missing_filename(tmp_path, non_file_input_arg_spec):
+    """Dir inputs with no default_value are skipped (no checkable path)."""
+    schema = ModuleSchema(
         module_name="my-module",
-        module_input_dir=tmp_path / "module_data",
-        registry=registry,
+        container_image="img:tag",
+        arguments={"inputs": [non_file_input_arg_spec.model_dump()], "outputs": {}},
+        volumes={},
     )
+    result = ModuleCheckResult(module_name="my-module")
+    result = _check_module(result, schema, tmp_path / "module_data")
 
     assert result.checks[0].skipped
 
 
-def test_check_module_string_filename_present(tmp_path):
+def test_check_module_string_filename_present(
+    tmp_path, random_module_specific_inputs_arg_spec
+):
     """A present file with a string filename is reported as exists=True."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml(
-        registry_dir,
-        "my-module",
-        inputs=[
-            {
-                "name": "param-file",
-                "filename": "params.nc",
-                "mount": {"volume": "module_specific_in"},
-            }
-        ],
-    )
-    registry = ModuleRegistry(registry_dir)
     module_input_dir = tmp_path / "module_data"
     module_input_dir.mkdir()
-    (module_input_dir / "params.nc").touch()
-
-    result = _check_module(
+    (module_input_dir / "random_file_name.nc").touch()
+    schema = ModuleSchema(
         module_name="my-module",
-        module_input_dir=module_input_dir,
-        registry=registry,
+        container_image="img:tag",
+        arguments={
+            "inputs": [random_module_specific_inputs_arg_spec.model_dump()],
+            "outputs": {},
+        },
+        volumes={},
     )
+    result = ModuleCheckResult(module_name="my-module")
+    result = _check_module(result, schema, module_input_dir)
 
     assert result.n_present == 1
     assert result.n_missing == 0
@@ -264,93 +153,69 @@ def test_check_module_data_missing_dir(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_check_module_fingerprint_params_module_specific_checked(tmp_path):
+def test_check_module_fingerprint_params_module_specific_checked(
+    tmp_path, fp_module_specific_arg_spec
+):
     """fingerprint_params with container_path /mnt/module_specific_in are checked."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml_with_args(
-        registry_dir,
-        "my-module",
-        {
+    schema = ModuleSchema(
+        module_name="my-module",
+        container_image="img:tag",
+        arguments={
             "inputs": [],
-            "fingerprint_params": [
-                {
-                    "name": "fp-data",
-                    "filename": "fp_data.nc",
-                    "mount": {"container_path": "/mnt/module_specific_in"},
-                }
-            ],
+            "fingerprint_params": [fp_module_specific_arg_spec.model_dump()],
+            "outputs": {},
         },
+        volumes={},
     )
-    registry = ModuleRegistry(registry_dir)
     module_input_dir = tmp_path / "module_data"
     module_input_dir.mkdir()
-
-    result = _check_module(
-        module_name="my-module",
-        module_input_dir=module_input_dir,
-        registry=registry,
-    )
+    result = ModuleCheckResult(module_name="my-module")
+    result = _check_module(result, schema, module_input_dir)
 
     assert len(result.checks) == 1
     assert not result.checks[0].skipped
-    assert not result.checks[0].exists  # file not created
+    assert not result.checks[0].exists
 
 
-def test_check_module_fingerprint_params_module_specific_present(tmp_path):
+def test_check_module_fingerprint_params_module_specific_present(
+    tmp_path, fp_module_specific_arg_spec
+):
     """A present fingerprint_params file in module-specific storage is detected."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml_with_args(
-        registry_dir,
-        "my-module",
-        {
-            "inputs": [],
-            "fingerprint_params": [
-                {
-                    "name": "fp-data",
-                    "filename": "fp_data.nc",
-                    "mount": {"container_path": "/mnt/module_specific_in"},
-                }
-            ],
-        },
-    )
-    registry = ModuleRegistry(registry_dir)
     module_input_dir = tmp_path / "module_data"
     module_input_dir.mkdir()
     (module_input_dir / "fp_data.nc").touch()
-
-    result = _check_module(
+    schema = ModuleSchema(
         module_name="my-module",
-        module_input_dir=module_input_dir,
-        registry=registry,
+        container_image="img:tag",
+        arguments={
+            "inputs": [],
+            "fingerprint_params": [fp_module_specific_arg_spec.model_dump()],
+            "outputs": {},
+        },
+        volumes={},
     )
+    result = ModuleCheckResult(module_name="my-module")
+    result = _check_module(result, schema, module_input_dir)
 
     assert result.n_present == 1
     assert result.n_missing == 0
 
 
-def test_check_module_fingerprint_params_shared_not_checked_here(tmp_path):
+def test_check_module_fingerprint_params_shared_not_checked_here(
+    tmp_path, fp_shared_arg_spec
+):
     """fingerprint_params with /mnt/shared_in are NOT checked by _check_module."""
-    registry_dir = tmp_path / "registry"
-    _write_module_yaml_with_args(
-        registry_dir,
-        "my-module",
-        {
-            "inputs": [],
-            "fingerprint_params": [
-                {
-                    "name": "fp-shared",
-                    "filename": "grd_fingerprints.nc",
-                    "mount": {"container_path": "/mnt/shared_in"},
-                }
-            ],
-        },
-    )
-    registry = ModuleRegistry(registry_dir)
-
-    result = _check_module(
+    schema = ModuleSchema(
         module_name="my-module",
-        module_input_dir=tmp_path / "module_data",
-        registry=registry,
+        container_image="img:tag",
+        arguments={
+            "inputs": [],
+            "fingerprint_params": [fp_shared_arg_spec.model_dump()],
+            "outputs": {},
+        },
+        volumes={},
     )
+    result = ModuleCheckResult(module_name="my-module")
+    result = _check_module(result, schema, tmp_path / "module_data")
 
     assert result.checks == []

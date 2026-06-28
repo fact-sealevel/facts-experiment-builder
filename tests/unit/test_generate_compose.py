@@ -4,7 +4,9 @@ import pytest
 from facts_experiment_builder.application import generate_compose
 from facts_experiment_builder.application.generate_compose import (
     check_metadata_has_required_fields,
+    _validate_climate_file_inputs,
 )
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
@@ -30,74 +32,57 @@ def test_module_requires_climate_file_true_when_key_true(
     assert result
 
 
-def _write_module_yaml_with_input(tmp_path: Path, input_name: str) -> Path:
-    """Write a minimal module YAML with uses_climate_file: true and a named input on the output volume."""
+def _make_climate_schema(input_name: str) -> ModuleSchema:
     source_key = input_name.replace("-", "_")
-    yaml_path = tmp_path / "test_module_module.yaml"
-    yaml_path.write_text(
-        f"uses_climate_file: true\n"
-        f"volumes:\n"
-        f"  output:\n"
-        f"    host_path: module_inputs.output_paths.output_dir\n"
-        f"    container_path: /mnt/out\n"
-        f"arguments:\n"
-        f"  inputs:\n"
-        f"    - name: {input_name}\n"
-        f"      source: module_inputs.inputs.{source_key}\n"
-        f"      mount:\n"
-        f"        volume: output\n"
-        f"        container_path: /mnt/out\n"
+    return ModuleSchema(
+        module_name="test-module",
+        container_image="img:tag",
+        uses_climate_file=True,
+        arguments={
+            "inputs": [
+                {
+                    "name": input_name,
+                    "type": "str",
+                    "source": f"module_inputs.inputs.{source_key}",
+                    "mount": {"volume": "output", "container_path": "/mnt/out"},
+                }
+            ]
+        },
+        volumes={
+            "output": {
+                "host_path": "module_inputs.output_paths.output_dir",
+                "container_path": "/mnt/out",
+            }
+        },
     )
-    return yaml_path
 
 
-def test_validate_climate_file_inputs_passes_with_standard_key(tmp_path: Path):
+def test_validate_climate_file_inputs_passes_with_standard_key():
     """Validation succeeds when the module's climate input key is provided in metadata."""
-    yaml_path = _write_module_yaml_with_input(tmp_path, "climate-data-file")
+    schema = _make_climate_schema("climate-data-file")
     metadata = {
         "test-module": {"inputs": {"climate_data_file": "fair-temperature/climate.nc"}}
     }
-
-    with patch(
-        "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
-        return_value=yaml_path,
-    ):
-        generate_compose._validate_climate_file_inputs(
-            metadata, ["test-module"], tmp_path
-        )
+    _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
 
 
-def test_validate_climate_file_inputs_passes_with_nonstandard_key(tmp_path: Path):
+def test_validate_climate_file_inputs_passes_with_nonstandard_key():
     """Validation succeeds when the module uses a non-standard climate input name."""
-    yaml_path = _write_module_yaml_with_input(tmp_path, "input-data-file")
+    schema = _make_climate_schema("input-data-file")
     metadata = {
         "test-module": {"inputs": {"input_data_file": "fair-temperature/climate.nc"}}
     }
-
-    with patch(
-        "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
-        return_value=yaml_path,
-    ):
-        generate_compose._validate_climate_file_inputs(
-            metadata, ["test-module"], tmp_path
-        )
+    _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
 
 
-def test_validate_climate_file_inputs_raises_when_nonstandard_key_missing(
-    tmp_path: Path,
-):
+def test_validate_climate_file_inputs_raises_when_nonstandard_key_missing():
     """Validation raises when a module with a non-standard climate input name has no value."""
-    yaml_path = _write_module_yaml_with_input(tmp_path, "input-data-file")
+    schema = _make_climate_schema("input-data-file")
     metadata = {"test-module": {"inputs": {}}}
-
-    with patch(
-        "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
-        return_value=yaml_path,
-    ):
-        with pytest.raises(ValueError, match="test-module"):
-            generate_compose._validate_climate_file_inputs(
-                metadata, ["test-module"], tmp_path
-            )
+    with pytest.raises(ValueError, match="test-module"):
+        _validate_climate_file_inputs(
+            metadata, ["test-module"], {"test-module": schema}
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -120,6 +105,15 @@ def _make_workflow_metadata(mod: str = "tlm-sterodynamics") -> dict:
     }
 
 
+def _make_module_schema(mod: str, file_outputs: list) -> ModuleSchema:
+    return ModuleSchema(
+        module_name=mod,
+        container_image="img:tag",
+        arguments={"outputs": {"files": file_outputs}},
+        volumes={},
+    )
+
+
 def test_collect_workflow_output_paths_global_only():
     """Only global outputs are collected when output_type='global'."""
     from facts_experiment_builder.core.workflow.workflow import Workflow
@@ -127,7 +121,7 @@ def test_collect_workflow_output_paths_global_only():
     wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
     metadata = _make_workflow_metadata()
     paths = generate_compose._collect_workflow_output_paths_by_type(
-        metadata, wf, "global"
+        metadata, wf, "global", {}
     )
     assert len(paths) == 1
     assert "gslr.nc" in paths[0]
@@ -140,10 +134,77 @@ def test_collect_workflow_output_paths_local_only():
     wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
     metadata = _make_workflow_metadata()
     paths = generate_compose._collect_workflow_output_paths_by_type(
-        metadata, wf, "local"
+        metadata, wf, "local", {}
     )
     assert len(paths) == 1
     assert "lslr.nc" in paths[0]
+
+
+def test_collect_workflow_output_paths_excludes_pass_to_total_false():
+    """Outputs with pass_to_total=False in the schema are excluded."""
+    from facts_experiment_builder.core.workflow.workflow import Workflow
+
+    mod = "emulandice-ais"
+    wf = Workflow(name="wf1", module_names=[mod])
+    metadata = {
+        mod: {
+            "outputs": {
+                "output-gslr-file": {
+                    "value": f"{mod}/gslr.nc",
+                    "output_type": "global",
+                },
+                "output-gslr-wais-file": {
+                    "value": f"{mod}/gslr-wais.nc",
+                    "output_type": "global",
+                },
+            }
+        }
+    }
+    schema = _make_module_schema(
+        mod,
+        [
+            {
+                "name": "output-gslr-file",
+                "type": "file",
+                "source": "s",
+                "output_type": "global",
+                "pass_to_total": True,
+            },
+            {
+                "name": "output-gslr-wais-file",
+                "type": "file",
+                "source": "s",
+                "output_type": "global",
+                "pass_to_total": False,
+            },
+        ],
+    )
+    paths = generate_compose._collect_workflow_output_paths_by_type(
+        metadata, wf, "global", {mod: schema}
+    )
+    assert len(paths) == 1
+    assert "gslr.nc" in paths[0]
+    assert "wais" not in paths[0]
+
+
+def test_collect_workflow_output_paths_no_schema_includes_all():
+    """When a module has no entry in schemas, all its outputs pass through."""
+    from facts_experiment_builder.core.workflow.workflow import Workflow
+
+    mod = "unknown-module"
+    wf = Workflow(name="wf1", module_names=[mod])
+    metadata = {
+        mod: {
+            "outputs": {
+                "output-a": {"value": f"{mod}/a.nc", "output_type": "global"},
+                "output-b": {"value": f"{mod}/b.nc", "output_type": "global"},
+            }
+        }
+    }
+    paths = generate_compose._collect_workflow_output_paths_by_type(
+        metadata, wf, "global", {}
+    )
+    assert len(paths) == 2
 
 
 def test_check_metadata_has_required_fields():

@@ -226,4 +226,68 @@ def test_from_dict_full():
     assert "top_level" in schema.arguments
     assert "output" in schema.volumes
     assert schema.extra == {"per_workflow": False}
-    assert "climate_file_required" not in schema.extra
+
+
+# ---------------------------------------------------------------------------
+# get_climate_output_type
+# ---------------------------------------------------------------------------
+
+
+def test_get_climate_output_type_returns_none_when_no_climate_input():
+    mod = ModuleSchema(
+        module_name="m", container_image="img:tag", arguments={}, volumes={}
+    )
+    assert mod.get_climate_output_type() is None
+
+
+def test_get_climate_output_type_reads_climate_step_output_from_climate_data_file_input():
+    mod = ModuleSchema(
+        module_name="sealevel-module",
+        container_image="img:tag",
+        arguments={
+            "inputs": [
+                {
+                    "name": "climate-data-file",
+                    "source": "module_inputs.inputs.climate_data_file",
+                    "climate_step_output": "output-climate-file",
+                }
+            ]
+        },
+        volumes={},
+    )
+    assert mod.get_climate_output_type() == "output-climate-file"
+
+
+def test_get_climate_output_type_reads_from_input_data_file_input():
+    mod = ModuleSchema(
+        module_name="sealevel-module",
+        container_image="img:tag",
+        arguments={
+            "inputs": [
+                {
+                    "name": "input-data-file",
+                    "source": "module_inputs.inputs.input_data_file",
+                    "climate_step_output": "output-gsat-file",
+                }
+            ]
+        },
+        volumes={},
+    )
+    assert mod.get_climate_output_type() == "output-gsat-file"
+
+
+def test_get_climate_output_type_returns_none_for_non_climate_inputs():
+    mod = ModuleSchema(
+        module_name="sealevel-module",
+        container_image="img:tag",
+        arguments={
+            "inputs": [
+                {
+                    "name": "location-file",
+                    "source": "module_inputs.inputs.location_file",
+                }
+            ]
+        },
+        volumes={},
+    )
+    assert mod.get_climate_output_type() is None

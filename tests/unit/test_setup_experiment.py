@@ -158,12 +158,12 @@ def test_hydrate_sealevel_step_merges_climate_data_using_module_specific_input_k
         uses_climate_file=True,
     )
     mock_load.side_effect = [schema]
-    skeleton = make_skeleton(
-        sealevel_modules=["emulandice-ais"],
-        climate_data="fair-temperature/climate.nc",
-    )
+    skeleton = make_skeleton(sealevel_modules=["emulandice-ais"])
 
-    step = hydrate_sealevel_step(skeleton)
+    step = hydrate_sealevel_step(
+        skeleton,
+        climate_files={"emulandice-ais": "fair-temperature/climate.nc"},
+    )
 
     inputs = step.module_specs_list[0].to_dict().get("inputs", {})
     assert (
@@ -349,3 +349,157 @@ def test_format_module_value_empty_dict_roundtrips_as_empty_dict():
     rendered = "\n".join(lines)
     parsed = yaml.safe_load(rendered)
     assert parsed == {"outputs": {}}, f"Expected {{'outputs': {{}}}}, got: {parsed}"
+
+
+# --- climate_output_type integration ---
+
+
+def _make_climate_schema(module_name: str) -> ModuleSchema:
+    return ModuleSchema(
+        module_name=module_name,
+        container_image="img:tag",
+        arguments={
+            "outputs": {
+                "files": [
+                    {
+                        "name": "output-climate-file",
+                        "filename": "climate.nc",
+                        "output_type": "global",
+                    },
+                    {
+                        "name": "output-gsat-file",
+                        "filename": "gsat.nc",
+                        "output_type": "global",
+                    },
+                ]
+            }
+        },
+        volumes={},
+    )
+
+
+def _make_sealevel_schema(module_name: str, climate_output_type: str) -> ModuleSchema:
+    return ModuleSchema(
+        module_name=module_name,
+        container_image="img:tag",
+        uses_climate_file=True,
+        arguments={
+            "inputs": [
+                {
+                    "name": "climate-data-file",
+                    "source": "module_inputs.inputs.climate_data_file",
+                    "climate_step_output": climate_output_type,
+                    "mount": {"volume": "output", "container_path": "/mnt/out"},
+                }
+            ],
+            "outputs": {},
+        },
+        volumes={
+            "output": {
+                "host_path": "module_inputs.output_paths.output_dir",
+                "container_path": "/mnt/out",
+            }
+        },
+    )
+
+
+@patch(
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
+)
+def test_hydrate_experiment_prefills_climate_file_from_climate_module(mock_load):
+    """Sealevel module gets climate-data-file = '{climate_module}/{filename}' derived
+    from climate_output_type on the sealevel schema."""
+    mock_load.side_effect = [
+        _make_climate_schema("fair-temperature"),  # climate module load
+        _make_sealevel_schema(
+            "bamber19-icesheets", "output-climate-file"
+        ),  # sealevel load
+    ]
+    skeleton = make_skeleton(
+        climate_module="fair-temperature",
+        sealevel_modules=["bamber19-icesheets"],
+    )
+
+    _, sealevel, _, _ = hydrate_experiment(skeleton)
+
+    inputs = sealevel.module_specs_list[0].inputs
+    assert (
+        inputs.get("climate_data_file", {}).get("value")
+        == "fair-temperature/climate.nc"
+    )
+
+
+@patch(
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
+)
+def test_hydrate_experiment_prefills_correct_file_for_different_climate_module(
+    mock_load,
+):
+    """When the climate module changes, the prefilled path prefix changes accordingly."""
+    mock_load.side_effect = [
+        _make_climate_schema("fair2-climate"),
+        _make_sealevel_schema("bamber19-icesheets", "output-climate-file"),
+    ]
+    skeleton = make_skeleton(
+        climate_module="fair2-climate",
+        sealevel_modules=["bamber19-icesheets"],
+    )
+
+    _, sealevel, _, _ = hydrate_experiment(skeleton)
+
+    inputs = sealevel.module_specs_list[0].inputs
+    assert (
+        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+    )
+
+
+@patch(
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
+)
+def test_hydrate_experiment_prefills_gsat_file_for_sealevel_module_expecting_gsat(
+    mock_load,
+):
+    """Sealevel module with climate_output_type='output-gsat-file' gets the gsat output."""
+    mock_load.side_effect = [
+        _make_climate_schema("fair-temperature"),
+        _make_sealevel_schema("gsat-module", "output-gsat-file"),
+    ]
+    skeleton = make_skeleton(
+        climate_module="fair-temperature",
+        sealevel_modules=["gsat-module"],
+    )
+
+    _, sealevel, _, _ = hydrate_experiment(skeleton)
+
+    inputs = sealevel.module_specs_list[0].inputs
+    assert (
+        inputs.get("climate_data_file", {}).get("value") == "fair-temperature/gsat.nc"
+    )
+
+
+@patch(
+    "facts_experiment_builder.application.setup_experiment.load_module_schema_by_name"
+)
+def test_hydrate_experiment_prefills_per_module_independently(mock_load):
+    """Two sealevel modules with different climate_output_type each get the right file."""
+    mock_load.side_effect = [
+        _make_climate_schema("fair-temperature"),  # climate load
+        _make_sealevel_schema("module-a", "output-climate-file"),  # sealevel loads
+        _make_sealevel_schema("module-b", "output-gsat-file"),
+    ]
+    skeleton = make_skeleton(
+        climate_module="fair-temperature",
+        sealevel_modules=["module-a", "module-b"],
+    )
+
+    _, sealevel, _, _ = hydrate_experiment(skeleton)
+
+    inputs_a = sealevel.module_specs_list[0].inputs
+    inputs_b = sealevel.module_specs_list[1].inputs
+    assert (
+        inputs_a.get("climate_data_file", {}).get("value")
+        == "fair-temperature/climate.nc"
+    )
+    assert (
+        inputs_b.get("climate_data_file", {}).get("value") == "fair-temperature/gsat.nc"
+    )
