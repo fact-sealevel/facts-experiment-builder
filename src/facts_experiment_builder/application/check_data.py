@@ -63,7 +63,107 @@ def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
 _MODULE_SPECIFIC_CONTAINER_PATH = "/mnt/module_specific_in"
 
 
+def _load_schema_for_check_module(module_name, registry):
+    result = ModuleCheckResult(module_name=module_name)
+    try:
+        yaml_path = registry.get_module_yaml_path(module_name)
+        schema = load_module_schema_from_yaml(yaml_path=yaml_path)
+        return result, schema
+    except FileNotFoundError(f"No file found at {yaml_path}"):
+        return result
+
+
 def _check_module(
+    result,
+    module_schema,
+    module_input_dir,
+):
+    """Accepts a module schema from _load_...."""
+    for inp in module_schema.arguments.get("inputs", []):
+        field_name = inp.get("name")
+        filename = inp.get("filename")
+        mount_volume = inp.get("mount", {}).get("volume", "")
+
+        if mount_volume == "output":
+            result.checks.append(
+                InputFileCheck(
+                    field_name=field_name,
+                    expected_path=Path(),
+                    exists=False,
+                    skipped=True,
+                    skip_reason="inter-module dependency (produced by another module at runtime)",
+                )
+            )
+            continue
+
+        # Shared inputs are checked as a group in check_shared_data().
+        if is_shared_input(field_name):
+            continue
+
+        # For dir inputs, use default_value as the path to check.
+        input_type = inp.get("type")
+        path_to_check = filename or (
+            inp.get("default_value") if input_type == "dir" else None
+        )
+
+        if not path_to_check:
+            result.checks.append(
+                InputFileCheck(
+                    field_name=field_name,
+                    expected_path=Path(),
+                    exists=False,
+                    skipped=True,
+                    skip_reason="cannot verify without experiment config (filename depends on options)",
+                )
+            )
+            continue
+
+        expected = module_input_dir / path_to_check
+        result.checks.append(
+            InputFileCheck(
+                field_name=field_name,
+                expected_path=expected,
+                exists=expected.exists(),
+            )
+        )
+
+    # Also check fingerprint_params that mount from module-specific storage.
+    # Most fingerprint_params use shared storage (/mnt/shared_in) and are
+    # handled by check_shared_data(); only those with an explicit
+    # module-specific container path are checked here.
+    for fp in module_schema.arguments.get("fingerprint_params", []):
+        field_name = fp.get("name", "")
+        filename = fp.get("filename")
+        container_path = fp.get("mount", {}).get("container_path", "")
+
+        if container_path != _MODULE_SPECIFIC_CONTAINER_PATH:
+            continue
+
+        if not filename:
+            result.checks.append(
+                InputFileCheck(
+                    field_name=field_name,
+                    expected_path=Path(),
+                    exists=False,
+                    skipped=True,
+                    skip_reason="cannot verify without experiment config (filename depends on options)",
+                )
+            )
+            continue
+
+        expected = module_input_dir / filename
+        result.checks.append(
+            InputFileCheck(
+                field_name=field_name,
+                expected_path=expected,
+                exists=expected.exists(),
+            )
+        )
+
+    return result
+
+
+def old_check_module(
     module_name: str,
     module_input_dir: Path,
     registry: ModuleRegistry,
@@ -78,8 +178,10 @@ def _check_module(
     result = ModuleCheckResult(module_name=module_name)
 
     try:
+        print("in try: get_module_yaml, load_module_schema_from_yaml")
         yaml_path = registry.get_module_yaml_path(module_name)
         schema = load_module_schema_from_yaml(yaml_path)
+        print("successful")
     except FileNotFoundError:
         return result
 
@@ -87,7 +189,7 @@ def _check_module(
         field_name = inp.get("name", "")
         filename = inp.get("filename")
         mount_volume = inp.get("mount", {}).get("volume", "")
-
+        print("field_name: ", field_name)
         # Skip inputs that come from another module's output (e.g. climate-data-file).
         if mount_volume == "output":
             result.checks.append(
@@ -118,7 +220,7 @@ def _check_module(
             )
             continue
 
-        filenames = filename if isinstance(filename, list) else [filename]
+        filenames = [filename]  # if isinstance(filename, list) else [filename]
 
         for fn in filenames:
             expected = module_input_dir / fn
@@ -154,7 +256,7 @@ def _check_module(
             )
             continue
 
-        filenames = filename if isinstance(filename, list) else [filename]
+        filenames = [filename]  # if isinstance(filename, list) else [filename]
         for fn in filenames:
             expected = module_input_dir / fn
             result.checks.append(
@@ -216,7 +318,7 @@ def check_shared_data(
             candidates.append((field_name, filename))
 
         for field_name, filename in candidates:
-            filenames = filename if isinstance(filename, list) else [filename]
+            filenames = [filename]  # if isinstance(filename, list) else [filename]
             for fn in filenames:
                 if fn in seen:
                     continue
@@ -261,13 +363,22 @@ def check_module_data(
             continue
 
         for module_name in modules:
-            result.module_results.append(
-                _check_module(
-                    module_name=module_name,
-                    module_input_dir=entry,
-                    registry=registry,
-                )
+            result, single_module_schema = _load_schema_for_check_module(
+                registry=registry, module_name=module_name
             )
+            checked_module_result = _check_module(
+                result=result,
+                module_schema=single_module_schema,
+                module_input_dir=entry,
+            )
+            result.module_results.append(checked_module_result)
+            # result.module_results.append(
+            #    _check_module(
+            #        module_name=module_name,
+            #        module_input_dir=entry,
+            #        registry=registry,
+            #    )
+            # )
 
     discovered_names = [r.module_name for r in result.module_results]
     result.shared_checks = check_shared_data(
