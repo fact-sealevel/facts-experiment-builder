@@ -43,6 +43,7 @@ class OptionArgSpec(BaseModel):
     envvar: Optional[str] = None
     alternatives: List[str] = Field(default_factory=list)
     allowed_values: Optional[list] = None
+    mount: Optional[MountSpec] = None  # needed for extremesealevel-pointsoverthreshold
 
 
 class InputArgSpec(BaseModel):
