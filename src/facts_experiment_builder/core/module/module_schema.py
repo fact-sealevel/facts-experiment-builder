@@ -6,6 +6,7 @@ experiment-metadata content and, with experiment data, to build ModuleServiceSpe
 
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 
 # TODO this would need to change if the module schema yaml structure changes.
 # is that fine or do we want it to be more flexibly defined?
@@ -107,11 +108,23 @@ class ModuleSchema:
                     keys.add(source.split(".")[-1])
         return keys
 
+    def get_climate_output_type(self) -> Optional[str]:
+        """Return the climate output name this module needs, derived from its climate input spec.
+
+        Reads climate_step_output from the input entry named 'climate-data-file' or
+        'input-data-file'. Returns None if this module has no such input.
+        """
+        for input_spec in self.arguments.get("inputs", []):
+            if input_spec.get("name") in ("climate-data-file", "input-data-file"):
+                return input_spec.get("climate_step_output")
+        return None
+
     @classmethod
     def from_dict(cls, data: dict) -> "ModuleSchema":
         arguments = data.get("arguments", {})
         if not isinstance(arguments, dict):
             arguments = {}
+        ArgumentsSpec(**arguments)
         volumes = data.get("volumes", {})
         if not isinstance(volumes, dict):
             volumes = {}
