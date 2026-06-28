@@ -36,6 +36,7 @@ from facts_experiment_builder.infra.module_loader import (
 )
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
+    ModuleSchema,
 )
 import logging
 
@@ -124,25 +125,19 @@ def _module_requires_climate_file(module_name: str) -> bool:
 
 
 def _validate_climate_file_inputs(
-    metadata: Dict[str, Any], sealevel_modules: List[str], experiment_dir: Path
+    metadata: Dict[str, Any],
+    sealevel_modules: List[str],
+    schemas: Dict[str, ModuleSchema],
 ) -> None:
-    """
-    Validate that sealevel modules have climate file inputs when no temperature module is specified.
-    Only validates modules that have climate_file_required=True in their module YAML.
+    """Validate that sealevel modules have climate file inputs when no temperature module is specified.
 
-    Args:
-        metadata: Experiment metadata dictionary
-        sealevel_modules: List of sealevel module names
-        experiment_dir: Path to experiment directory (used to find module YAML files)
-
-    Raises:
-        ValueError: If any sealevel module that requires climate files is missing climate file input
+    Pure logic — accepts pre-loaded schemas. Raises ValueError listing any modules
+    that require a climate file but have no value provided in metadata.
     """
     missing_climate_files = []
 
     for module_name in sealevel_modules:
-        module_yaml_path = find_module_yaml_path(module_name)
-        module_schema = load_module_schema_from_yaml(yaml_path=module_yaml_path)
+        module_schema = schemas[module_name]
 
         if not module_schema.uses_climate_file:
             continue
@@ -171,34 +166,36 @@ def _validate_climate_file_inputs(
         )
 
 
+def _load_schemas(
+    sealevel_modules: List[str],
+) -> None:
+    """I/O wrapper: load module schemas then validate climate file inputs."""
+    schemas = {
+        m: load_module_schema_from_yaml(find_module_yaml_path(m))
+        for m in sealevel_modules
+    }
+    return schemas
+
+
 def _collect_workflow_output_paths_by_type(
     metadata: Dict[str, Any],
     wf: Workflow,
     output_type: str,
+    schemas: Dict[str, "ModuleSchema"],
     *,
     container_prefix: str = "/mnt/total_out",
 ) -> List[str]:
     """
-    Collect container paths for workflow module outputs that match the given output_type.
+    Collect container paths for workflow module outputs that match the given output_type
+    and have pass_to_total=True in their module schema.
 
-    For each module in the workflow, reads metadata[mod].outputs; each value can be
-    a string path or a dict with "value" and "output_type". Missing output_type
-    is treated as "local" for backward compatibility.
+    For each module in the workflow, reads metadata[mod].outputs; each value must be
+    a dict with "value" and "output_type". If a module schema is present in `schemas`,
+    only outputs whose OutputFileSpec has pass_to_total=True are included. Outputs from
+    modules not found in `schemas` are included for backward compatibility.
     """
     paths: List[str] = []
     prefix = container_prefix.rstrip("/")
-
-    # List of substrings to skip to not include sub-regional outputs that are part of larger outputs
-    subregion_strings_to_skip = [
-        "wais",
-        "eais",
-        "pen",
-        "smb",
-        "SMB",
-        "WAIS",
-        "EAIS",
-        "PEN",
-    ]
 
     for mod in wf.module_names:
         out_section = metadata.get(mod, {}) or {}
@@ -207,27 +204,34 @@ def _collect_workflow_output_paths_by_type(
         outputs = out_section.get("outputs") or {}
         if not isinstance(outputs, dict):
             continue
-        for v in outputs.values():
+
+        schema = schemas.get(mod)
+        pass_to_total_by_name: Dict[str, bool] = {}
+        if schema is not None:
+            pass_to_total_by_name = {
+                o["name"]: o.get("pass_to_total", True)
+                for o in schema.get_file_outputs()
+            }
+
+        for key, v in outputs.items():
             if isinstance(v, dict) and "value" in v:
                 p = v.get("value") or ""
                 ot = v.get("output_type", "")
-            # elif isinstance(v, str):
-            #    p = v
-            #    ot = "local"
-
             else:
                 continue
 
-            if p and isinstance(p, str) and ot == output_type:
-                # Do not pass through outputs that are components of a larger output unit
-                if p in subregion_strings_to_skip:
-                    logger.info(
-                        "%s: This output is a component of a larger unit and is already represented elsewhere; skipping.",
-                        p,
-                    )
-                    continue
+            if not (p and isinstance(p, str) and ot == output_type):
+                continue
 
-                paths.append(f"{prefix}/{p.strip()}")
+            if pass_to_total_by_name and not pass_to_total_by_name.get(key, True):
+                logger.info(
+                    "%s output '%s': pass_to_total=false, skipping.",
+                    mod,
+                    key,
+                )
+                continue
+
+            paths.append(f"{prefix}/{p.strip()}")
     return paths
 
 
@@ -263,9 +267,10 @@ def _populate_section_with_global_outputs(
     section: Dict[str, Any],
     metadata: Dict[str, Any],
     wf: Workflow,
+    schemas: Dict[str, "ModuleSchema"],
 ) -> None:
     """Extend section["inputs"]["item"] with container paths for outputs with output_type "global"."""
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global")
+    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global", schemas)
     section["inputs"]["item"].extend(paths)
 
 
@@ -273,9 +278,10 @@ def _populate_section_with_local_outputs(
     section: Dict[str, Any],
     metadata: Dict[str, Any],
     wf: Workflow,
+    schemas: Dict[str, "ModuleSchema"],
 ) -> None:
     """Extend section["inputs"]["item"] with container paths for outputs with output_type "local"."""
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "local")
+    paths = _collect_workflow_output_paths_by_type(metadata, wf, "local", schemas)
     section["inputs"]["item"].extend(paths)
 
 
@@ -417,8 +423,9 @@ def _build_module_specs(
         _log_success("Created %s module", plan.temperature_module_name)
     else:
         logger.info("No temperature module specified (NONE)")
+        schemas = _load_schemas(sealevel_modules=sealevel_modules)
         _validate_climate_file_inputs(
-            metadata, plan.sealevel_module_names, experiment_dir
+            metadata=metadata, sealevel_modules=sealevel_modules, schemas=schemas
         )
 
     for module_name in plan.sealevel_module_names:
@@ -592,6 +599,16 @@ def _build_compose_services(
         facts_total_image = facts_total_config.get(
             "container_image", "ghcr.io/fact-sealevel/facts-total:v0.1.2"
         )
+
+        wf_schemas: Dict[str, ModuleSchema] = {}
+        for wf in plan.workflows.values():
+            for mod_name in wf.module_names:
+                if mod_name not in wf_schemas:
+                    try:
+                        wf_schemas[mod_name] = load_module_schema_by_name(mod_name)
+                    except FileNotFoundError:
+                        pass
+
         for wf_name, wf in plan.workflows.items():
             for output_type in facts_total_config.get(
                 "output_types", ["global", "local"]
@@ -609,9 +626,13 @@ def _build_compose_services(
                     wf, facts_total_image, output_type
                 )
                 if output_type == "global":
-                    _populate_section_with_global_outputs(section, metadata, wf)
+                    _populate_section_with_global_outputs(
+                        section, metadata, wf, wf_schemas
+                    )
                 else:
-                    _populate_section_with_local_outputs(section, metadata, wf)
+                    _populate_section_with_local_outputs(
+                        section, metadata, wf, wf_schemas
+                    )
                 service_name = wf.facts_total_service_name_for_type(output_type)
                 compose_svc = _create_facts_total_compose_service(
                     section,
