@@ -26,6 +26,7 @@ from facts_experiment_builder.core.steps import (
 from facts_experiment_builder.infra.module_loader import (
     load_module_schema_by_name,
 )
+from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 from facts_experiment_builder.infra.experiment_manager import (
     resolve_experiment_directory_path,
     check_if_experiment_directory_exists,
@@ -35,16 +36,6 @@ from facts_experiment_builder.infra.experiment_manager import (
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def _climate_output_file_path(climate_module_name: str) -> Optional[str]:
-    """Return the output climate file path for a climate module (e.g. 'fair-temperature/climate.nc')."""
-    schema = load_module_schema_by_name(climate_module_name)
-    for output in schema.get_file_outputs():
-        if output.get("name") == "output-climate-file":
-            filename = output.get("filename", "climate.nc")
-            return f"{climate_module_name}/{filename}"
-    return None
 
 
 def validate_skeleton_modules(skeleton: ExperimentSkeleton):
@@ -59,15 +50,19 @@ def validate_skeleton_modules(skeleton: ExperimentSkeleton):
 
 
 def hydrate_sealevel_step(
-    skeleton, top_level_context: Optional[Dict[str, Any]] = None
+    skeleton,
+    sealevel_schemas=None,
+    climate_files: Optional[Dict[str, str]] = None,
+    top_level_context: Optional[Dict[str, Any]] = None,
 ) -> SealevelStep:
     if skeleton.sealevel_modules:
-        sealevel_schemas = [
-            load_module_schema_by_name(m) for m in skeleton.sealevel_modules
-        ]
+        if sealevel_schemas is None:
+            sealevel_schemas = [
+                load_module_schema_by_name(m) for m in skeleton.sealevel_modules
+            ]
         sealevel_step = SealevelStep.from_module_schemas(
             sealevel_schemas,
-            climate_data_file=skeleton.climate_data,
+            climate_files=climate_files,
             module_regions=skeleton.module_regions,
             top_level_context=top_level_context,
         )
@@ -87,16 +82,32 @@ def hydrate_experiment(
 
     Errors from unknown module names propagate immediately — no silent failures.
     """
+    climate_files: Optional[Dict[str, str]] = None
+    sealevel_schemas = None
     if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
-        climate_step = ClimateStep.from_module_schema(
-            load_module_schema_by_name(skeleton.climate_module)
-        )
+        climate_schema = load_module_schema_by_name(skeleton.climate_module)
+        climate_step = ClimateStep.from_module_schema(climate_schema)
+        sealevel_schemas = [
+            load_module_schema_by_name(m) for m in (skeleton.sealevel_modules or [])
+        ]
+        climate_files = {
+            s.module_name: resolve_climate_file(
+                climate_schema, s.get_climate_output_type()
+            )
+            for s in sealevel_schemas
+            if s.get_climate_output_type()
+        }
     elif skeleton.supplied_totaled_sealevel_step_data:
         climate_step = ClimateStep.not_needed()
     else:
         climate_step = ClimateStep(alternate_climate_data=skeleton.climate_data)
 
-    sealevel_step = hydrate_sealevel_step(skeleton, top_level_context=top_level_context)
+    sealevel_step = hydrate_sealevel_step(
+        skeleton,
+        sealevel_schemas=sealevel_schemas,
+        climate_files=climate_files,
+        top_level_context=top_level_context,
+    )
 
     if skeleton.totaling_module:
         totaling_step = TotalingStep.from_module_schema(
@@ -166,7 +177,12 @@ def experiment_skeleton_to_facts_experiment(
     # validate skeleton first
     validate_skeleton_modules(skeleton)
     # Load schemas to derive which top-level and fingerprint keys this experiment needs
-    schemas = [load_module_schema_by_name(m) for m in skeleton.all_module_names]
+    schemas = []
+    for m in skeleton.all_module_names:
+        logger.info("Loading schema for %s module", m)
+        schema = load_module_schema_by_name(m)
+        schemas.append(schema)
+    # [load_module_schema_by_name(m) for m in skeleton.all_module_names]
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
     cli_values: Dict[str, object] = {
         "pipeline-id": pipeline_id,

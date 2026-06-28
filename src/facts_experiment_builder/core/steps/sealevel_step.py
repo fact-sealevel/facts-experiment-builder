@@ -17,7 +17,7 @@ class SealevelStep(ExperimentStep):
     def from_module_schemas(
         cls,
         schemas: List[ModuleSchema],
-        climate_data_file: Optional[str] = None,
+        climate_files: Optional[Dict[str, str]] = None,
         module_regions: Optional[Dict[str, List[str]]] = None,
         top_level_context: Optional[Dict[str, Any]] = None,
     ) -> "SealevelStep":
@@ -25,7 +25,9 @@ class SealevelStep(ExperimentStep):
 
         Args:
             schemas: Module schemas for each sealevel module.
-            climate_data_file: Pre-filled climate data file path, if known.
+            climate_files: Per-module climate file paths, keyed by module name.
+                Each value is the relative path (e.g. "fair-temperature/climate.nc")
+                to pre-fill into that module's climate input.
             module_regions: Optional dict mapping module names to a list of
                 region values (e.g. {"emulandice2-glaciers": ["RGI01", "RGI02"]}).
                 When provided, pre-fills the region option for that module so the
@@ -35,10 +37,12 @@ class SealevelStep(ExperimentStep):
                 passed through to ModuleExperimentSpec for multi-key filename_map
                 resolution.
         """
+        climate_files = climate_files or {}
         module_regions = module_regions or {}
         specs = []
         for schema in schemas:
             prefilled: Dict[str, str] = {}
+            climate_data_file = climate_files.get(schema.module_name)
             if climate_data_file and schema.uses_climate_file:
                 output_vol_keys = schema.get_output_volume_input_keys()
                 climate_keys = {k for k in output_vol_keys if "-" not in k} or {
