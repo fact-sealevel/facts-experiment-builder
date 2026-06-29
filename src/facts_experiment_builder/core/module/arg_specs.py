@@ -5,7 +5,7 @@ catching unknown fields, wrong types, and missing required keys at YAML load
 time (in ModuleSchema.from_dict).
 """
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -53,7 +53,7 @@ class InputArgSpec(BaseModel):
     type: str
     source: str
     help: Optional[str] = None
-    filename: Optional[str] = None
+    filename: Union[str, list] = None
     filename_map: Optional[Dict[str, Any]] = None
     default_value: Optional[Any] = None
     optional: bool = False
