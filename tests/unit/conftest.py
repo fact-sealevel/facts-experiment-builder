@@ -19,6 +19,18 @@ from facts_experiment_builder.core.module.module_service_spec import (
 )
 
 
+@pytest.fixture
+def experiment_name_correct():
+    experiment_name = "experiments/my_test_experiment"
+    return experiment_name
+
+
+@pytest.fixture
+def experiment_name_no_parent():
+    experiment_name = "my_test_experiment"
+    return experiment_name
+
+
 @pytest.fixture(autouse=True)
 def reset_feb_logger():
     """Reset facts_experiment_builder logger state between tests.
