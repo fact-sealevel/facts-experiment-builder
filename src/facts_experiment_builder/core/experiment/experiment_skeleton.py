@@ -48,7 +48,7 @@ class ExperimentSkeleton:
     module_regions: Dict[str, List[str]] = field(default_factory=dict)
 
     @classmethod
-    def from_cli_inputs(
+    def from_inputs(
         cls,
         climate_step: Optional[str],
         supplied_climate_step_data: Optional[str],
@@ -59,7 +59,7 @@ class ExperimentSkeleton:
     ) -> "ExperimentSkeleton":
         """Build a skeleton by parsing comma-separated CLI module strings."""
         from facts_experiment_builder.core.experiment.module_name_validation import (
-            parse_module_list,
+            parse_module_list_str,
         )
 
         # validate climate step inputs
@@ -81,9 +81,9 @@ class ExperimentSkeleton:
                 "(--supplied-totaled-sealevel-step-data), not both."
             )
 
-        climate_modules = parse_module_list(climate_step)
-        sealevel_modules = parse_module_list(sealevel_step)
-        esl_modules = parse_module_list(extremesealevel_step)
+        climate_modules = parse_module_list_str(climate_step)
+        sealevel_modules = parse_module_list_str(sealevel_step)
+        esl_modules = parse_module_list_str(extremesealevel_step)
 
         # Domain rules:
         # - totaling can't run if sealevel step bypassed
