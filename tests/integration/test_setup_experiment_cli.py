@@ -31,7 +31,6 @@ def test_setup_experiment_runs_successfully(
         assert result.exit_code == 0, result.output
         assert (
             project_root
-            / "experiments"
             / str(experiment_name)
             / "experiment-config.yaml"
         ).exists()
@@ -40,7 +39,6 @@ def test_setup_experiment_runs_successfully(
         # build metadata path using fixtures in conftest
         metadata_path = (
             project_root
-            / "experiments"
             / str(experiment_name)
             / "experiment-config.yaml"
         )
@@ -88,7 +86,7 @@ def test_generate_compose_runs_successfully(
 
     assert result.exit_code == 0, result.output
     assert (
-        project_root / "experiments" / str(experiment_name) / "experiment-compose.yaml"
+        project_root / str(experiment_name) / "experiment-compose.yaml"
     ).exists()
 
 
