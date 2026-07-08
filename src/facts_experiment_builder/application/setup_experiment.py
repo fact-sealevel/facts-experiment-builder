@@ -286,16 +286,6 @@ def check_parent_dir_from_experiment_name(experiment_name: str) -> Path:
             "You must ensure this directory exists before trying to create an experiment within it."
         ) from e
 
-
-def experiment_name_contains_parent_dir(experiment_name: str):
-    if "/" not in experiment_name:
-        raise ValueError(
-            f"You must pass the parent directory with the experiment name (ie. experiments/my_experiment). Received: {experiment_name}"
-        )
-    else:
-        return experiment_name
-
-
 def check_if_experiment_already_exists(path_to_experiment: Path) -> None:
     if experiment_directory_exists(experiment_directory=path_to_experiment):
         raise ExperimentAlreadyExistsError(
