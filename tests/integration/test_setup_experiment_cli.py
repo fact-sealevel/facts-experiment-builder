@@ -29,19 +29,11 @@ def test_setup_experiment_runs_successfully(
         result = runner.invoke(main_setup, setup_args, catch_exceptions=False)
 
         assert result.exit_code == 0, result.output
-        assert (
-            project_root
-            / str(experiment_name)
-            / "experiment-config.yaml"
-        ).exists()
+        assert (project_root / str(experiment_name) / "experiment-config.yaml").exists()
 
         # roundtrip
         # build metadata path using fixtures in conftest
-        metadata_path = (
-            project_root
-            / str(experiment_name)
-            / "experiment-config.yaml"
-        )
+        metadata_path = project_root / str(experiment_name) / "experiment-config.yaml"
         # read metadata file
         metadata_dict = yaml.safe_load(metadata_path.read_text())
         # create experiment
@@ -85,9 +77,7 @@ def test_generate_compose_runs_successfully(
         result = runner.invoke(main_compose, compose_args, catch_exceptions=False)
 
     assert result.exit_code == 0, result.output
-    assert (
-        project_root / str(experiment_name) / "experiment-compose.yaml"
-    ).exists()
+    assert (project_root / str(experiment_name) / "experiment-compose.yaml").exists()
 
 
 def test_setup_experiment_fails_if_experiment_already_exists(
