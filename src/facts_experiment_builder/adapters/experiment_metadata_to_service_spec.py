@@ -1,7 +1,7 @@
 """Build ModuleServiceSpec instances from experiment metadata and module YAML."""
 
 from pathlib import Path
-from typing import Dict, Any, Optional, Set
+from typing import Dict, Any, Set
 import os
 from facts_experiment_builder.adapters.adapter_utils import (
     get_required_field,
@@ -28,8 +28,8 @@ from facts_experiment_builder.core.typed_path import (
 )
 from facts_experiment_builder.infra.module_loader import (
     load_module_schema_from_yaml,
-    find_module_yaml_path,
 )
+from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 
 ALLOWED_MODULE_TYPES = {
     "temperature_module",
@@ -38,19 +38,6 @@ ALLOWED_MODULE_TYPES = {
     "extreme_sealevel_module",
     "other_module",
 }
-
-_KNOWN_MODULE_NAMES: "Optional[frozenset]" = None
-
-
-def _registry_module_names() -> frozenset:
-    global _KNOWN_MODULE_NAMES
-    if _KNOWN_MODULE_NAMES is None:
-        from facts_experiment_builder.core.registry.module_registry import (
-            ModuleRegistry,
-        )
-
-        _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
-    return _KNOWN_MODULE_NAMES
 
 
 def _dir_input_keys(module_definition: Any) -> Set[str]:
@@ -83,6 +70,7 @@ def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
 def build_module_service_spec(
     metadata: Dict[str, Any],
     experiment_dir: Path,
+    registry: ModuleRegistry,
     module_name: str,
     module_type: str = None,
     module_yaml_path: Path = None,
@@ -114,7 +102,8 @@ def build_module_service_spec(
         # this is total module step/ workflows
     else:
         # this is climate + sea level module steps
-        resolved_yaml_path = find_module_yaml_path(module_name)
+        resolved_yaml_path = registry.get_module_yaml_path(module_name)
+
     module_definition = load_module_schema_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
@@ -153,7 +142,7 @@ def build_module_service_spec(
     )
     # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
     # so volume host path is always base + current module's suffix only (never another module's name).
-    if Path(module_specific_input_base).name in _registry_module_names():
+    if Path(module_specific_input_base).name in registry.module_names():
         module_specific_input_base = str(Path(module_specific_input_base).parent)
     # Module-specific input dir: driven by input_dir_name in module YAML (e.g. "ipccar5" for both
     # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that

@@ -1,10 +1,14 @@
 import yaml
+from pathlib import Path
 from unittest.mock import patch
 from facts_experiment_builder.application.setup_experiment import (
     hydrate_experiment,
     hydrate_sealevel_step,
-    experiment_name_contains_parent_dir,
-    check_if_experiment_already_exists,
+    create_experiment_skeleton,
+    is_totaling_needed,
+    PrepareExperimentOutput,
+    prepare_experiment_setup,
+    finalize_experiment_setup,
 )
 from facts_experiment_builder.infra.write_experiment_metadata import format_module_value
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
@@ -14,13 +18,27 @@ from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
     collect_metadata_param_keys,
 )
-from facts_experiment_builder.application.setup_experiment import (
-    is_totaling_needed,
-)
-from facts_experiment_builder.core.experiment.exceptions import (
-    ExperimentAlreadyExistsError,
+from facts_experiment_builder.infra.experiment_storage import (
+    FileSystemExperimentStorage,
 )
 import pytest
+
+
+class FakeModuleRegistry:
+    def __init__(self, modules=("module-one", "module-two"), version="test-version"):
+        self._modules = list(modules)
+        self._version = version
+
+    def list_modules(self):
+        return self._modules
+
+    def get_version(self):
+        return self._version
+
+
+@pytest.fixture
+def registry():
+    return FakeModuleRegistry()
 
 
 def make_module_schema(name="test-module", uses_climate_file=False) -> ModuleSchema:
@@ -33,53 +51,77 @@ def make_module_schema(name="test-module", uses_climate_file=False) -> ModuleSch
     )
 
 
-def make_skeleton(
-    climate_module=None,
-    climate_data=None,
-    sealevel_modules=None,
-    supplied_totaled_sealevel_step_data=None,
-    totaling_module=None,
-    extremesealevel_module=None,
-) -> ExperimentSkeleton:
-    return ExperimentSkeleton(
-        climate_module=climate_module,
-        climate_data=climate_data,
-        sealevel_modules=sealevel_modules or [],
-        supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-        totaling_module=totaling_module,
-        extremesealevel_module=extremesealevel_module,
+def make_skeleton(**overrides) -> ExperimentSkeleton:
+    defaults = dict(
+        climate_module=None,
+        climate_data=None,
+        sealevel_modules=[],
+        supplied_totaled_sealevel_step_data=None,
+        totaling_module=None,
+        extremesealevel_module=None,
+        module_regions=None,
     )
+    return ExperimentSkeleton(**{**defaults, **overrides})
+
+
+def test_finalize_experiment_setup_writes_metadata_config(tmp_path, registry):
+    storage = FileSystemExperimentStorage(tmp_path)
+    experiment_name = "fake_experiment_location/experiment_name"
+    Path(tmp_path / "fake_experiment_location").mkdir()
+    output = prepare_experiment_setup(
+        experiment_name=experiment_name,
+        module_regions=None,
+        climate_step="module-one",
+        supplied_climate_step_data=None,
+        sealevel_step="module-one,module-two",
+        supplied_totaled_sealevel_step_data=None,
+        extremesealevel_step=None,
+        storage=storage,
+    )
+    skeleton = output.experiment_skeleton
+    experiment_path = output.experiment_path
+    workflow_dict = {"all-modules": ["module-one", "module-two"]}
+
+    finalize_experiment_setup(
+        experiment_name,
+        experiment_path,
+        skeleton,
+        workflow_dict,
+        pipeline_id="abc123",
+        scenario="ssp585",
+        baseyear=2005,
+        pyear_end=2150,
+        pyear_step=10,
+        pyear_start=2020,
+        nsamps=50,
+        location_file="location.lst",
+        module_specific_input_data="path/to/data",
+        shared_input_data="path/to/shared/data",
+        experiment_specific_input_data=None,
+        projection_scale="local",
+        registry=registry,
+    )
+    config_path = experiment_path / "experiment-config.yaml"
+    assert config_path.exists()
 
 
 # --- Testing setup experiment utility fns ---
 
 
-def test_experiment_name_contains_parent_dir_fails_when_no_parent():
-    experiment_name = "test-experiment-name"
-
-    with pytest.raises(ValueError):
-        experiment_name_contains_parent_dir(experiment_name)
-
-
-def test_check_if_experiment_already_exists_raises_error_correctly(tmp_path):
-    experiment_directory = tmp_path / "experiments/my_experiment"
-    experiment_directory.mkdir(parents=True)
-
-    with pytest.raises(ExperimentAlreadyExistsError):
-        check_if_experiment_already_exists(path_to_experiment=experiment_directory)
-
-
-def test_check_if_experiment_already_exists_succeeds_correctly(tmp_path):
-    experiment_directory = tmp_path / "experiments/my_experiment"
-    # create_experiment_directory(experiment_directory=experiment_directory)
-    check_if_experiment_already_exists(path_to_experiment=experiment_directory)
-
-
-def test_experiment_name_contains_parent_dir_succeeds():
-    experiment_name = "experiments/experiment_name"
-    result = experiment_name_contains_parent_dir(experiment_name=experiment_name)
-    assert result == experiment_name
-    assert result is not None
+def test_prepare_experiment_setup_returns_correct_output_type(tmp_path):
+    storage = FileSystemExperimentStorage(tmp_path)
+    Path(tmp_path / "fake_experiment_location").mkdir()
+    output = prepare_experiment_setup(
+        experiment_name="fake_experiment_location/experiment_name",
+        module_regions=None,
+        climate_step="module-one",
+        supplied_climate_step_data=None,
+        sealevel_step="module-one,module-two",
+        supplied_totaled_sealevel_step_data=None,
+        extremesealevel_step=None,
+        storage=storage,
+    )
+    assert isinstance(output, PrepareExperimentOutput)
 
 
 def test_is_totaling_needed_returns_false_if_less_than_2_sealevel_modules():
@@ -96,15 +138,33 @@ def test_is_totaling_needed_true_if_more_than_2_sealevel_modules():
     assert result is True
 
 
+# --- make experiment skeleton ---
+def test_create_experiment_skeleton_builds_from_inputs():
+    sealevel_step = "module-one,module-two,module-three"
+    parsed_sealevel_step = ["module-one", "module-two", "module-three"]
+    skeleton = create_experiment_skeleton(
+        climate_step="fair-temperature",
+        supplied_climate_step_data=None,
+        sealevel_step=sealevel_step,
+        supplied_totaled_sealevel_step_data=None,
+        extremesealevel_step="another-module",
+        parsed_module_regions={"module-name": ["region1", "region2"]},
+    )
+    assert isinstance(skeleton, ExperimentSkeleton)
+    assert skeleton.climate_module == "fair-temperature"
+    assert skeleton.sealevel_modules == parsed_sealevel_step
+
+
 # --- hydrate_experiment ---
 
 
 def test_hydrate_experiment_no_modules_returns_none_steps():
-    skeleton = make_skeleton(climate_data="/path/to/climate")
+    skeleton = make_skeleton(climate_data="/path/to/climate/data", sealevel_modules=[])
+
     climate, sealevel, totaling, esl = hydrate_experiment(skeleton)
 
     assert climate.module_spec is None
-    assert climate.alternate_climate_data == "/path/to/climate"
+    assert climate.alternate_climate_data == "/path/to/climate/data"
     assert sealevel.module_specs_list == []
     assert totaling.module_spec is None
     assert esl.module_spec is None

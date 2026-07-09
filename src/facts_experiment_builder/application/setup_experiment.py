@@ -1,6 +1,5 @@
 from typing import Any, Dict, Optional
 
-from pathlib import Path
 from dataclasses import dataclass
 import dataclasses
 from facts_experiment_builder.core.components.metadata_bundle import (
@@ -13,9 +12,6 @@ from facts_experiment_builder.core.registry import ModuleRegistry
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
 )
-from facts_experiment_builder.core.experiment.exceptions import (
-    ExperimentAlreadyExistsError,
-)
 from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
 )
@@ -27,6 +23,7 @@ from facts_experiment_builder.core.experiment.experiment_skeleton import (
     ExperimentSkeleton,
     parse_module_regions,
 )
+from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.steps import (
     ClimateStep,
     SealevelStep,
@@ -40,12 +37,8 @@ from facts_experiment_builder.infra.module_loader import (
     load_module_schema_by_name,
 )
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
-from facts_experiment_builder.infra.experiment_manager import (
-    make_experiment_path_from_experiment_name,
-    experiment_directory_exists,
-    create_experiment_directory,
-    create_experiment_directory_files,
-    resolve_experiment_parent_dir,
+from facts_experiment_builder.infra.experiment_storage import (
+    FileSystemExperimentStorage,
 )
 import logging
 
@@ -53,12 +46,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_experiment_skeleton(
-    climate_step,
-    supplied_climate_step_data,
-    sealevel_step,
-    supplied_totaled_sealevel_step_data,
-    extremesealevel_step,
-    parsed_module_regions,
+    climate_step: str,
+    supplied_climate_step_data: str,
+    sealevel_step: str,
+    supplied_totaled_sealevel_step_data: str,
+    extremesealevel_step: str,
+    parsed_module_regions: Dict,
 ):
     # create skeleton obj
     skeleton = ExperimentSkeleton.from_inputs(
@@ -93,22 +86,18 @@ def prepare_experiment_setup(
     sealevel_step,
     supplied_totaled_sealevel_step_data,
     extremesealevel_step,
+    storage: FileSystemExperimentStorage,
 ) -> PrepareExperimentOutput:
     """Handles initial experiment setup orchestration logic, through to creating skeleton and until workflows owuld be created (need user prompt for this.)"""
     # first, check that experiment name was passed with parent dir
-    check_parent_dir_from_experiment_name(experiment_name=experiment_name)
 
-    # Make experiment path from experiment name
-    experiment_path = make_experiment_path_from_experiment_name(
-        experiment_name=experiment_name
-    )
+    # Create an experiment name object
+    experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
 
-    # check if experiment already exists
-    check_if_experiment_already_exists(path_to_experiment=experiment_path)
+    # Create experiment path from resolved root (handled in cli layer)
+    experiment_target = storage.create(experiment_name_obj)
 
-    # parse module regions received from cli
     parsed_module_regions = parse_module_regions(module_regions)
-
     # Create experiment skeleton
     skeleton = create_experiment_skeleton(
         climate_step=climate_step,
@@ -119,7 +108,7 @@ def prepare_experiment_setup(
         parsed_module_regions=parsed_module_regions,
     )
     output = PrepareExperimentOutput(
-        experiment_path=experiment_path, experiment_skeleton=skeleton
+        experiment_path=experiment_target, experiment_skeleton=skeleton
     )
     return output
 
@@ -141,6 +130,7 @@ def finalize_experiment_setup(
     experiment_specific_input_data,
     shared_input_data,
     projection_scale,
+    registry: ModuleRegistry,
 ):
     # make TopLevelParams dataclass
     top_level_params = TopLevelParams(
@@ -156,14 +146,13 @@ def finalize_experiment_setup(
     skeleton_with_workflows = add_workflows_to_skeleton(
         skeleton=experiment_skeleton, workflows_dict=workflows_dict
     )
-    populate_experiment_directory(
-        experiment_path=experiment_path,
-    )
+
     # Create FactsExperiment from template
     experiment_obj = experiment_skeleton_to_facts_experiment(
         experiment_name=experiment_name,
         skeleton=skeleton_with_workflows,
         top_level_params=top_level_params,
+        registry=registry,
         module_specific_input_data=module_specific_input_data,
         experiment_specific_input_data=experiment_specific_input_data,  # supplied_climate_step_data,
         shared_input_data=shared_input_data,
@@ -171,7 +160,7 @@ def finalize_experiment_setup(
     )
     # Write metadata file using templtae
     metadata_path = experiment_path / "experiment-config.yaml"
-    registry_version = ModuleRegistry.default().get_version()
+    registry_version = registry.get_version()
 
     write_metadata_yaml_jinja2(
         experiment=experiment_obj,
@@ -188,10 +177,13 @@ def add_workflows_to_skeleton(
     return skeleton
 
 
-def validate_skeleton_modules(skeleton: ExperimentSkeleton):
+def validate_skeleton_modules_against_registry(
+    skeleton: ExperimentSkeleton, registry: ModuleRegistry
+):
     """Checks that all modules in the experiment skeleton are valid."""
-    valid = ModuleRegistry.default().list_modules()
+    valid = registry.list_modules()
     try:
+        # delete facts-total from this list and see if it works after that..
         validate_module_names(skeleton.all_module_names, valid)
     except ValueError as e:
         raise ValueError(
@@ -276,45 +268,11 @@ def hydrate_experiment(
     return climate_step, sealevel_step, totaling_step, extreme_sealevel_step
 
 
-def check_parent_dir_from_experiment_name(experiment_name: str) -> Path:
-    # first split parent and experiment name
-    try:
-        return resolve_experiment_parent_dir(experiment_name=experiment_name)
-    except FileNotFoundError as e:
-        raise FileNotFoundError(
-            f"Parent directory for experiment '{experiment_name}' does not exist."
-            "You must ensure this directory exists before trying to create an experiment within it."
-        ) from e
-
-def check_if_experiment_already_exists(path_to_experiment: Path) -> None:
-    if experiment_directory_exists(experiment_directory=path_to_experiment):
-        raise ExperimentAlreadyExistsError(
-            path=path_to_experiment,
-            # experiment_name=experiment_name
-        )
-
-
-def populate_experiment_directory(
-    experiment_path: str,
-    #     module_names: List[str],
-):
-    """Creates sub-directory in experiments/ for this experiment.
-    Also prepopulates with _____"""
-    # Create the experiment directory
-    create_experiment_directory(experiment_path)
-    # Create the experiment directory files
-    create_experiment_directory_files(
-        experiment_path,
-        # module_names,
-    )
-
-    return
-
-
 def experiment_skeleton_to_facts_experiment(
     experiment_name: str,
     skeleton: ExperimentSkeleton,
     top_level_params: "TopLevelParams",
+    registry: ModuleRegistry,
     module_specific_input_data: Optional[str] = None,
     experiment_specific_input_data: Optional[str] = None,
     shared_input_data: Optional[str] = None,
@@ -327,7 +285,7 @@ def experiment_skeleton_to_facts_experiment(
     """
 
     # validate skeleton first
-    validate_skeleton_modules(skeleton)
+    validate_skeleton_modules_against_registry(skeleton=skeleton, registry=registry)
     # Load schemas to derive which top-level and fingerprint keys this experiment needs
     schemas = []
     for m in skeleton.all_module_names:

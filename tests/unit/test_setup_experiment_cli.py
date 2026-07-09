@@ -12,11 +12,29 @@ from facts_experiment_builder.cli.setup_experiment_cli import (
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list_str,
 )
+import re
 import pytest
 from contextlib import nullcontext
 
+ANSI = re.compile(r"\x1b\[[0-9;]*m]")
+
+
+def plain(text: str) -> str:
+    return ANSI.sub("", text)
+
 
 runner = CliRunner()
+
+
+def test_cli_reports_missing_parent_dir_in_experiment_name(tmp_path):
+    result = CliRunner().invoke(
+        main, ["--experiment-name", "fake_dir/blank", "--root", str(tmp_path)]
+    )
+    assert result.exit_code != 0
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    out = plain(result.output + getattr(result, "stderr", ""))
+    assert "does not exist" in out
+    assert "fake_dir" in out
 
 
 def test_cli_help_exits_zero():

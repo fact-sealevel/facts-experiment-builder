@@ -27,7 +27,8 @@ from facts_experiment_builder.core.workflow.workflow import (
     Workflow,
     workflows_from_metadata,
 )
-from facts_experiment_builder.infra.path_manager import find_module_yaml_path
+
+# from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.path_utils import expand_path
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
 from facts_experiment_builder.infra.module_loader import (
@@ -105,7 +106,7 @@ def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[st
     return names
 
 
-def _module_requires_climate_file(module_name: str) -> bool:
+def _module_requires_climate_file(module_name: str, registry: ModuleRegistry) -> bool:
     """
     Check if a module requires a climate file by loading its module YAML configuration.
 
@@ -117,7 +118,7 @@ def _module_requires_climate_file(module_name: str) -> bool:
     """
 
     # Get path
-    module_yaml_path = find_module_yaml_path(module_name)
+    module_yaml_path = registry.get_module_yaml_path(module_name)
     # Load module yaml
     module_yaml = load_module_schema_from_yaml(yaml_path=module_yaml_path)
     # Return uses climate file attr
@@ -168,10 +169,12 @@ def _validate_climate_file_inputs(
 
 def _load_schemas(
     sealevel_modules: List[str],
-) -> None:
-    """I/O wrapper: load module schemas then validate climate file inputs."""
+    registry: ModuleRegistry,
+) -> Dict[str, ModuleSchema]:
+    """I/O wrapper: load module schemas.
+    Return dick of schemas."""
     schemas = {
-        m: load_module_schema_from_yaml(find_module_yaml_path(m))
+        m: load_module_schema_from_yaml(registry.get_module_yaml_path(m))
         for m in sealevel_modules
     }
     return schemas
@@ -235,10 +238,10 @@ def _collect_workflow_output_paths_by_type(
     return paths
 
 
-def _module_is_per_workflow(module_name: str) -> bool:
+def _module_is_per_workflow(module_name: str, registry: ModuleRegistry) -> bool:
     """Return True if the module YAML declares per_workflow: true."""
     try:
-        module_yaml_path = find_module_yaml_path(module_name)
+        module_yaml_path = registry.get_module_yaml_path(module_name)
         with open(module_yaml_path) as f:
             cfg = yaml.safe_load(f) or {}
         return bool(cfg.get("per_workflow"))
@@ -403,6 +406,7 @@ def _build_module_specs(
     plan: _ExperimentPlan,
     metadata: Dict[str, Any],
     experiment_dir: Path,
+    registry: ModuleRegistry,
 ) -> _ModuleSpecs:
     """Phase 2: Create a ModuleServiceSpec for each module in the experiment.
 
@@ -423,7 +427,9 @@ def _build_module_specs(
         _log_success("Created %s module", plan.temperature_module_name)
     else:
         logger.info("No temperature module specified (NONE)")
-        schemas = _load_schemas(sealevel_modules=sealevel_modules)
+        schemas = _load_schemas(
+            sealevel_modules=plan.sealevel_module_names, registry=registry
+        )
         _validate_climate_file_inputs(
             metadata=metadata, sealevel_modules=sealevel_modules, schemas=schemas
         )
@@ -497,6 +503,7 @@ def _create_esl_workflow_services(
     metadata: Dict[str, Any],
     experiment_dir: Path,
     projection_scale: Optional[str],
+    registry: ModuleRegistry,
 ) -> Dict[str, Any]:
     """Build one ESL compose service per workflow, keyed by service name."""
     services: Dict[str, Any] = {}
@@ -508,7 +515,7 @@ def _create_esl_workflow_services(
 
     for esl_module_name in esl_module_names:
         try:
-            esl_yaml_path = find_module_yaml_path(esl_module_name)
+            esl_yaml_path = registry.get_module_yaml_path(esl_module_name)
         except FileNotFoundError:
             logger.warning(
                 "ESL module YAML not found for '%s', skipping per-workflow ESL",
@@ -569,6 +576,7 @@ def _build_compose_services(
     plan: _ExperimentPlan,
     metadata: Dict[str, Any],
     experiment_dir: Path,
+    registry: ModuleRegistry,
 ) -> Dict[str, Any]:
     """Phase 3: Render ModuleServiceSpecs into Docker Compose service dicts."""
     services: Dict[str, Any] = {}
@@ -590,10 +598,12 @@ def _build_compose_services(
 
     if plan.workflows:
         per_workflow_fw = [
-            m for m in plan.framework_module_names if _module_is_per_workflow(m)
+            m
+            for m in plan.framework_module_names
+            if _module_is_per_workflow(module_name=m, registry=registry)
         ]
         facts_total_name = per_workflow_fw[0] if per_workflow_fw else "facts-total"
-        facts_total_yaml_path = find_module_yaml_path(facts_total_name)
+        facts_total_yaml_path = registry.get_module_yaml_path(facts_total_name)
         with open(facts_total_yaml_path, "r") as f:
             facts_total_config = yaml.safe_load(f) or {}
         facts_total_image = facts_total_config.get(
@@ -652,6 +662,7 @@ def _build_compose_services(
                 metadata,
                 experiment_dir,
                 plan.experiment.projection_scale,
+                registry=registry,
             )
         )
 
@@ -664,7 +675,9 @@ def _build_compose_services(
     return services
 
 
-def generate_compose(metadata: Dict[str, Any], experiment_dir: Path) -> Dict[str, Any]:
+def generate_compose(
+    metadata: Dict[str, Any], experiment_dir: Path, registry: ModuleRegistry
+) -> Dict[str, Any]:
     """
     Generate Docker Compose dict from already-loaded experiment metadata.
 
@@ -679,7 +692,7 @@ def generate_compose(metadata: Dict[str, Any], experiment_dir: Path) -> Dict[str
         Complete Docker Compose file dictionary
     """
     plan = _parse_experiment(metadata)
-    specs = _build_module_specs(plan, metadata, experiment_dir)
+    specs = _build_module_specs(plan, metadata, experiment_dir, registry=registry)
     if not any(
         [
             specs.temperature_module,
@@ -689,11 +702,15 @@ def generate_compose(metadata: Dict[str, Any], experiment_dir: Path) -> Dict[str
         ]
     ):
         return {"services": {}}
-    services = _build_compose_services(specs, plan, metadata, experiment_dir)
+    services = _build_compose_services(
+        specs, plan, metadata, experiment_dir, registry=registry
+    )
     return {"services": services}
 
 
-def generate_compose_from_path(metadata_path: Path) -> Dict[str, Any]:
+def generate_compose_from_path(
+    metadata_path: Path, registry: ModuleRegistry
+) -> Dict[str, Any]:
     """
     Generate Docker Compose dict from a path to experiment-config.yaml.
 
@@ -711,7 +728,7 @@ def generate_compose_from_path(metadata_path: Path) -> Dict[str, Any]:
             f"When trying to read experiment-metadata file to generate corresponding "
             f"compose file, metadata file not found: {metadata_path}"
         )
-    ModuleRegistry.default()
+
     metadata = load_experiment_metadata(metadata_path)
     experiment_dir = metadata_path.parent
-    return generate_compose(metadata, experiment_dir)
+    return generate_compose(metadata, experiment_dir, registry=registry)

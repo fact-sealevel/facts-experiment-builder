@@ -4,16 +4,22 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose_from_path,
 )
-from facts_experiment_builder.infra.experiment_manager import (
-    make_experiment_path_from_experiment_name,
-    make_experiment_metadata_path_from_experiment_dir,
-    experiment_metadata_file_exists,
-    experiment_directory_exists,
-    resolve_custom_experiment_compose_path,
-    resolve_default_experiment_compose_path,
-    use_custom_output_path,
+from facts_experiment_builder.cli.utils import (
+    determine_root,
 )
 
+# from facts_experiment_builder.infra.experiment_manager import (
+#     make_experiment_path_from_experiment_name,
+#     make_experiment_metadata_path_from_experiment_dir,
+#     experiment_metadata_file_exists,
+#     experiment_directory_exists,
+#     resolve_custom_experiment_compose_path,
+#     resolve_default_experiment_compose_path,
+# )
+from facts_experiment_builder.infra.experiment_storage import (
+    FileSystemExperimentStorage,
+)
+from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.infra.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
@@ -65,6 +71,13 @@ def _configure_feb_logging() -> None:
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
 @click.option(
+    "--root",
+    type=click.Path(path_type=Path),
+    default=None,
+    show_default=True,
+    help="Project root directory, will default to current working directory.",
+)
+@click.option(
     "--debug",
     default=False,
     is_flag=True,
@@ -73,6 +86,7 @@ def _configure_feb_logging() -> None:
 def main(
     experiment_name,
     custom_output_path,
+    root,
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
@@ -90,25 +104,39 @@ def main(
     # Step 1: Find experiment metadata file
     console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
 
-    # first, reconstruct experiment dir path
-    experiment_path = make_experiment_path_from_experiment_name(
-        experiment_name=experiment_name
-    )
+    exp = ExperimentName.parse(experiment_name)
+    storage = FileSystemExperimentStorage(determine_root(root))
 
-    experiment_directory_exists(experiment_directory=experiment_path)
-    # then, get path to config file
-    experiment_metadata_path = make_experiment_metadata_path_from_experiment_dir(
-        experiment_path=experiment_path
+    experiment_path = storage.experiment_dir(exp)
+    output_path = (
+        custom_output_path.resolve()
+        if custom_output_path is not None
+        else storage.compose_path(exp)
     )
+    print("exp path: ", experiment_path)
+    # first, reconstruct experiment dir path
+    # experiment_path = make_experiment_path_from_experiment_name(
+    #    experiment_name=experiment_name
+    # )
+    assert experiment_path.is_dir(), f"Expected '{experiment_path}' to be a directory."
+    # experiment_directory_exists(experiment_directory=experiment_path)
+    # then, get path to config file
+    experiment_metadata_path = storage.config_path(exp=exp)
+    # experiment_metadata_path = make_experiment_metadata_path_from_experiment_dir(
+    #    experiment_path=experiment_path
+    # )
     # Ensure the file exists
-    experiment_metadata_file_exists(experiment_metadata_path)
+    assert experiment_metadata_path.exists(), (
+        f"Expected '{experiment_metadata_path}' exists."
+    )
+    # experiment_metadata_file_exists(experiment_metadata_path)
 
     console.print(
         f"[success]✓ Found experiment metadata file:[/success] [secondary]{experiment_metadata_path}[/secondary]"
     )
     # TODO in future, check it conforms to schema?
 
-    # Step 2: Build compose dictionary from metadata
+    # # Step 2: Build compose dictionary from metadata
     console.print(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
@@ -123,19 +151,19 @@ def main(
         "[primary]Step 3:[/primary] Resolving output path for compose file..."
     )
     # Check if received custom output path to use
-    if use_custom_output_path(custom_output_path):
-        # add fn here
-        output_path = resolve_custom_experiment_compose_path(custom_output_path)
-    else:
-        output_path = resolve_default_experiment_compose_path(
-            experiment_path=experiment_path
-        )
+    # if custom_output_path is not None:
+    #     # add fn here
+    #     output_path = resolve_custom_experiment_compose_path(custom_output_path)
+    # else:
+    #     output_path = resolve_default_experiment_compose_path(
+    #         experiment_path=experiment_path
+    #     )
 
-    # Step 4: Make compose YAML content from dict
+    # # Step 4: Make compose YAML content from dict
     console.print("[primary]Step 4:[/primary] Making compose YAML content from dict...")
     yaml_content = make_compose_yaml(content_dict=compose_dict)
 
-    # Step 5: Write compose YAML content to file
+    # # Step 5: Write compose YAML content to file
     console.print("[primary]Step 5:[/primary] Writing compose YAML content to file...")
     write_compose_yaml(
         compose_content=yaml_content,

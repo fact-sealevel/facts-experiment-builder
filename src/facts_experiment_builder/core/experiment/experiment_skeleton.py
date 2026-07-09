@@ -42,7 +42,7 @@ class ExperimentSkeleton:
     supplied_totaled_sealevel_step_data: Optional[str] = (
         None  # None if modules provided
     )
-    totaling_module: Optional[str] = None  # None if no totaling step
+    totaling_module: Optional[str | None] = None  # None if no totaling step
     extremesealevel_module: Optional[str] = None  # None if no ESL step
     workflows: Dict[str, str] = field(default_factory=dict)
     module_regions: Dict[str, List[str]] = field(default_factory=dict)
@@ -89,8 +89,10 @@ class ExperimentSkeleton:
         # - totaling can't run if sealevel step bypassed
         # - totaling doesn't run if no sealevel modules are passed
         # - totaling runs if more than one sealevel module included
-        if supplied_totaled_sealevel_step_data:
+        if supplied_totaled_sealevel_step_data or not sealevel_modules:
             totaling_module = None
+        else:
+            totaling_module = "facts-total"
         if not supplied_totaled_sealevel_step_data and not sealevel_modules:
             totaling_module = None
         elif sealevel_modules:

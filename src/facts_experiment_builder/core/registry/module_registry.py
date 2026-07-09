@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 class ModuleRegistry:
     def __init__(self, registry_dir: Path):
         self._registry_dir = registry_dir
+        self._module_names: Optional[frozenset] = None
 
     @property
     def registry_dir(self) -> Path:
@@ -19,6 +20,16 @@ class ModuleRegistry:
     @classmethod
     def default(cls) -> "ModuleRegistry":
         return _get_default_registry()
+
+    def list_modules(self) -> List[str]:
+        """Return names of all module directories in the registry."""
+        return [d.name for d in self._registry_dir.iterdir() if d.is_dir()]
+
+    def module_names(self) -> frozenset:
+        """cached set of module names. assumes registry dir doesnt change during instance lifetime"""
+        if self._module_names is None:
+            self._module_names = frozenset(self.list_modules())
+        return self._module_names
 
     def get_module_yaml_path(self, module_name: str) -> Path:
         """Return path to <module_name>/<snake>_module.yaml in the registry."""
@@ -59,10 +70,6 @@ class ModuleRegistry:
         except Exception:
             pass
         return "unknown"
-
-    def list_modules(self) -> List[str]:
-        """Return names of all module directories in the registry."""
-        return [d.name for d in self._registry_dir.iterdir() if d.is_dir()]
 
 
 @lru_cache(maxsize=1)

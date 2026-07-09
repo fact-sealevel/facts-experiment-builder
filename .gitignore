@@ -194,3 +194,5 @@ src/facts_experiment_builder/resources/clues
 # It must not be tracked by this repo — keep it here to prevent accidental git add.
 facts-module-registry/
 nbs/
+
+old_stuff/

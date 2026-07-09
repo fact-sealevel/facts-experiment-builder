@@ -3,7 +3,6 @@
 import logging
 import pytest
 from pathlib import Path
-from unittest.mock import patch
 from facts_experiment_builder.core.module.arg_specs import (
     FingerprintParamSpec,
     InputArgSpec,
@@ -17,6 +16,7 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
 )
+from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 
 
 @pytest.fixture
@@ -54,13 +54,20 @@ def climate_required_true_module_yaml(tmp_path) -> Path:
 
 
 @pytest.fixture
-def patched_find_module_yaml_path(climate_required_true_module_yaml: Path):
-    """Patches find_module_yaml_path to return climate_required_module_yaml."""
-    with patch(
-        "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
-        return_value=climate_required_true_module_yaml,
-    ) as mock:
-        yield mock
+def module_registry() -> ModuleRegistry:
+    return ModuleRegistry(
+        "/Users/emmamarshall/Desktop/facts_work/facts_v2/facts2-workspace/facts-module-registry"
+    )
+
+
+# @pytest.fixture
+# def patched_find_module_yaml_path(climate_required_true_module_yaml: Path):
+#     """Patches find_module_yaml_path to return climate_required_module_yaml."""
+#     with patch(
+#         "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
+#         return_value=climate_required_true_module_yaml,
+#     ) as mock:
+#         yield mock
 
 
 @pytest.fixture

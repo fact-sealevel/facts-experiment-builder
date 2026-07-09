@@ -26,6 +26,7 @@ generate-compose = "facts_experiment_builder.cli.generate_compose_cli:main"
 list-modules = "facts_experiment_builder.cli.list_modules_cli:list_modules"
 init-workspace = "facts_experiment_builder.cli.init_cli:init"
 check-data = "facts_experiment_builder.cli.check_data_cli:check_data"
+shell = "facts_experiment_builder.shell:main"
 
 [build-system]
 requires = ["uv_build>=0.8.11,<0.9.0"]
@@ -36,6 +37,7 @@ dev = [
     "jupyter>=1.1.1",
     "pytest>=8.0.0",
     "ruff>=0.14.5",
+    "diff-cover>=10.3.0",
 ]
 
 [tool.pytest.ini_options]
