@@ -22,6 +22,7 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 from facts_experiment_builder.core.experiment.facts_experiment import (
     FactsExperiment,
     TopLevelParams,
+    # ExperimentSpecificInputData
 )
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
     ExperimentSkeleton,
@@ -50,6 +51,19 @@ from facts_experiment_builder.infra.experiment_manager import (
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def which_experiment_specific_data(climate_step_data, sealevel_step_data):
+    if climate_step_data is not None and sealevel_step_data is not None:
+        raise ValueError(
+            "Received values for both supplied_climate_step_data and "
+            " supplied_sealevel_step_data. "
+            "Only one of these may be specified and used in an experiment"
+        )
+    if climate_step_data is not None and sealevel_step_data is None:
+        return sealevel_step_data
+    if sealevel_step_data is not None and climate_step_data is None:
+        return sealevel_step_data
 
 
 def create_experiment_skeleton(
@@ -138,7 +152,7 @@ def finalize_experiment_setup(
     nsamps,
     location_file,
     module_specific_input_data,
-    experiment_specific_input_data,
+    experiment_specific_input_data,  #: ExperimentSpecificInputData,
     shared_input_data,
     projection_scale,
 ):
@@ -286,6 +300,7 @@ def check_parent_dir_from_experiment_name(experiment_name: str) -> Path:
             "You must ensure this directory exists before trying to create an experiment within it."
         ) from e
 
+
 def check_if_experiment_already_exists(path_to_experiment: Path) -> None:
     if experiment_directory_exists(experiment_directory=path_to_experiment):
         raise ExperimentAlreadyExistsError(
@@ -368,6 +383,10 @@ def experiment_skeleton_to_facts_experiment(
         for key, help_text in top_level_keys.items()
     }
 
+    # extract experiment specific data paths
+    # experiment_specific_climate_path = experiment_specific_input_data._get_path(kind="climate")
+    # experiment_specific_sealevel_path = experiment_specific_input_data._get_path(kind="sealevle")
+
     paths = {
         "module-specific-input-data": create_metadata_bundle(
             "Module-specific input data", module_specific_input_data
@@ -381,7 +400,7 @@ def experiment_skeleton_to_facts_experiment(
         ),
         "output-data-location": create_metadata_bundle(
             "Output path",
-            f"./experiments/{experiment_name}/data/output",
+            f"./{experiment_name}/data/output",
         ),
         **(
             {
