@@ -1,5 +1,6 @@
 """In-memory representation of an experiment (analogous to experiment-config.yaml)."""
 
+from dataclasses import dataclass
 from typing import Dict, Any, List, Optional, Set
 from datetime import datetime
 from facts_experiment_builder.core.workflow.workflow import (
@@ -15,6 +16,36 @@ from facts_experiment_builder.core.steps import (
 )
 from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 
+
+@dataclass
+class TopLevelParams:
+    pipeline_id: str
+    scenario: str
+    baseyear: int
+    pyear_start: int
+    pyear_end: int
+    pyear_step: int
+    nsamps: int
+    location_file: str
+
+
+# @dataclass
+# class ExperimentSpecificInputData:
+#     climate_step_data: str
+#     sealevel_step_data: str
+
+#     def _get_path(self, kind):
+#         if kind == "climate":
+#             path = self.climate_step_data
+#         elif kind in ["sealevel","sea-level"]:
+#             path = self.sealevel_step_data
+#         else:
+#             raise ValueError(
+#                 "Expected one of ['climate','sealevel'],"
+#                 f"Received '{kind}'. Please provide a valid kind."
+#             )
+#         if Path(path).exists():
+#             return Path(path)
 
 # Framework-level structural keys — these describe the experiment config format,
 # not any particular module's parameters.
@@ -64,7 +95,7 @@ class FactsExperiment:
     def __init__(
         self,
         experiment_name: str,
-        top_level_params: Dict[str, Any],
+        top_level_params: Dict[str, Any],  # TopLevelParams
         climate_step: ClimateStep,
         sealevel_step: SealevelStep,
         totaling_step: TotalingStep,

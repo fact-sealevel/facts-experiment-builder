@@ -10,7 +10,7 @@ from facts_experiment_builder.cli.setup_experiment_cli import (
     _collect_workflows,
 )
 from facts_experiment_builder.core.experiment.module_name_validation import (
-    parse_module_list,
+    parse_module_list_str,
 )
 import pytest
 from contextlib import nullcontext
@@ -123,7 +123,7 @@ def test_create_all_modules_workflow_key_is_all_modules():
     modules = ["ipccar5-icesheets", "ipccar5-glaciers", "tlm-sterodynamics"]
     name, values = _create_all_modules_workflow(modules)
     # turn values from str to list
-    values_list = parse_module_list(values)
+    values_list = parse_module_list_str(values)
     assert name == "all-modules"
     assert values_list == modules, f"Expected: {modules}, received: {values}"
 

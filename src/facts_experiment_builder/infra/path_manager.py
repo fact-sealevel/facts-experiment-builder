@@ -22,30 +22,3 @@ def find_module_yaml_path(module_name: str) -> Path:
         FileNotFoundError: If no matching module YAML is found.
     """
     return ModuleRegistry.default().get_module_yaml_path(module_name)
-
-
-def find_experiment_metadata_file(experiment_name: str):
-    # Resolve path to experiment directory
-    project_root = Path.cwd()
-    experiment_dir = project_root / "experiments" / experiment_name
-
-    if not experiment_dir.exists():
-        raise FileNotFoundError(f"Experiment directory not found: {experiment_dir}")
-
-    # Resolve absolute path to file
-    metadata_file = experiment_dir / "experiment-config.yaml"
-    if not metadata_file.exists():
-        raise FileNotFoundError(f"Experiment metadata file not found: {metadata_file}")
-
-    return metadata_file
-
-
-def resolve_experiment_compose_path(
-    metadata_path: Path, custom_output_path: Optional[Path] = None
-) -> Path:
-    if custom_output_path:
-        output_path = Path(custom_output_path).resolve()
-    else:
-        output_path = metadata_path.parent / "experiment-compose.yaml"
-
-    return output_path

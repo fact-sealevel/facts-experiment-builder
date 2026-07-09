@@ -3,6 +3,8 @@ from unittest.mock import patch
 from facts_experiment_builder.application.setup_experiment import (
     hydrate_experiment,
     hydrate_sealevel_step,
+    # experiment_name_contains_parent_dir,
+    check_if_experiment_already_exists,
 )
 from facts_experiment_builder.infra.write_experiment_metadata import format_module_value
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
@@ -12,6 +14,13 @@ from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
     collect_metadata_param_keys,
 )
+from facts_experiment_builder.application.setup_experiment import (
+    is_totaling_needed,
+)
+from facts_experiment_builder.core.experiment.exceptions import (
+    ExperimentAlreadyExistsError,
+)
+import pytest
 
 
 def make_module_schema(name="test-module", uses_climate_file=False) -> ModuleSchema:
@@ -40,6 +49,51 @@ def make_skeleton(
         totaling_module=totaling_module,
         extremesealevel_module=extremesealevel_module,
     )
+
+
+# --- Testing setup experiment utility fns ---
+
+
+# def test_experiment_name_contains_parent_dir_fails_when_no_parent():
+#    experiment_name = "test-experiment-name"
+
+#    with pytest.raises(ValueError):
+#        experiment_name_contains_parent_dir(experiment_name)
+
+
+def test_check_if_experiment_already_exists_raises_error_correctly(tmp_path):
+    experiment_directory = tmp_path / "experiments/my_experiment"
+    experiment_directory.mkdir(parents=True)
+
+    with pytest.raises(ExperimentAlreadyExistsError):
+        check_if_experiment_already_exists(path_to_experiment=experiment_directory)
+
+
+def test_check_if_experiment_already_exists_succeeds_correctly(tmp_path):
+    experiment_directory = tmp_path / "experiments/my_experiment"
+    # create_experiment_directory(experiment_directory=experiment_directory)
+    check_if_experiment_already_exists(path_to_experiment=experiment_directory)
+
+
+# def test_experiment_name_contains_parent_dir_succeeds():
+#    experiment_name = "experiments/experiment_name"
+#    result = experiment_name_contains_parent_dir(experiment_name=experiment_name)
+#    assert result == experiment_name
+#    assert result is not None
+
+
+def test_is_totaling_needed_returns_false_if_less_than_2_sealevel_modules():
+    sealevel_step_opts = ["bamber19-icesheets", "", "fair-temperature,,"]
+    for sealevel_step in sealevel_step_opts:
+        result = is_totaling_needed(sealevel_step=sealevel_step)
+        assert result is False, f"Result for {sealevel_step} is {result}"
+
+
+def test_is_totaling_needed_true_if_more_than_2_sealevel_modules():
+    sealevel_step = "bamber19-icesheets,kopp14-verticallandmotion,tlm-sterodynamics"
+    result = is_totaling_needed(sealevel_step=sealevel_step)
+    print(f"Result for {sealevel_step} is {result}")
+    assert result is True
 
 
 # --- hydrate_experiment ---

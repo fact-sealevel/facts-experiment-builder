@@ -4,10 +4,16 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose_from_path,
 )
-from facts_experiment_builder.infra.path_manager import (
-    find_experiment_metadata_file,
-    resolve_experiment_compose_path,
+from facts_experiment_builder.infra.experiment_manager import (
+    make_experiment_path_from_experiment_name,
+    make_experiment_metadata_path_from_experiment_dir,
+    experiment_metadata_file_exists,
+    experiment_directory_exists,
+    resolve_custom_experiment_compose_path,
+    resolve_default_experiment_compose_path,
+    use_custom_output_path,
 )
+
 from facts_experiment_builder.infra.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
@@ -83,17 +89,31 @@ def main(
 
     # Step 1: Find experiment metadata file
     console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
-    metadata_path = find_experiment_metadata_file(experiment_name)
-    console.print(
-        f"[success]✓ Found experiment metadata file:[/success] [secondary]{metadata_path}[/secondary]"
+
+    # first, reconstruct experiment dir path
+    experiment_path = make_experiment_path_from_experiment_name(
+        experiment_name=experiment_name
     )
+
+    experiment_directory_exists(experiment_directory=experiment_path)
+    # then, get path to config file
+    experiment_metadata_path = make_experiment_metadata_path_from_experiment_dir(
+        experiment_path=experiment_path
+    )
+    # Ensure the file exists
+    experiment_metadata_file_exists(experiment_metadata_path)
+
+    console.print(
+        f"[success]✓ Found experiment metadata file:[/success] [secondary]{experiment_metadata_path}[/secondary]"
+    )
+    # TODO in future, check it conforms to schema?
 
     # Step 2: Build compose dictionary from metadata
     console.print(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
     try:
-        compose_dict = generate_compose_from_path(metadata_path)
+        compose_dict = generate_compose_from_path(experiment_metadata_path)
     except (FileNotFoundError, ValueError) as e:
         console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
         raise SystemExit(1)
@@ -102,7 +122,14 @@ def main(
     console.print(
         "[primary]Step 3:[/primary] Resolving output path for compose file..."
     )
-    output_path = resolve_experiment_compose_path(metadata_path, custom_output_path)
+    # Check if received custom output path to use
+    if use_custom_output_path(custom_output_path):
+        # add fn here
+        output_path = resolve_custom_experiment_compose_path(custom_output_path)
+    else:
+        output_path = resolve_default_experiment_compose_path(
+            experiment_path=experiment_path
+        )
 
     # Step 4: Make compose YAML content from dict
     console.print("[primary]Step 4:[/primary] Making compose YAML content from dict...")

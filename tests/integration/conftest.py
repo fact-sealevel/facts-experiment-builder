@@ -19,7 +19,7 @@ def registry_env(monkeypatch):
 ## shared fixtures
 @pytest.fixture
 def experiment_name():
-    input = "integration_test_experiment"
+    input = "experiments/integration_test_experiment"
     return input
 
 

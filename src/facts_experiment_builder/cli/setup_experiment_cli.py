@@ -4,31 +4,30 @@ This script uses Jinja2-based YAML generation from setup_experiment.py.
 
 """
 
-import dataclasses
-import click
 from pathlib import Path
+import click
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.setup_experiment import (
-    setup_experiment_fs,
-    experiment_skeleton_to_facts_experiment,
-    populate_experiment_directory,
+    is_totaling_needed,
+    prepare_experiment_setup,
+    finalize_experiment_setup,
+    which_experiment_specific_data,
 )
-from facts_experiment_builder.core.experiment.exceptions import (
-    ExperimentAlreadyExistsError,
-)
-from facts_experiment_builder.core.experiment.experiment_skeleton import (
-    ExperimentSkeleton,
-    parse_module_regions,
-)
-from facts_experiment_builder.infra.write_experiment_metadata import (
-    write_metadata_yaml_jinja2,
-)  # TODO move this eventually
-from facts_experiment_builder.core.registry import ModuleRegistry
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from facts_experiment_builder.core.experiment.experiment_skeleton import (
+        ExperimentSkeleton,
+    )
 from facts_experiment_builder.core.experiment.module_name_validation import (
-    parse_module_list,
+    parse_module_list_str,
     unparse_module_list,
     validate_module_names,
 )
+
+# from facts_experiment_builder.core.experiment.facts_experiment import (
+# ExperimentSpecificInputData,
+# )
 import logging
 
 logger = logging.getLogger(__name__)
@@ -44,7 +43,10 @@ def configure_logging(debug_target):
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
-    "--experiment-name", type=str, required=True, help="Name of the experiment"
+    "--experiment-name",
+    type=str,
+    required=True,
+    help="Name of the experiment and parent directory, e.g. experiments/my_first_experiment",
 )
 @click.option(
     "--climate-step", type=str, required=False, help="Name of the temperature module"
@@ -182,36 +184,8 @@ def main(
         "[muted] - If you do not pass either a module to run, or data to bypass running the module, for a required step,\n"
         "[muted] - If you try to define a workflow that includes a module not present in the sea-level step of the experiment.\n"
     )
-    # first, check that experiment doesn't already exist
-    try:
-        experiment_path = setup_experiment_fs(experiment_name=experiment_name)
-    except ExperimentAlreadyExistsError as e:
-        raise click.UsageError(str(e))
 
-    # Parse --module-regions tuple into dict before building skeleton
-    try:
-        parsed_module_regions = parse_module_regions(module_regions)
-    except ValueError as e:
-        raise click.UsageError(str(e))
-
-    # Build the skeleton from CLI inputs (parses comma-separated strings, no YAML loading)
-    try:
-        skeleton = ExperimentSkeleton.from_cli_inputs(
-            climate_step=climate_step,
-            supplied_climate_step_data=supplied_climate_step_data,
-            sealevel_step=sealevel_step,
-            supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-            extremesealevel_step=extremesealevel_step,
-            module_regions=parsed_module_regions,
-        )
-    except ValueError as e:
-        raise click.UsageError(
-            "Failed to create experiment skeleton in application.setup_experiment: %s",
-            str(e),
-        )
-
-    # If no sealevel modules are provided, skip sealevel step
-    if not skeleton.sealevel_modules:
+    if not sealevel_step and not supplied_totaled_sealevel_step_data:
         console.print(
             "[muted] Note: Skipping sealevel step because no sealevel modules were passed to `setup-new-experiment --sealevel-step`. [/muted]"
         )
@@ -220,22 +194,58 @@ def main(
         console.print(
             "[muted]Note: Totaling step is being skipped because --supplied-totaled-sealevel-step-data was provided.[/muted]"
         )
+    prepared_experiment = prepare_experiment_setup(
+        experiment_name=experiment_name,
+        module_regions=module_regions,
+        climate_step=climate_step,
+        supplied_climate_step_data=supplied_climate_step_data,
+        sealevel_step=sealevel_step,
+        supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
+        extremesealevel_step=extremesealevel_step,
+    )
+    skeleton = prepared_experiment.experiment_skeleton
+    experiment_path = prepared_experiment.experiment_path
 
     # If framework includes facts-total, collect workflows and attach to skeleton
     sl_modules = skeleton.sealevel_modules
-    if skeleton.totaling_module == "facts-total":
+    if is_totaling_needed(sealevel_step=sealevel_step):
         workflow_dict = _collect_workflows(
             complete_modules_list=sl_modules,
             total_all_modules=total_all_modules,
         )
-        skeleton = dataclasses.replace(skeleton, workflows=workflow_dict)
+    else:
+        workflow_dict = {}
     console.rule(style="rule")
     console.rule(style="rule", title="Setting up new FACTS experiment")
+    # experiment_spec_data #= ExperimentSpecificInputData(
+    # climate_step_data=supplied_climate_step_data,
+    # sealevel_step_data=supplied_totaled_sealevel_step_data,
+    # )
 
-    # Create output dir etc.
-    populate_experiment_directory(
-        experiment_path=experiment_path, module_names=skeleton.all_module_names
+    experiment_spec_data = which_experiment_specific_data(
+        climate_step_data=supplied_climate_step_data,
+        sealevel_step_data=supplied_totaled_sealevel_step_data,
     )
+
+    finalize_experiment_setup(
+        experiment_name=experiment_name,
+        experiment_path=experiment_path,
+        experiment_skeleton=skeleton,
+        workflows_dict=workflow_dict,
+        pipeline_id=pipeline_id,
+        scenario=scenario,
+        baseyear=baseyear,
+        pyear_end=pyear_end,
+        pyear_start=pyear_start,
+        pyear_step=pyear_step,
+        nsamps=nsamps,
+        location_file=location_file,
+        module_specific_input_data=module_specific_input_data,
+        experiment_specific_input_data=experiment_spec_data,
+        shared_input_data=shared_input_data,
+        projection_scale=projection_scale,
+    )
+
     print_experiment_directory_created(experiment_name, experiment_path)
 
     print_experiment_modules(experiment_skeleton=skeleton)
@@ -256,31 +266,9 @@ def main(
 
     console.rule(style="rule", title="Generating experiment-config.yaml")
 
-    # Step 2: Create FactsExperiment from template
-    experiment = experiment_skeleton_to_facts_experiment(
-        experiment_name=experiment_name,
-        skeleton=skeleton,
-        pipeline_id=pipeline_id,
-        scenario=scenario,
-        baseyear=baseyear,
-        pyear_start=pyear_start,
-        pyear_end=pyear_end,
-        pyear_step=pyear_step,
-        nsamps=nsamps,
-        location_file=location_file,
-        module_specific_input_data=module_specific_input_data,
-        experiment_specific_input_data=supplied_climate_step_data,
-        shared_input_data=shared_input_data,
-        projection_scale=projection_scale,
-    )
-
-    # Step 4: Write metadata using Jinja2 templating (accepts FactsExperiment or dict)
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
     metadata_path = experiment_path / "experiment-config.yaml"
-    registry_version = ModuleRegistry.default().get_version()
-    write_metadata_yaml_jinja2(
-        experiment, metadata_path, module_registry_version=registry_version
-    )
+
     console.print(
         f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
     )
@@ -363,7 +351,7 @@ def _collect_single_workflow(complete_modules_list: list[str]) -> tuple[str, str
         "Enter the names of the modules to include in this workflow, separated by commas",
         type=str,
     )
-    module_list = parse_module_list(module_list_str)
+    module_list = parse_module_list_str(module_list_str)
     _validate_modules_list_workflow(module_list, complete_modules_list)
     return (workflow_name, module_list_str)
 
@@ -422,14 +410,14 @@ def print_experiment_directory_created(experiment_name: str, experiment_path: "P
     )
 
 
-def print_experiment_modules(experiment_skeleton: ExperimentSkeleton):
+def print_experiment_modules(experiment_skeleton: "ExperimentSkeleton"):
     console.print("[muted]  The experiment has the following modules:[/muted]")
     print_climate_step_info(experiment_skeleton)
     print_sealevel_step_info(experiment_skeleton)
     print_extremesealevel_step_info(experiment_skeleton)
 
 
-def print_experiment_workflows(experiment_skeleton: ExperimentSkeleton):
+def print_experiment_workflows(experiment_skeleton: "ExperimentSkeleton"):
     console.print("[muted]  The experiment has the following workflows: [/muted]")
     print_workflows_info(experiment_skeleton)
 
