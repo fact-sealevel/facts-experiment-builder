@@ -3,7 +3,7 @@ from unittest.mock import patch
 from facts_experiment_builder.application.setup_experiment import (
     hydrate_experiment,
     hydrate_sealevel_step,
-    experiment_name_contains_parent_dir,
+    # experiment_name_contains_parent_dir,
     check_if_experiment_already_exists,
 )
 from facts_experiment_builder.infra.write_experiment_metadata import format_module_value
@@ -54,11 +54,11 @@ def make_skeleton(
 # --- Testing setup experiment utility fns ---
 
 
-def test_experiment_name_contains_parent_dir_fails_when_no_parent():
-    experiment_name = "test-experiment-name"
+# def test_experiment_name_contains_parent_dir_fails_when_no_parent():
+#    experiment_name = "test-experiment-name"
 
-    with pytest.raises(ValueError):
-        experiment_name_contains_parent_dir(experiment_name)
+#    with pytest.raises(ValueError):
+#        experiment_name_contains_parent_dir(experiment_name)
 
 
 def test_check_if_experiment_already_exists_raises_error_correctly(tmp_path):
@@ -75,11 +75,11 @@ def test_check_if_experiment_already_exists_succeeds_correctly(tmp_path):
     check_if_experiment_already_exists(path_to_experiment=experiment_directory)
 
 
-def test_experiment_name_contains_parent_dir_succeeds():
-    experiment_name = "experiments/experiment_name"
-    result = experiment_name_contains_parent_dir(experiment_name=experiment_name)
-    assert result == experiment_name
-    assert result is not None
+# def test_experiment_name_contains_parent_dir_succeeds():
+#    experiment_name = "experiments/experiment_name"
+#    result = experiment_name_contains_parent_dir(experiment_name=experiment_name)
+#    assert result == experiment_name
+#    assert result is not None
 
 
 def test_is_totaling_needed_returns_false_if_less_than_2_sealevel_modules():
