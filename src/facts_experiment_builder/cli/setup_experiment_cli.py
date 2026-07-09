@@ -11,6 +11,7 @@ from facts_experiment_builder.application.setup_experiment import (
     is_totaling_needed,
     prepare_experiment_setup,
     finalize_experiment_setup,
+    which_experiment_specific_data,
 )
 from typing import TYPE_CHECKING
 
@@ -23,9 +24,10 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     unparse_module_list,
     validate_module_names,
 )
-from facts_experiment_builder.core.experiment.facts_experiment import (
-    ExperimentSpecificInputData,
-)
+
+# from facts_experiment_builder.core.experiment.facts_experiment import (
+# ExperimentSpecificInputData,
+# )
 import logging
 
 logger = logging.getLogger(__name__)
@@ -215,10 +217,16 @@ def main(
         workflow_dict = {}
     console.rule(style="rule")
     console.rule(style="rule", title="Setting up new FACTS experiment")
-    experiment_spec_data = ExperimentSpecificInputData(
+    # experiment_spec_data #= ExperimentSpecificInputData(
+    # climate_step_data=supplied_climate_step_data,
+    # sealevel_step_data=supplied_totaled_sealevel_step_data,
+    # )
+
+    experiment_spec_data = which_experiment_specific_data(
         climate_step_data=supplied_climate_step_data,
         sealevel_step_data=supplied_totaled_sealevel_step_data,
     )
+
     finalize_experiment_setup(
         experiment_name=experiment_name,
         experiment_path=experiment_path,
