@@ -19,6 +19,7 @@ from facts_experiment_builder.cli.utils import (
 from facts_experiment_builder.infra.experiment_storage import (
     FileSystemExperimentStorage,
 )
+from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.infra.write_compose import (
     make_compose_yaml,
@@ -83,15 +84,26 @@ def _configure_feb_logging() -> None:
     is_flag=True,
     help="Enable debug mode",
 )
+@click.option(
+    "--module-registry",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    show_default=True,
+    envvar="FEB_MODULE_REGISTRY_DIR",
+    default=Path("./facts-module-registry"),
+    help="Path to the facts-module-registry directory to use in generatecompose. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
+)
 def main(
     experiment_name,
     custom_output_path,
     root,
+    module_registry,
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
 
     _configure_feb_logging()
+    module_registry_path = module_registry.absolute()
+    registry = FileSystemModuleRegistry(registry_path=module_registry_path)
 
     if debug:
         logger.setLevel(logging.INFO)
@@ -113,11 +125,7 @@ def main(
         if custom_output_path is not None
         else storage.compose_path(exp)
     )
-    print("exp path: ", experiment_path)
-    # first, reconstruct experiment dir path
-    # experiment_path = make_experiment_path_from_experiment_name(
-    #    experiment_name=experiment_name
-    # )
+
     assert experiment_path.is_dir(), f"Expected '{experiment_path}' to be a directory."
     # experiment_directory_exists(experiment_directory=experiment_path)
     # then, get path to config file
@@ -141,7 +149,9 @@ def main(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
     try:
-        compose_dict = generate_compose_from_path(experiment_metadata_path)
+        compose_dict = generate_compose_from_path(
+            experiment_metadata_path, definition=registry
+        )
     except (FileNotFoundError, ValueError) as e:
         console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
         raise SystemExit(1)
