@@ -33,6 +33,8 @@ class ModuleSchema:
     command: str = ""
     uses_climate_file: bool = False
     extra: Dict[str, Any] = field(default_factory=dict)
+    per_workflow: bool = False
+    output_types: List[str] = field(default_factory=lambda: ["global", "local"])
 
     def __post_init__(self) -> None:
         if self.arguments is None:
@@ -124,6 +126,7 @@ class ModuleSchema:
         arguments = data.get("arguments", {})
         if not isinstance(arguments, dict):
             arguments = {}
+
         ArgumentsSpec(**arguments)
         volumes = data.get("volumes", {})
         if not isinstance(volumes, dict):
@@ -137,6 +140,8 @@ class ModuleSchema:
             "command",
             "uses_climate_file",
             "climate_file_required",
+            "output_types",
+            "per_workflow",
         }
         extra = {k: v for k, v in data.items() if k not in known_keys}
         return cls(
@@ -147,6 +152,8 @@ class ModuleSchema:
             depends_on=data.get("depends_on"),
             command=data.get("command", ""),
             uses_climate_file=data.get("uses_climate_file", False),
+            per_workflow=data.get("per_workflow"),
+            output_types=data.get("output_types"),
             extra=extra,
         )
 
