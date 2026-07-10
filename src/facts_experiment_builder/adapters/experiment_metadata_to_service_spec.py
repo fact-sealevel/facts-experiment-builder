@@ -1,7 +1,7 @@
 """Build ModuleServiceSpec instances from experiment metadata and module YAML."""
 
 from pathlib import Path
-from typing import Dict, Any, Set
+from typing import Dict, Any, Set, List, Optional
 import os
 from facts_experiment_builder.adapters.adapter_utils import (
     get_required_field,
@@ -19,25 +19,39 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
 )
-from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleContainerImage,
+    ModuleSchema,
+)
 from facts_experiment_builder.core.typed_path import (
     HostPath,
     HostDirPath,
     ContainerPath,
     ExperimentSpecificInputPath,
 )
-from facts_experiment_builder.infra.module_loader import (
-    load_module_schema_from_yaml,
-)
-from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 
-ALLOWED_MODULE_TYPES = {
-    "temperature_module",
-    "sealevel_module",
-    "framework_module",
-    "extreme_sealevel_module",
-    "other_module",
-}
+
+class InvalidModuleTypeError(Exception):
+    def __init__(
+        self,
+        module_type: str,
+    ):
+        self.module_type = module_type
+        super().__init__(
+            f"Received invalid module type '{module_type}'."
+            f"Module type must be None or one of: {', '.join(sorted(ALLOWED_MODULE_TYPES))}"
+        )
+
+
+ALLOWED_MODULE_TYPES = frozenset(
+    {
+        "temperature_module",
+        "sealevel_module",
+        "framework_module",
+        "extreme_sealevel_module",
+        "other_module",
+    }
+)
 
 
 def _dir_input_keys(module_definition: Any) -> Set[str]:
@@ -67,13 +81,17 @@ def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
     return keys
 
 
+def module_type_is_valid(module_type: Optional[str]) -> bool:
+    return module_type is None or module_type in ALLOWED_MODULE_TYPES
+
+
 def build_module_service_spec(
     metadata: Dict[str, Any],
-    experiment_dir: Path,
-    registry: ModuleRegistry,
+    # experiment_dir: Path,
     module_name: str,
+    known_module_names: List,
+    module_definition: ModuleSchema,
     module_type: str = None,
-    module_yaml_path: Path = None,
 ) -> ModuleServiceSpec:
     """
     Build a ModuleServiceSpec for the given module from experiment metadata and module YAML.
@@ -83,40 +101,24 @@ def build_module_service_spec(
         experiment_dir: Path to experiment directory
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
         module_type: Optional category (e.g. 'temperature_module', 'sealevel_module')
-        module_yaml_path: Optional path to module YAML (otherwise discovered by name)
 
     Returns:
         ModuleServiceSpec instance
     """
-    if module_type is not None and module_type not in ALLOWED_MODULE_TYPES:
-        raise ValueError(
-            f"Invalid module_type '{module_type}'. "
-            f"Must be one of: {', '.join(sorted(ALLOWED_MODULE_TYPES))}"
+    if not module_type_is_valid(module_type=module_type):
+        raise InvalidModuleTypeError(
+            module_type=module_type,
         )
 
     module_context = f"{module_name} module"
 
-    # TODO fix this
-    if module_yaml_path and module_yaml_path.exists():
-        resolved_yaml_path = module_yaml_path
-        # this is total module step/ workflows
-    else:
-        # this is climate + sea level module steps
-        resolved_yaml_path = registry.get_module_yaml_path(module_name)
-
-    module_definition = load_module_schema_from_yaml(resolved_yaml_path)
     module_metadata = get_required_field(metadata, module_name, module_context)
 
     scenario_name = get_required_field(metadata, "scenario", module_context)
     if isinstance(scenario_name, dict):
         scenario_name = scenario_name.get(
-            "scenario_name", scenario_name.get("scenario", "")
+            "scenario_name", scenario_name.get("scenario")
         )
-    # experiment_name = get_required_field(metadata, "experiment_name", module_context)
-    # scenario = ScenarioConfig(
-    #    scenario_name=scenario_name,
-    #    description=f"Scenario for {experiment_name}",
-    # )
 
     experiment_paths = get_experiment_paths(metadata, module_context)
 
@@ -142,7 +144,9 @@ def build_module_service_spec(
     )
     # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
     # so volume host path is always base + current module's suffix only (never another module's name).
-    if Path(module_specific_input_base).name in registry.module_names():
+    if (
+        Path(module_specific_input_base).name in known_module_names
+    ):  # registry.module_names():
         module_specific_input_base = str(Path(module_specific_input_base).parent)
     # Module-specific input dir: driven by input_dir_name in module YAML (e.g. "ipccar5" for both
     # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that
