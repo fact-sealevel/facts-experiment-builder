@@ -40,6 +40,7 @@ class FileSystemExperimentStorage:
         self._root = root
 
     def create(self, exp: ExperimentName) -> Path:
+        """Creates directory for specified experiment name."""
         target = (self._root / exp.relative_path).resolve()
         if not target.is_relative_to(self._root):
             raise ExperimentStorageError(exp, target=target, root=self._root)
