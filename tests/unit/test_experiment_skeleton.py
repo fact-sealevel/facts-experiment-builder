@@ -1,8 +1,23 @@
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
     parse_module_regions,
     ExperimentSkeleton,
+    is_totaling_needed,
 )
 import pytest
+
+
+def test_is_totaling_needed_returns_false_if_less_than_2_sealevel_modules():
+    sealevel_step_opts = ["bamber19-icesheets", "", "fair-temperature,,"]
+    for sealevel_step in sealevel_step_opts:
+        result = is_totaling_needed(sealevel_step=sealevel_step)
+        assert result is False, f"Result for {sealevel_step} is {result}"
+
+
+def test_is_totaling_needed_true_if_more_than_2_sealevel_modules():
+    sealevel_step = "bamber19-icesheets,kopp14-verticallandmotion,tlm-sterodynamics"
+    result = is_totaling_needed(sealevel_step=sealevel_step)
+    print(f"Result for {sealevel_step} is {result}")
+    assert result is True
 
 
 def test_parse_module_regions_fails_if_no_regions_specified():

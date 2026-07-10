@@ -16,7 +16,10 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
 )
-from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
+from facts_experiment_builder.core.registry.module_registry import (
+    ModuleRegistry,
+    _get_default_registry,
+)
 
 
 @pytest.fixture
@@ -54,10 +57,22 @@ def climate_required_true_module_yaml(tmp_path) -> Path:
 
 
 @pytest.fixture
-def module_registry() -> ModuleRegistry:
-    return ModuleRegistry(
-        "/Users/emmamarshall/Desktop/facts_work/facts_v2/facts2-workspace/facts-module-registry"
+def tmp_registry_dir() -> Path:
+    REGISTRY_FIXTURE_PATH = (
+        "/Users/emmamarshall/Desktop/facts_work/facts_v2/facts-module-registry/"
     )
+    return REGISTRY_FIXTURE_PATH
+
+
+@pytest.fixture
+def module_registry(tmp_registry_dir, monkeypatch) -> ModuleRegistry:
+    # return ModuleRegistry(
+    #    "/Users/emmamarshall/Desktop/facts_work/facts_v2/facts2-workspace/facts-module-registry"
+    # )
+    monkeypatch.setenv("FEB_MODULE_REGISTRY_DIR", str(tmp_registry_dir))
+    _get_default_registry.cache_clear()
+    yield ModuleRegistry(tmp_registry_dir)
+    _get_default_registry.cache_clear()
 
 
 # @pytest.fixture

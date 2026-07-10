@@ -5,15 +5,15 @@ REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 REGISTRY_SOURCE = REPO_ROOT / "facts-module-registry"
 
 
-@pytest.fixture(autouse=True)
-def registry_env(monkeypatch):
-    """Point the registry at the real source via env var for all integration tests.
+# @pytest.fixture(autouse=True)
+# def registry_env(monkeypatch):
+#     """Point the registry at the real source via env var for all integration tests.
 
-    Using FEB_MODULE_REGISTRY_DIR bypasses the git health checks (no warnings
-    in tests) and always resolves to a stable path, so the lru_cache on
-    _get_default_registry never goes stale between test cases.
-    """
-    monkeypatch.setenv("FEB_MODULE_REGISTRY_DIR", str(REGISTRY_SOURCE))
+#     Using FEB_MODULE_REGISTRY_DIR bypasses the git health checks (no warnings
+#     in tests) and always resolves to a stable path, so the lru_cache on
+#     _get_default_registry never goes stale between test cases.
+#     """
+#     monkeypatch.setenv("FEB_MODULE_REGISTRY_DIR", str(REGISTRY_SOURCE))
 
 
 ## shared fixtures

@@ -25,16 +25,24 @@ def plain(text: str) -> str:
 
 runner = CliRunner()
 
-
-def test_cli_reports_missing_parent_dir_in_experiment_name(tmp_path):
-    result = CliRunner().invoke(
-        main, ["--experiment-name", "fake_dir/blank", "--root", str(tmp_path)]
-    )
-    assert result.exit_code != 0
-    assert result.exception is None or isinstance(result.exception, SystemExit)
-    out = plain(result.output + getattr(result, "stderr", ""))
-    assert "does not exist" in out
-    assert "fake_dir" in out
+# no longer the behhavior
+# def test_cli_reports_missing_parent_dir_in_experiment_name(tmp_path, tmp_registry_dir):
+#     result = CliRunner().invoke(
+#         main,
+#         [
+#             "--experiment-name",
+#             "fake_dir/blank",
+#             "--root",
+#             str(tmp_path),
+#             "--module-registry",
+#             str(tmp_registry_dir),
+#         ],
+#     )
+#     assert result.exit_code != 0
+#     assert result.exception is None or isinstance(result.exception, SystemExit)
+#     out = plain(result.output + getattr(result, "stderr", ""))
+#     assert "does not exist" in out
+#     assert "fake_dir" in out
 
 
 def test_cli_help_exits_zero():

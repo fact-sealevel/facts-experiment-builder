@@ -196,3 +196,11 @@ facts-module-registry/
 nbs/
 
 old_stuff/
+
+src/facts_experiment_builder/adapters/experiment_adapters.py
+src/facts_experiment_builder/core/total_checker.py
+src/facts_experiment_builder/core/workspace/
+src/facts_experiment_builder/experiment_recipes.yml
+src/facts_experiment_builder/infra/workspace_loader.py
+old stuff/
+diagrams/

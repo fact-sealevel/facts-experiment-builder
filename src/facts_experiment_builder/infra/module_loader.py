@@ -3,6 +3,9 @@ from pathlib import Path
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.infra.path_manager import find_module_yaml_path
 from facts_experiment_builder.infra.exceptions import ModuleYamlNotFoundError
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def load_module_schema_from_yaml(yaml_path: Path) -> ModuleSchema:
@@ -34,5 +37,6 @@ def load_module_schema_by_name(module_name: str) -> ModuleSchema:
     Returns:
         ModuleSchema for the module.
     """
+    logger.info("Loading schema for %s module", module_name)
     yaml_path = find_module_yaml_path(module_name)
     return load_module_schema_from_yaml(yaml_path)

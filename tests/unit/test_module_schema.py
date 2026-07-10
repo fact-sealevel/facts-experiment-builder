@@ -1,6 +1,7 @@
 """Tests for facts_experiment_builder.core.module.module_schema."""
 
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+import pytest
 
 
 def test_module_schema_construction_minimal():
@@ -182,11 +183,10 @@ def test_from_dict_normalizes_none_volumes():
     schema = ModuleSchema.from_dict({"module_name": "foo", "volumes": None})
     assert schema.volumes == {}
 
-
-def test_from_dict_collects_extra_fields():
-    """from_dict puts unknown keys into extra."""
+    # def test_from_dict_collects_per_workflow():
+    #     """from_dict puts unknown keys into extra."""
     schema = ModuleSchema.from_dict({"module_name": "foo", "per_workflow": True})
-    assert schema.extra == {"per_workflow": True}
+    assert schema.per_workflow is True
 
 
 def test_from_dict_climate_file_required_goes_to_extra():
@@ -225,7 +225,8 @@ def test_from_dict_full():
     ]
     assert "top_level" in schema.arguments
     assert "output" in schema.volumes
-    assert schema.extra == {"per_workflow": False}
+    assert schema.per_workflow is False
+    # assert schema.extra == {"per_workflow": False}
 
 
 # ---------------------------------------------------------------------------
@@ -291,3 +292,24 @@ def test_get_climate_output_type_returns_none_for_non_climate_inputs():
         volumes={},
     )
     assert mod.get_climate_output_type() is None
+
+
+def test_get_file_outputs_raises_error_if_outputs_not_dict():
+    data = {
+        "module_name": "bamber19-icesheets",
+        "container_image": "ghcr.io/org/bamber19:0.2",
+        "arguments": {"top_level": [], "options": [], "outputs": ["output_list"]},
+        "volumes": {"output": {"host_path": "x", "container_path": "/out"}},
+        "depends_on": [
+            {
+                "service": "fair-temperature",
+                "condition": "service_completed_successfully",
+            }
+        ],
+        "command": "icesheets",
+        "uses_climate_file": True,
+        "climate_file_required": True,
+        "per_workflow": False,
+    }
+    with pytest.raises(ValueError):
+        ModuleSchema.from_dict(data)
