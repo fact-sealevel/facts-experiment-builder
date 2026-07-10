@@ -2,6 +2,15 @@
 
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
+from facts_experiment_builder.core.experiment.module_name_validation import (
+    parse_module_list_str,
+)
+
+
+def is_totaling_needed(sealevel_step: str) -> bool:
+    sealevel_module_ls = parse_module_list_str(s=sealevel_step)
+
+    return len(sealevel_module_ls) > 1
 
 
 def parse_module_regions(module_regions_args: tuple) -> Dict[str, List[str]]:
