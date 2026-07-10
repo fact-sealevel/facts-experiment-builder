@@ -1,11 +1,12 @@
 """Create modules from experiment metadata."""
 
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 
 from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import (
     build_module_service_spec,
 )
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
 
@@ -13,9 +14,10 @@ from facts_experiment_builder.infra.experiment_loader import load_experiment_met
 def create_module_service_spec_from_metadata(
     experiment_dir: Path,
     module_name: str,
+    module_definition: ModuleSchema,
+    known_module_names: List,
     module_type: Optional[str] = None,
     metadata: Optional[Dict[str, Any]] = None,
-    module_yaml_path: Optional[Path] = None,
 ):
     """
     Create a single module service spec from experiment metadata.
@@ -30,17 +32,19 @@ def create_module_service_spec_from_metadata(
     Returns:
         ModuleServiceSpec
     """
-    metadata_path = Path(experiment_dir, "experiment-config.yaml")
+    metadata_path = Path(
+        experiment_dir, "experiment-config.yaml"
+    )  # TODO Thread this from gen compose!
     if metadata is None:
         metadata = load_experiment_metadata(metadata_path)
 
     try:
         return build_module_service_spec(
-            metadata,
-            experiment_dir,
+            metadata=metadata,
+            known_module_names=known_module_names,
+            module_definition=module_definition,
             module_name=module_name,
             module_type=module_type,
-            module_yaml_path=module_yaml_path,
         )
     except Exception as e:
         error_msg = str(e)
