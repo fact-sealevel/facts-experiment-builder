@@ -7,8 +7,10 @@ This script uses Jinja2-based YAML generation from setup_experiment.py.
 from pathlib import Path
 import click
 from facts_experiment_builder.cli.theme import console
-from facts_experiment_builder.application.setup_experiment import (
+from facts_experiment_builder.core.experiment.experiment_skeleton import (
     is_totaling_needed,
+)
+from facts_experiment_builder.application.setup_experiment import (
     prepare_experiment_setup,
     finalize_experiment_setup,
 )
@@ -23,7 +25,8 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     unparse_module_list,
     validate_module_names,
 )
-from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
+
+# from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 from facts_experiment_builder.core.experiment.facts_experiment import (
     ExperimentSpecificInputData,
 )
@@ -38,6 +41,7 @@ from facts_experiment_builder.infra.experiment_storage import (
     ExperimentRootNotFoundError,
     ExperimentStorageError,
 )
+from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
 
 import logging
 
@@ -183,6 +187,7 @@ def main(
     shared_input_data,
     projection_scale,
     module_regions,
+    module_registry,
     root,
     debug,
     debug_target,
@@ -201,7 +206,10 @@ def main(
         configure_logging("all")
 
     try:
-        registry = ModuleRegistry(module_regions)
+        # First resolve path to ensure its absolute
+        module_registry_path = module_registry.absolute()
+        registry = FileSystemModuleRegistry(registry_path=module_registry_path)
+
         root = determine_root(root)
         storage = FileSystemExperimentStorage(root)
 
@@ -274,7 +282,7 @@ def main(
             experiment_specific_input_data=experiment_spec_data,
             shared_input_data=shared_input_data,
             projection_scale=projection_scale,
-            registry=registry,
+            definition=registry,  # registry passed as protocol
         )
 
         print_experiment_directory_created(experiment_name, experiment_path)
