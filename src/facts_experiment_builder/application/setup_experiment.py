@@ -5,12 +5,10 @@ import dataclasses
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
 )
-from facts_experiment_builder.core.experiment.module_name_validation import (
-    parse_module_list_str,
-)
-from facts_experiment_builder.core.registry import ModuleRegistry
+
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
+    ModuleSchema,
 )
 from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
@@ -33,9 +31,7 @@ from facts_experiment_builder.core.steps import (
 from facts_experiment_builder.infra.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )
-from facts_experiment_builder.infra.module_loader import (
-    load_module_schema_by_name,
-)
+
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 from facts_experiment_builder.infra.experiment_storage import (
     FileSystemExperimentStorage,
@@ -43,33 +39,6 @@ from facts_experiment_builder.infra.experiment_storage import (
 import logging
 
 logger = logging.getLogger(__name__)
-
-
-def create_experiment_skeleton(
-    climate_step: str,
-    supplied_climate_step_data: str,
-    sealevel_step: str,
-    supplied_totaled_sealevel_step_data: str,
-    extremesealevel_step: str,
-    parsed_module_regions: Dict,
-):
-    # create skeleton obj
-    skeleton = ExperimentSkeleton.from_inputs(
-        climate_step=climate_step,
-        supplied_climate_step_data=supplied_climate_step_data,
-        sealevel_step=sealevel_step,
-        supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-        extremesealevel_step=extremesealevel_step,
-        module_regions=parsed_module_regions,
-    )
-
-    return skeleton
-
-
-def is_totaling_needed(sealevel_step: str) -> bool:
-    sealevel_module_ls = parse_module_list_str(s=sealevel_step)
-
-    return len(sealevel_module_ls) > 1
 
 
 @dataclass
@@ -99,14 +68,15 @@ def prepare_experiment_setup(
 
     parsed_module_regions = parse_module_regions(module_regions)
     # Create experiment skeleton
-    skeleton = create_experiment_skeleton(
+    skeleton = ExperimentSkeleton.from_inputs(
         climate_step=climate_step,
-        sealevel_step=sealevel_step,
         supplied_climate_step_data=supplied_climate_step_data,
+        sealevel_step=sealevel_step,
         supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
         extremesealevel_step=extremesealevel_step,
-        parsed_module_regions=parsed_module_regions,
+        module_regions=parsed_module_regions,
     )
+
     output = PrepareExperimentOutput(
         experiment_path=experiment_target, experiment_skeleton=skeleton
     )
@@ -130,8 +100,18 @@ def finalize_experiment_setup(
     experiment_specific_input_data,
     shared_input_data,
     projection_scale,
-    registry: ModuleRegistry,
+    definition,
 ):
+    validate_skeleton_module_names(
+        skeleton=experiment_skeleton, valid_module_names=definition.module_names()
+    )
+
+    # Gather info from port
+    version = definition.version()
+    schemas = {
+        m: definition.get_schema(m) for m in experiment_skeleton.all_module_names
+    }
+
     # make TopLevelParams dataclass
     top_level_params = TopLevelParams(
         scenario=scenario,
@@ -143,8 +123,10 @@ def finalize_experiment_setup(
         pyear_step=pyear_step,
         location_file=location_file,
     )
-    skeleton_with_workflows = add_workflows_to_skeleton(
-        skeleton=experiment_skeleton, workflows_dict=workflows_dict
+
+    # Add workflows to the skeleton created in the first top-level setup experiment fn
+    skeleton_with_workflows = dataclasses.replace(
+        experiment_skeleton, workflows=workflows_dict
     )
 
     # Create FactsExperiment from template
@@ -152,86 +134,57 @@ def finalize_experiment_setup(
         experiment_name=experiment_name,
         skeleton=skeleton_with_workflows,
         top_level_params=top_level_params,
-        registry=registry,
         module_specific_input_data=module_specific_input_data,
         experiment_specific_input_data=experiment_specific_input_data,  # supplied_climate_step_data,
         shared_input_data=shared_input_data,
         projection_scale=projection_scale,
+        schemas=schemas,
     )
     # Write metadata file using templtae
     metadata_path = experiment_path / "experiment-config.yaml"
-    registry_version = registry.get_version()
 
     write_metadata_yaml_jinja2(
         experiment=experiment_obj,
         output_path=metadata_path,
-        module_registry_version=registry_version,
+        module_registry_version=version,
     )
 
 
-def add_workflows_to_skeleton(
-    skeleton: ExperimentSkeleton,
-    workflows_dict: Dict,
-) -> ExperimentSkeleton:
-    skeleton = dataclasses.replace(skeleton, workflows=workflows_dict)
-    return skeleton
-
-
-def validate_skeleton_modules_against_registry(
-    skeleton: ExperimentSkeleton, registry: ModuleRegistry
+def validate_skeleton_module_names(
+    skeleton: ExperimentSkeleton, valid_module_names: frozenset[str]
 ):
-    """Checks that all modules in the experiment skeleton are valid."""
-    valid = registry.list_modules()
+    """Checks that all modules in the experiment skeleton are valid.
+    Uses module_names which is created from port of ModuleRegistry
+    and is a list of all modules found in the registry in use."""
     try:
-        # delete facts-total from this list and see if it works after that..
-        validate_module_names(skeleton.all_module_names, valid)
+        validate_module_names(skeleton.all_module_names, valid_module_names)
     except ValueError as e:
         raise ValueError(
             f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
         ) from e
 
 
-def hydrate_sealevel_step(
-    skeleton,
-    sealevel_schemas=None,
-    climate_files: Optional[Dict[str, str]] = None,
-    top_level_context: Optional[Dict[str, Any]] = None,
-) -> SealevelStep:
-    if skeleton.sealevel_modules:
-        if sealevel_schemas is None:
-            sealevel_schemas = [
-                load_module_schema_by_name(m) for m in skeleton.sealevel_modules
-            ]
-        sealevel_step = SealevelStep.from_module_schemas(
-            sealevel_schemas,
-            climate_files=climate_files,
-            module_regions=skeleton.module_regions,
-            top_level_context=top_level_context,
-        )
-    else:
-        sealevel_step = SealevelStep(
-            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_step_data,
-        )
-
-    return sealevel_step
-
-
 def hydrate_experiment(
     skeleton: ExperimentSkeleton,
+    schemas: Dict[str, ModuleSchema],
     top_level_context: Optional[Dict[str, Any]] = None,
 ) -> tuple:
-    """Load module YAMLs from an ExperimentSkeleton and return the four hydrated steps.
+    """From experiment skeleton and dict of modules schemas, return the four hydrated steps of the experiment.
 
     Errors from unknown module names propagate immediately — no silent failures.
     """
     climate_files: Optional[Dict[str, str]] = None
     sealevel_schemas = None
+
+    # If skeleton has a climate module, extract schema and build step
     if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
-        climate_schema = load_module_schema_by_name(skeleton.climate_module)
+        climate_schema = schemas[skeleton.climate_module]
         climate_step = ClimateStep.from_module_schema(climate_schema)
-        sealevel_schemas = [
-            load_module_schema_by_name(m) for m in (skeleton.sealevel_modules or [])
-        ]
+
+        # this happens in the climate section in order to match the correct
+        # climate input data type for different sealevel modules
+        sealevel_schemas = [schemas[name] for name in (skeleton.sealevel_modules or [])]
+
         climate_files = {
             s.module_name: resolve_climate_file(
                 climate_schema, s.get_climate_output_type()
@@ -239,28 +192,38 @@ def hydrate_experiment(
             for s in sealevel_schemas
             if s.get_climate_output_type()
         }
+    # Skip climate step or assign alternate data depending on user input
     elif skeleton.supplied_totaled_sealevel_step_data:
         climate_step = ClimateStep.not_needed()
     else:
         climate_step = ClimateStep(alternate_climate_data=skeleton.climate_data)
 
-    sealevel_step = hydrate_sealevel_step(
-        skeleton,
-        sealevel_schemas=sealevel_schemas,
-        climate_files=climate_files,
-        top_level_context=top_level_context,
-    )
+    # now hydrate sealevel step
+    if skeleton.sealevel_modules:
+        sealevel_schemas = [schemas[m] for m in skeleton.sealevel_modules]
+        sealevel_step = SealevelStep.from_module_schemas(
+            schemas=sealevel_schemas,
+            climate_files=climate_files,
+            module_regions=skeleton.module_regions,
+            top_level_context=top_level_context,
+        )
+    else:
+        sealevel_step = SealevelStep(
+            supplied_totaled_sealevel_data=skeleton.supplied_totaled_sealevel_step_data
+        )
 
+    # Now hydrate totaling step
     if skeleton.totaling_module:
         totaling_step = TotalingStep.from_module_schema(
-            load_module_schema_by_name(skeleton.totaling_module)
+            schema=schemas[skeleton.totaling_module]
         )
     else:
         totaling_step = TotalingStep()
 
+    # Hydrate esl step
     if skeleton.extremesealevel_module:
         extreme_sealevel_step = ExtremeSealevelStep.from_module_schema(
-            load_module_schema_by_name(skeleton.extremesealevel_module)
+            schema=schemas[skeleton.extremesealevel_module]
         )
     else:
         extreme_sealevel_step = ExtremeSealevelStep()
@@ -272,27 +235,19 @@ def experiment_skeleton_to_facts_experiment(
     experiment_name: str,
     skeleton: ExperimentSkeleton,
     top_level_params: "TopLevelParams",
-    registry: ModuleRegistry,
+    schemas,
     module_specific_input_data: Optional[str] = None,
     experiment_specific_input_data: Optional[str] = None,
     shared_input_data: Optional[str] = None,
     projection_scale: str = "local",
 ) -> FactsExperiment:
     """
-    Load module YAMLs from a skeleton and assemble a fully-formed FactsExperiment.
+    From skeleton, top level params and module schemas, assemble full facts experiment
 
-    Unknown module names raise FileNotFoundError — no silent failures.
+    Unknown module names raise FileNotFoundError to avoid no silent failures.
     """
+    list_of_schemas = list(schemas.values())
 
-    # validate skeleton first
-    validate_skeleton_modules_against_registry(skeleton=skeleton, registry=registry)
-    # Load schemas to derive which top-level and fingerprint keys this experiment needs
-    schemas = []
-    for m in skeleton.all_module_names:
-        logger.info("Loading schema for %s module", m)
-        schema = load_module_schema_by_name(m)
-        schemas.append(schema)
-    # [load_module_schema_by_name(m) for m in skeleton.all_module_names]
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
     cli_values: Dict[str, object] = {
         "pipeline-id": top_level_params.pipeline_id,
@@ -314,13 +269,15 @@ def experiment_skeleton_to_facts_experiment(
     top_level_context = {k: v for k, v in cli_values.items() if v is not None}
     # hydrate skeleton to create steps
     climate_step, sealevel_step, totaling_step, extreme_sealevel_step = (
-        hydrate_experiment(skeleton, top_level_context=top_level_context)
+        hydrate_experiment(
+            skeleton, schemas=schemas, top_level_context=top_level_context
+        )
     )
 
     ## This section is for top-level / experiment-level fields
     # it extracts information for top-level params from module yamls
     # and has fixed fields for experiment level params like paths
-    top_level_keys = collect_metadata_param_keys(schemas, "top_level")
+    top_level_keys = collect_metadata_param_keys(list_of_schemas, "top_level")
     top_level_param_bundles = {
         key: create_metadata_bundle(help_text, cli_values.get(key))
         for key, help_text in top_level_keys.items()
@@ -353,7 +310,7 @@ def experiment_skeleton_to_facts_experiment(
         ),
     }
 
-    fp_keys = collect_metadata_param_keys(schemas, "fingerprint_params")
+    fp_keys = collect_metadata_param_keys(list_of_schemas, "fingerprint_params")
     fingerprint_params = {
         key: create_metadata_bundle(help_text, cli_values.get(key))
         for key, help_text in fp_keys.items()
