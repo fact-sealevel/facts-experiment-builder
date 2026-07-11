@@ -2,7 +2,7 @@ import click
 from pathlib import Path
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
-    generate_compose_from_path,
+    generate_compose,
 )
 from facts_experiment_builder.cli.utils import (
     determine_root,
@@ -19,6 +19,7 @@ from facts_experiment_builder.cli.utils import (
 from facts_experiment_builder.infra.experiment_storage import (
     FileSystemExperimentStorage,
 )
+from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
 from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.infra.write_compose import (
@@ -90,7 +91,7 @@ def _configure_feb_logging() -> None:
     show_default=True,
     envvar="FEB_MODULE_REGISTRY_DIR",
     default=Path("./facts-module-registry"),
-    help="Path to the facts-module-registry directory to use in generatecompose. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
+    help="Path to the facts-module-registry directory to use in generate-compose. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
 )
 def main(
     experiment_name,
@@ -148,11 +149,22 @@ def main(
     console.print(
         "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
     )
-    try:
-        compose_dict = generate_compose_from_path(
-            experiment_metadata_path, definition=registry
+    # check that file exists at metadata path
+    if not experiment_metadata_path.exists():
+        raise FileNotFoundError(
+            f"When trying to read experiment-metadata file to generate corresponding "
+            f"compose file, metadata file not found: {experiment_metadata_path}"
         )
-    except (FileNotFoundError, ValueError) as e:
+    # Load experiment metadata file in as dict
+    metadata_dict = load_experiment_metadata(experiment_metadata_path)
+
+    try:
+        compose_dict = generate_compose(
+            metadata=metadata_dict,
+            experiment_dir=experiment_metadata_path.parent,
+            definition=registry,
+        )
+    except (FileNotFoundError, ValueError) as e:  # need to incldue more errors ehre?
         console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
         raise SystemExit(1)
 
