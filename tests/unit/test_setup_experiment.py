@@ -1,10 +1,12 @@
 import yaml
 from pathlib import Path
 from facts_experiment_builder.application.setup_experiment import (
-    hydrate_experiment,
     PrepareExperimentOutput,
     prepare_experiment_setup,
     finalize_experiment_setup,
+)
+from facts_experiment_builder.adapters.experiment_adapters import (
+    hydrate_experiment,
 )
 from facts_experiment_builder.infra.write_experiment_metadata import format_module_value
 from facts_experiment_builder.core.experiment.experiment_skeleton import (

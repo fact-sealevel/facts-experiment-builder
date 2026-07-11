@@ -23,14 +23,28 @@ def experiment_name():
     return input
 
 
+# @pytest.fixture
+# def project_root(tmp_path):
+#     if not REGISTRY_SOURCE.exists():
+#         pytest.skip(
+#             "facts-module-registry not present — clone it to run integration tests"
+#         )
+#     (tmp_path / "experiments").mkdir()
+#     return tmp_path
+
+
+@pytest.fixture
+def module_registry(tmp_path):
+    """fake path to module registry to use for testing."""
+    registry = Path(tmp_path / "fake_registry")
+    return registry
+
+
 @pytest.fixture
 def project_root(tmp_path):
-    if not REGISTRY_SOURCE.exists():
-        pytest.skip(
-            "facts-module-registry not present — clone it to run integration tests"
-        )
-    (tmp_path / "experiments").mkdir()
-    return tmp_path
+    """fake proejct root to use for testing"""
+    project_root = Path(tmp_path, "workspace")
+    return project_root
 
 
 ## setup new experiment fixtures
@@ -128,6 +142,8 @@ def setup_args(
     baseyear,
     nsamps,
     pipeline_id,
+    project_root,
+    module_registry,
 ):
     input = [
         "--experiment-name",
@@ -156,6 +172,10 @@ def setup_args(
         module_specific_inputs_path[1],
         "--shared-input-data",
         shared_inputs_path[1],
+        "--root",
+        project_root,
+        "--module-registry",
+        module_registry,
     ]
     return input
 

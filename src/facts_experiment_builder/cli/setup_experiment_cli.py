@@ -10,6 +10,7 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
     is_totaling_needed,
 )
+from pydantic import ValidationError
 from facts_experiment_builder.application.setup_experiment import (
     prepare_experiment_setup,
     finalize_experiment_setup,
@@ -21,12 +22,12 @@ if TYPE_CHECKING:
         ExperimentSkeleton,
     )
 from facts_experiment_builder.core.experiment.module_name_validation import (
-    parse_module_list_str,
-    unparse_module_list,
     validate_module_names,
 )
+from facts_experiment_builder.cli.workflow_prompts import (
+    _collect_workflows,
+)
 
-# from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 from facts_experiment_builder.core.experiment.facts_experiment import (
     ExperimentSpecificInputData,
 )
@@ -34,6 +35,7 @@ from facts_experiment_builder.cli.utils import determine_root, configure_logging
 from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentAlreadyExistsError,
 )
+
 from facts_experiment_builder.core.experiment.name import InvalidExperimentNameError
 from facts_experiment_builder.infra.experiment_storage import (
     FileSystemExperimentStorage,
@@ -209,7 +211,7 @@ def main(
         # First resolve path to ensure its absolute
         module_registry_path = module_registry.absolute()
         registry = FileSystemModuleRegistry(registry_path=module_registry_path)
-
+        valid_module_names = registry.module_names()
         root = determine_root(root)
         storage = FileSystemExperimentStorage(root)
 
@@ -250,6 +252,12 @@ def main(
         skeleton = prepared_experiment.experiment_skeleton
         experiment_path = prepared_experiment.experiment_path
 
+        testing_schemas = {}
+        for m in skeleton.all_module_names:
+            try:
+                testing_schemas[m] = registry.get_schema(m)
+            except ValidationError as e:
+                raise ValueError(f"shcema validation failed for module: '{m}") from e
         # If framework includes facts-total, collect workflows and attach to skeleton
         sl_modules = skeleton.sealevel_modules
         if is_totaling_needed(sealevel_step=sealevel_step):
@@ -265,6 +273,16 @@ def main(
             climate_step_data=supplied_climate_step_data,
             sealevel_step_data=supplied_totaled_sealevel_step_data,
         )
+
+        try:
+            validate_module_names(
+                skeleton.all_module_names, valid_modules=valid_module_names
+            )
+        except ValueError as e:
+            raise ValueError(
+                f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
+            ) from e
+
         finalize_experiment_setup(
             experiment_name=experiment_name,
             experiment_path=experiment_path,
@@ -327,119 +345,6 @@ def main(
         console.print("  [muted]2.[/muted] Generate Docker Compose file.")
     except USER_FACING_ERRORS as e:
         raise click.ClickException(str(e)) from e
-
-
-def _check_required_experiment_step(
-    step_module, step_data, step_module_name, step_data_name
-):
-    """Function to check that either a module is passed or replacement data is passed for an experiment step."""
-    if step_module and step_data:
-        raise click.UsageError(
-            f"Pass either a module to run during the '{step_module_name}' or data to bypass '{step_data_name}', not both."
-        )
-    if not step_module and not step_data:
-        raise click.UsageError(
-            f"Must pass a module to run during '{step_module_name}' or bypass running a module at this step by passing a path to data to '{step_data_name}'. Received neither."
-        )
-
-
-def _check_optional_experiment_step(
-    step_module, step_data, step_module_name, step_data_name
-):
-    """Function to check that either a module is passed or replacement data is passed for an experiment step."""
-    if step_module and step_data:
-        raise click.UsageError(
-            f"Pass either a module to run during the '{step_module_name}' or data to bypass '{step_data_name}', not both."
-        )
-    if not step_module and not step_data:
-        click.echo(
-            f"Didn't receive a module to run during '{step_module_name} or data to bypass running that step. You are running an experiment that doesn't include {step_module_name}."
-            # Must pass a module to run during '{step_module_name}' or bypass running a module at this step by passing a path to data to '{step_data_name}'. Received neither."
-        )
-
-
-def _check_for_required_args(
-    experiment_name,
-    climate_step,
-    supplied_climate_step_data,
-    # sealevel_step,
-    supplied_totaled_sealevel_step_data,
-):
-    if not experiment_name:
-        raise click.UsageError(
-            "Missing required argument 'experiment_name'. You must pass one with --experiment-name"
-        )
-    # Climate step is optional when totaled sealevel data is provided (no climate step needed)
-    if not supplied_totaled_sealevel_step_data:
-        _check_required_experiment_step(
-            step_module=climate_step,
-            step_data=supplied_climate_step_data,
-            step_module_name="--climate-step",
-            step_data_name="--supplied-climate-step-data",
-        )
-
-
-def _create_all_modules_workflow(complete_modules_list: list[str]) -> tuple[str, str]:
-    workflow_name = "all-modules"
-    module_list = complete_modules_list
-    module_list_str = unparse_module_list(module_list)
-    return (workflow_name, module_list_str)
-
-
-def _collect_single_workflow(complete_modules_list: list[str]) -> tuple[str, str]:
-    workflow_name = click.prompt(
-        "Enter a name for this workflow (e.g. wf1)",
-        type=str,
-    )
-    module_list_str = click.prompt(
-        "Enter the names of the modules to include in this workflow, separated by commas",
-        type=str,
-    )
-    module_list = parse_module_list_str(module_list_str)
-    _validate_modules_list_workflow(module_list, complete_modules_list)
-    return (workflow_name, module_list_str)
-
-
-def _validate_modules_list_workflow(
-    workflow_modules: list[str],
-    experiment_modules: list[str],
-) -> None:
-    """Validates the modules listed for a workflow against the modules listed for the experiment."""
-    try:
-        validate_module_names(workflow_modules, experiment_modules)
-    except ValueError as e:
-        raise click.UsageError(
-            f"{e} \nIt looks like you tried to add a module to a workflow that isn't included in the experiment, please fix this and continue."
-        )
-
-
-def _collect_workflows(
-    complete_modules_list: list[str],
-    total_all_modules: bool,
-) -> dict[str, str]:
-    """Collects workflows from the user until they are done."""
-    workflow_dict = {}
-    if total_all_modules:
-        workflow_name, module_list_str = _create_all_modules_workflow(
-            complete_modules_list=complete_modules_list,
-        )
-        workflow_dict[workflow_name] = module_list_str.strip()
-
-        if not click.confirm(
-            "Received 'total_all_modules = True'. Do you want to define additional workflows with different combinations of modules?"
-        ):
-            return workflow_dict
-    while True:
-        workflow_name, module_list_str = _collect_single_workflow(
-            complete_modules_list=complete_modules_list
-        )
-        workflow_dict[workflow_name] = module_list_str.strip()
-        console.print(f"  Workflows so far: [secondary]{workflow_dict}[/secondary]")
-        if not click.confirm(
-            "Would you like to enter another workflow?", default=False
-        ):
-            break
-    return workflow_dict
 
 
 def print_experiment_directory_created(experiment_name: str, experiment_path: "Path"):

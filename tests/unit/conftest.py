@@ -2,7 +2,10 @@
 
 import logging
 import pytest
+import yaml
+import click
 from pathlib import Path
+
 from facts_experiment_builder.core.module.arg_specs import (
     FingerprintParamSpec,
     InputArgSpec,
@@ -15,10 +18,6 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleOutputPaths,
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
-)
-from facts_experiment_builder.core.registry.module_registry import (
-    ModuleRegistry,
-    _get_default_registry,
 )
 
 
@@ -57,32 +56,28 @@ def climate_required_true_module_yaml(tmp_path) -> Path:
 
 
 @pytest.fixture
-def tmp_registry_dir() -> Path:
-    REGISTRY_FIXTURE_PATH = (
-        "/Users/emmamarshall/Desktop/facts_work/facts_v2/facts-module-registry/"
-    )
-    return REGISTRY_FIXTURE_PATH
+def decline_extra_prompts(monkeypatch):
+    """Automatically decline any click.confirm prompts"""
+
+    def _unexpected(*a, **k):
+        raise AssertionError(f"Unexpected click.prompt call: {a} {k}")
+
+    monkeypatch.setattr(click, "prompt", _unexpected)
+    monkeypatch.setattr(click, "confirm", lambda *a, **k: False)
 
 
 @pytest.fixture
-def module_registry(tmp_registry_dir, monkeypatch) -> ModuleRegistry:
-    # return ModuleRegistry(
-    #    "/Users/emmamarshall/Desktop/facts_work/facts_v2/facts2-workspace/facts-module-registry"
-    # )
-    monkeypatch.setenv("FEB_MODULE_REGISTRY_DIR", str(tmp_registry_dir))
-    _get_default_registry.cache_clear()
-    yield ModuleRegistry(tmp_registry_dir)
-    _get_default_registry.cache_clear()
+def fake_registry(tmp_path):
+    def _make(modules: dict[str, dict]) -> Path:
+        registry_dir = tmp_path / "fake_registry"
+        for name, schema in modules.items():
+            mod_dir = registry_dir / name
+            mod_dir.mkdir(parents=True)
+            yaml_path = mod_dir / f"{name.replace('-', '_')}_module.yaml"
+            yaml_path.write_text(yaml.dump(schema))
+        return registry_dir
 
-
-# @pytest.fixture
-# def patched_find_module_yaml_path(climate_required_true_module_yaml: Path):
-#     """Patches find_module_yaml_path to return climate_required_module_yaml."""
-#     with patch(
-#         "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
-#         return_value=climate_required_true_module_yaml,
-#     ) as mock:
-#         yield mock
+    return _make
 
 
 @pytest.fixture

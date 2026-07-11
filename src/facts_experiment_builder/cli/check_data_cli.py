@@ -4,8 +4,10 @@ import click
 from pathlib import Path
 
 from facts_experiment_builder.cli.theme import console
+
 from facts_experiment_builder.application.check_data import check_module_data
-from facts_experiment_builder.cli.utils import check_registry_accessible
+
+from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
 
 
 def resolve_input_paths(
@@ -91,10 +93,19 @@ def check_provided_paths(
     default=None,
     help="Explicit path to shared input data directory. Overrides data_dir for this purpose.",
 )
+@click.option(
+    "--module-registry",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    show_default=True,
+    envvar="FEB_MODULE_REGISTRY_DIR",
+    default=Path("./facts-module-registry"),
+    help="Path to the facts-module-registry directory to use in check-data. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
+)
 def check_data(
     data_dir: Path,
     module_specific_input_data: Path | None,
     shared_input_data: Path | None,
+    module_registry: Path,
 ) -> None:
     """Check a FACTS data directory against expected module inputs.
 
@@ -103,7 +114,9 @@ def check_data(
     Modules are detected automatically from subdirectory names — only modules
     you have downloaded data for will be checked.
     """
-
+    # Make registry
+    registry_path = module_registry.absolute()
+    registry = FileSystemModuleRegistry(registry_path=registry_path)
     # Check that provided paths are valid
     # Resolve paths checks if valid, check_provided_paths raises error if not
     module_dir, shared_dir = check_provided_paths(
@@ -116,13 +129,10 @@ def check_data(
     console.print(f"[muted]Module-specific inputs: {module_dir}[/muted]")
     console.print(f"[muted]Shared inputs:           {shared_dir}[/muted]\n")
 
-    # Check if the module registry is accessible to program in expected loc
-    registry = check_registry_accessible()
-
     result = check_module_data(
         module_specific_input_dir=module_dir,
         shared_input_dir=shared_dir,
-        registry=registry,
+        definitions=registry,
     )
 
     if not result.module_results and not result.unrecognized_dirs:

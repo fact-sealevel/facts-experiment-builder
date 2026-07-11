@@ -6,9 +6,31 @@ from facts_experiment_builder.application.check_data import (
     check_module_data,
     ModuleCheckResult,
 )
-from facts_experiment_builder.core.registry.module_registry import ModuleRegistry
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
+
+def make_schema(
+    name="test-module", uses_climate_file=False, arguments=None
+) -> ModuleSchema:
+    if arguments is None:
+        arguments = {
+            "inputs": [],
+            "options": [],
+            "outputs": {"files": [], "other": []},
+            "top_level": [],
+        }
+    return ModuleSchema.from_dict(
+        {
+            "module_name": name,
+            "container_image": "test/image:latest",
+            "arguments": arguments,
+            "volumes": {},
+            "uses_climate_file": uses_climate_file,
+        }
+    )
+
+
+# factories to build fixtures (same as test_setup_experiment)
 
 # ---------------------------------------------------------------------------
 # _dir_to_module_names
@@ -97,11 +119,11 @@ def test_check_module_string_filename_present(
 # ---------------------------------------------------------------------------
 
 
-def test_check_module_data_unrecognized_dir(tmp_path):
+def test_check_module_data_unrecognized_dir(tmp_path, fake_registry):
     """Directories that don't match any registry module are reported as unrecognized."""
     registry_dir = tmp_path / "registry"
     registry_dir.mkdir()
-    registry = ModuleRegistry(registry_dir)
+    registry = fake_registry({"fair-temperature": {"module_name": "fair-temperature"}})
 
     module_specific = tmp_path / "module_specific_input_data"
     (module_specific / "unknown-module").mkdir(parents=True)
@@ -109,18 +131,18 @@ def test_check_module_data_unrecognized_dir(tmp_path):
     result = check_module_data(
         module_specific_input_dir=module_specific,
         shared_input_dir=tmp_path / "shared",
-        registry=registry,
+        definitions=registry,
     )
 
     assert result.unrecognized_dirs == ["unknown-module"]
     assert result.module_results == []
 
 
-def test_check_module_data_empty_dir(tmp_path):
+def test_check_module_data_empty_dir(tmp_path, fake_registry):
     """An empty module_specific_input_data dir returns an empty result."""
-    registry_dir = tmp_path / "registry"
-    registry_dir.mkdir()
-    registry = ModuleRegistry(registry_dir)
+    # registry_dir = tmp_path / "registry"
+    # registry_dir.mkdir()
+    registry = fake_registry({})
 
     module_specific = tmp_path / "module_specific_input_data"
     module_specific.mkdir()
@@ -128,21 +150,22 @@ def test_check_module_data_empty_dir(tmp_path):
     result = check_module_data(
         module_specific_input_dir=module_specific,
         shared_input_dir=tmp_path / "shared",
-        registry=registry,
+        definitions=registry,
     )
 
     assert result.module_results == []
     assert result.unrecognized_dirs == []
 
 
-def test_check_module_data_missing_dir(tmp_path):
+def test_check_module_data_missing_dir(tmp_path, fake_registry):
     """A non-existent module_specific_input_data dir returns an empty result without error."""
-    registry = ModuleRegistry(tmp_path / "registry")
+    # registry = ModuleRegistry(tmp_path / "registry")
+    registry = fake_registry({"fair-temperature": {"module_name": "fair-temperature"}})
 
     result = check_module_data(
         module_specific_input_dir=tmp_path / "does_not_exist",
         shared_input_dir=tmp_path / "shared",
-        registry=registry,
+        definitions=registry,
     )
 
     assert result.module_results == []

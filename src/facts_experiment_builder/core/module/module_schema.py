@@ -42,6 +42,9 @@ class ModuleSchema:
         if self.volumes is None:
             self.volumes = {}
 
+    def input_dir_name(self) -> str:
+        return self.extra.get("input_dir_name") or self.module_name
+
     def get_file_outputs(self) -> List[Dict[str, Any]]:
         """File outputs (have filename + output_type)."""
 
