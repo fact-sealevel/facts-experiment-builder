@@ -6,24 +6,8 @@ individual modules (e.g. scenario names for ssp-landwaterstorage).
 
 from typing import Any
 
-import yaml
 
-
-def _load_scenario_mapping_ssp_landwaterstorage() -> dict:
-    """Load common -> ssp-landwaterstorage scenario name mapping from config."""
-    from facts_experiment_builder.core.registry import ModuleRegistry
-
-    path = ModuleRegistry.default().get_module_file(
-        "ssp-landwaterstorage", "scenario_name_mapping_ssp_landwaterstorage.yaml"
-    )
-    if not path.exists():
-        return {}
-    with open(path, "r") as f:
-        data = yaml.safe_load(f)
-    return data if isinstance(data, dict) else {}
-
-
-def scenario_name_ssp_landwaterstorage(common_name: Any) -> str:
+def scenario_name_ssp_landwaterstorage(common_name: Any, mapping: dict = None) -> str:
     """Convert common scenario name to the form expected by ssp-landwaterstorage.
 
     Uses the mapping in scenario_name_mapping_ssp_landwaterstorage.yaml.
@@ -47,6 +31,7 @@ def scenario_name_ssp_landwaterstorage(common_name: Any) -> str:
     key = str(common_name).strip() if common_name else ""
     if not key:
         return ""
-    mapping = _load_scenario_mapping_ssp_landwaterstorage()
+    # mapping = _load_scenario_mapping_ssp_landwaterstorage()
+    mapping = mapping or {}
     out = mapping.get(key, key)
     return str(out) if out is not None else key
