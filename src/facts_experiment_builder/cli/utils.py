@@ -3,19 +3,20 @@
 from pathlib import Path
 import logging
 import click
-from facts_experiment_builder.core.registry import ModuleRegistry
+from facts_experiment_builder.infra.module_registry import (
+    ModuleRegistryNotFound,
+    FileSystemModuleRegistry,
+)
 
 
-def check_registry_accessible():
+def make_registry(registry_path: Path) -> FileSystemModuleRegistry:
     try:
-        registry = ModuleRegistry.default()
-        return registry
-    except FileNotFoundError as e:
+        return FileSystemModuleRegistry(registry_path=registry_path.absolute())
+    except ModuleRegistryNotFound:
         raise click.UsageError(
-            f"{e}\n"
-            "Are you running this from your FACTS workspace root? "
-            "If not, cd there and re-run. If you haven't set up a workspace yet, "
-            "run `feb init` first."
+            f"Module registry not found at '{registry_path}"
+            "Check where you are running this command from "
+            " Also check that you have run `feb init`"
         )
 
 
