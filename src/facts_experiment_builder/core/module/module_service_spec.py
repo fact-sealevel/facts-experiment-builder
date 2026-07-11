@@ -9,7 +9,7 @@ from facts_experiment_builder.infra.path_utils import (
     ModuleInputPaths,
     ModuleOutputPaths,
 )
-from facts_experiment_builder.adapters.compose_service_writer import (
+from facts_experiment_builder.infra.compose_service_writer import (
     build_compose_service_dict,
 )
 from facts_experiment_builder.core.module.module_schema import (
@@ -186,7 +186,10 @@ class ModuleServiceSpec:
             else Path(container_path) / value_path.parent / value_path.name
         )
 
-    def _process_argument(self, arg_spec: Dict[str, Any]) -> Any:
+    def _process_argument(
+        self,
+        arg_spec: Dict[str, Any],
+    ) -> Any:
         """
         Process a single argument specification.
 
@@ -226,7 +229,8 @@ class ModuleServiceSpec:
             elif isinstance(value, dict):
                 value = value.get("scenario_name", value.get("scenario", value))
         elif transform == "scenario_name_ssp_landwaterstorage":
-            value = scenario_name_ssp_landwaterstorage(value)
+            mapping = self.module_definition.extra.get("scenario_name_mapping", {})
+            value = scenario_name_ssp_landwaterstorage(value, mapping=mapping)
         elif transform == "filename":
             # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
             if isinstance(value, (str, Path)) and not (
@@ -249,7 +253,6 @@ class ModuleServiceSpec:
                 if value[0].kind == "container":
                     return [tp.path for tp in value]
                 return [self._host_path_to_container(tp.path, arg_spec) for tp in value]
-            # Legacy: list of non-TypedPath (should not occur once adapter always wraps)
             pass
 
         # Handle mount transformations for file paths (legacy str/Path; outputs use _process_output_argument).

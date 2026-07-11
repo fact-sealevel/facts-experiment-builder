@@ -8,17 +8,6 @@ from typing import Any, Literal, Optional
 _KNOWN_MODULE_NAMES: Optional[frozenset] = None
 
 
-def _registry_module_names() -> frozenset:
-    global _KNOWN_MODULE_NAMES
-    if _KNOWN_MODULE_NAMES is None:
-        from facts_experiment_builder.core.registry.module_registry import (
-            ModuleRegistry,
-        )
-
-        _KNOWN_MODULE_NAMES = frozenset(ModuleRegistry.default().list_modules())
-    return _KNOWN_MODULE_NAMES
-
-
 def expand_path(path_str: Any, context: str = "") -> str:
     """
     Expand environment variables and ~ in path strings, then resolve to an absolute path.
@@ -194,6 +183,7 @@ def resolve_input_path(
     Raises:
         ValueError: If field_value is invalid or path cannot be resolved
     """
+
     if isinstance(field_value, dict):
         actual_value = field_value.get("value", "")
     elif isinstance(field_value, str):
@@ -239,28 +229,8 @@ def resolve_input_path(
             raise ValueError(
                 f"Module name is required for module-specific input '{field_name}'{context_msg}"
             )
-        try:
-            module_specific_path = Path(module_specific_input_data)
-        except TypeError as e:
-            context_msg = f" in {context}" if context else ""
-            raise ValueError(
-                f"Cannot create Path from module_specific_input_data for '{field_name}': "
-                f"module_specific_input_data={module_specific_input_data}, type={type(module_specific_input_data)}{context_msg}"
-            ) from e
-        if module_specific_path.name == module_name:
-            base_path = module_specific_input_data
-        elif module_specific_path.name and module_name.startswith(
-            module_specific_path.name + "-"
-        ):
-            # Multi-command module sharing one dir (e.g. ipccar5 for ipccar5-glaciers/ipccar5-icesheets).
-            # Files sit directly under module_specific_input_data; do not append module_name.
-            base_path = module_specific_input_data
-        else:
-            if module_specific_path.name in _registry_module_names():
-                base_path = str(module_specific_path.parent / module_name)
-            else:
-                base_path = os.path.join(module_specific_input_data, module_name)
-        resolved_path = os.path.join(base_path, actual_value)
+
+        resolved_path = os.path.join(module_specific_input_data, actual_value)
 
     return os.path.normpath(resolved_path)
 
