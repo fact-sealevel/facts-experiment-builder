@@ -152,9 +152,7 @@ def build_module_service_spec(
     # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that
     # per-workflow service names (e.g. extremesealevel-pointsoverthreshold-wf1) resolve to the base
     # module's dir automatically.
-    module_specific_input_path_suffix = (
-        module_definition.extra.get("input_dir_name") or module_definition.module_name
-    )
+    module_specific_input_path_suffix = module_definition.input_dir_name()
     module_specific_input_data = (
         module_specific_input_base + "/" + module_specific_input_path_suffix
     )
