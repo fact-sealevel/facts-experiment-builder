@@ -1,8 +1,10 @@
 from pathlib import Path
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
-from facts_experiment_builder.infra.module_loader import load_module_schema_from_yaml
+
 import subprocess
 from pydantic import ValidationError
+import yaml
+from facts_experiment_builder.infra.exceptions import ModuleYamlNotFoundError
 
 
 class ModuleRegistryNotFound(Exception):
@@ -33,19 +35,34 @@ class FileSystemModuleRegistry:
         if module_name not in self._schemas:
             path = self._yaml_path(module_name)
             try:
-                self._schemas[module_name] = load_module_schema_from_yaml(path)
+                with open(path, "r") as f:
+                    data = yaml.safe_load(f) or {}
+            except FileNotFoundError:
+                raise ModuleYamlNotFoundError
             except ValidationError as e:
                 raise ModuleSchemaInvalidError(
                     module_name=module_name, path=path, e=e
                 ) from e
-            return self._schemas[module_name]
+            module_schema = ModuleSchema.from_dict(data)
+            # some modules have an additional file in the registry entry
+            mapping_path = (
+                path.parent
+                / f"scenario_name_mapping_{module_name.replace('-', '_')}.yaml"
+            )  # TODO Fix this
+            if mapping_path.exists():
+                with open(mapping_path) as f:
+                    m = yaml.safe_load(f)
+                if isinstance(m, dict):
+                    module_schema.extra["scenario_name_mapping"] = m
+            self._schemas[module_name] = module_schema
+        return self._schemas[module_name]
 
     def module_names(self) -> frozenset[str]:
         if self._names is None:
             names_init = [d.name for d in self._registry_path.iterdir() if d.is_dir()]
-            names = [i for i in names_init if not i.startswith(".")]
+            names = frozenset(i for i in names_init if not i.startswith("."))
             self._names = names
-            return self._names
+        return self._names
 
     def version(self) -> str:
         """Return the registry git commit hash, or 'unknown' if not a git repo."""
