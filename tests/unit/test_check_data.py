@@ -238,7 +238,6 @@ def test_check_data_unrecognized_dir(tmp_path):
     """Directories that don't match any registry module are reported as unrecognized."""
     registry_dir = tmp_path / "registry"
     registry_dir.mkdir()
-    # registry = fake_registry({"fair-temperature": {"module_name": "fair-temperature"}})
     registry_fs = FileSystemModuleRegistry(registry_dir)
 
     module_specific = tmp_path / "module_specific_input_data"
