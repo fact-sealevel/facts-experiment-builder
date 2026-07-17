@@ -112,7 +112,7 @@ def test_input_arg_spec_minimal(random_module_specific_inputs_arg_spec):
     assert spec.mount is not None
     assert spec.climate_step_output is None
     assert spec.name is not None
-    assert spec.type == "str"
+    assert spec.type == "file"
 
 
 def test_module_specific_input_has_source_module_inputs(
@@ -137,6 +137,12 @@ def test_input_arg_spec_with_mount(mount_spec_module_specific_in):
 def test_input_arg_spec_rejects_unknown_field():
     with pytest.raises(ValidationError):
         InputArgSpec(name="x", type="file", source="s", unknown="y")
+
+
+def test_input_arg_spec_for_dir_has_correct_type(non_file_input_arg_spec):
+    spec = non_file_input_arg_spec
+    assert spec.name == "zosdir"
+    assert spec.type == "dir"
 
 
 # ---------------------------------------------------------------------------

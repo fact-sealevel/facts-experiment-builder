@@ -127,7 +127,7 @@ def random_module_specific_inputs_arg_spec():
 
     input_spec = InputArgSpec(
         name="random-input-file",
-        type="str",
+        type="file",
         source="module_inputs.inputs.randome_input_file",
         help="help string",
         filename="random_file_name.nc",
@@ -158,6 +158,19 @@ def fp_module_specific_arg_spec():
         type="file",
         source="module_inputs.fingerprint_params.fp_data",
         filename="fp_data.nc",
+        mount=MountSpec(
+            volume="module_specific_in", container_path="/mnt/module_specific_in"
+        ),
+    )
+
+
+@pytest.fixture
+def module_specific_arg_spec_missing_fname():
+    """mod specific param that shouldn't be skipped but also has no fname"""
+    return FingerprintParamSpec(
+        name="fp-data",
+        type="file",
+        source="module_inputs.fingerprint_params.fp_data",
         mount=MountSpec(
             volume="module_specific_in", container_path="/mnt/module_specific_in"
         ),
