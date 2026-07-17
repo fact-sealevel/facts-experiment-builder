@@ -64,11 +64,9 @@ def test_hydrate_experiment_builds_climate_step():
     schemas = {
         "fair-temperature": make_schema(
             "fair-temperature",
-            # module_type="temperature_module"
         ),
         "tlm-sterodynamics": make_schema(
             "tlm-sterodynamics",
-            # module_type="sealevel_module",
             uses_climate_file=True,
         ),
     }

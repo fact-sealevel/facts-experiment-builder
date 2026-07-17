@@ -5,6 +5,9 @@ from typing import List, Literal, Union
 
 PathKind = Literal["host", "host_dir", "container", "experiment_specific_in"]
 
+_MODULE_SPECIFIC_CONTAINER_PATH = "/mnt/module_specific_in"
+_SHARED_CONTAINER_PATH = "/mnt/shared_in"
+
 
 @dataclass(frozen=True)
 class TypedPath:
