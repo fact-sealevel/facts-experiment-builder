@@ -1,4 +1,4 @@
-from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import (
+from facts_experiment_builder.application.experiment_metadata_to_service_spec import (
     module_type_is_valid,
 )
 import pytest

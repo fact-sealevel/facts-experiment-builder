@@ -6,7 +6,7 @@ from facts_experiment_builder.core.typed_path import (
     HostDirPath,
     ContainerPath,
 )
-from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import (
+from facts_experiment_builder.application.experiment_metadata_to_service_spec import (
     _dir_input_keys,
 )
 from facts_experiment_builder.core.module.module_service_spec import (

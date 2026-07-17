@@ -15,7 +15,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Set
 
-from facts_experiment_builder.adapters.adapter_utils import get_experiment_paths
+from facts_experiment_builder.application.experiment_metadata_to_service_spec import (
+    get_experiment_paths,
+)
 from facts_experiment_builder.core.experiment import FactsExperiment
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
 
@@ -29,7 +31,7 @@ from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
     ModuleSchema,
 )
-from facts_experiment_builder.adapters.experiment_metadata_to_service_spec import (
+from facts_experiment_builder.application.experiment_metadata_to_service_spec import (
     build_module_service_spec,
 )
 import logging

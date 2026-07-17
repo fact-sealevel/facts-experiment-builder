@@ -17,7 +17,7 @@ from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.infra.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )
-from facts_experiment_builder.adapters.experiment_adapters import (
+from facts_experiment_builder.application.experiment_helpers import (
     experiment_skeleton_to_facts_experiment,
 )
 from facts_experiment_builder.infra.experiment_storage import (
