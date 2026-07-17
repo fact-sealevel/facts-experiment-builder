@@ -255,7 +255,6 @@ def _create_facts_total_compose_service(
     wf_module = build_module_service_spec(
         metadata=metadata_copy,
         module_name=service_name,
-        module_type="framework_module",
         known_module_names=known_module_names,
         module_definition=schema,
     )
@@ -359,7 +358,6 @@ def _make_experiment_plan(
 def _build_module_specs(
     plan: _ExperimentPlan,
     metadata: Dict[str, Any],
-    experiment_dir: Path,
     schemas: Dict,
     known_module_names: List,
 ) -> _ModuleSpecs:
@@ -513,7 +511,6 @@ def _create_esl_workflow_services(
             esl_module = build_module_service_spec(
                 metadata=metadata_copy,
                 module_name=service_name,
-                module_type="extreme_sealevel_module",
                 known_module_names=known_module_names,
                 module_definition=schema,
             )
@@ -656,11 +653,10 @@ def generate_compose(
     # Make experiment plan
     plan = _make_experiment_plan(metadata, schemas)
     specs = _build_module_specs(
-        plan,
-        metadata,
-        experiment_dir,
-        schemas,
-        known_module_names,
+        plan=plan,
+        metadata=metadata,
+        schemas=schemas,
+        known_module_names=known_module_names,
     )
     if not any(
         [
