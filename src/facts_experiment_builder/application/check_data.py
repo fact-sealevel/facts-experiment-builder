@@ -13,6 +13,10 @@ from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_definition_source import (
     ModuleDefinitionSource,
 )
+from facts_experiment_builder.core.typed_path import (
+    _SHARED_CONTAINER_PATH,
+    _MODULE_SPECIFIC_CONTAINER_PATH,
+)
 
 
 @dataclass
@@ -144,9 +148,6 @@ def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
     return sorted(matches)
 
 
-_MODULE_SPECIFIC_CONTAINER_PATH = "/mnt/module_specific_in"
-
-
 def plan_fp_checks(entry: Dict[str, dict]) -> List[PlannedCheck]:
     field_name = entry.get("name", "")
     container_path = entry.get("mount", {}).get("container_path", "")
@@ -206,9 +207,6 @@ def plan_input_checks(inp: Dict[str, dict]) -> List[PlannedCheck]:
         ]
     paths = raw if isinstance(raw, list) else [raw]
     return [PlannedCheck(field_name, p) for p in paths]
-
-
-# def execute_fp_check(plan: PlannedCheck, mdoule_input_dir: Path) -> InputFileCheck:
 
 
 def execute_check(plan: PlannedCheck, module_input_dir: Path) -> InputFileCheck:
@@ -290,9 +288,6 @@ def _check_module(
     return combined_file_checks  # , skipped_checks
 
 
-_SHARED_CONTAINER_PATH = "/mnt/shared_in"
-
-
 def check_shared_data(
     discovered_module_names: List[str],
     shared_input_dir: Path,
@@ -313,7 +308,6 @@ def check_shared_data(
 
     for module_name in discovered_module_names:
         try:
-            # yaml_path = registry.get_module_yaml_path(module_name)
             schema = schemas[module_name]  # load_module_schema_from_yaml(yaml_path)
         except FileNotFoundError:
             continue
@@ -330,8 +324,6 @@ def check_shared_data(
                 continue
             if container_path == "/mnt/shared_in":
                 candidates.append((field_name, filename))
-            # if is_shared_input(field_name):
-            #    candidates.append((field_name, filename))
 
         for fp in schema.arguments.get("fingerprint_params", []):
             field_name = fp.get("name", "")
