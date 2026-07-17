@@ -25,14 +25,15 @@ def list_modules(module_registry):
     console.rule(characters="- - ", style="rule", title="list-modules")
     console.print(
         f"You ran [bold]list-modules[/bold]. "
-        f"I found a module registry at [secondary]{module_registry.registry_dir}[/secondary]."
+        f"I found a module registry at [secondary]{module_registry._registry_path}[/secondary]."
     )
 
     console.print()
     console.print("The modules found in this registry are:")
     console.print()
-    for module in sorted(module_registry.list_modules()):
-        console.print(f"  [accent]{module}[/accent]")
+    module_names = module_registry.module_names()
+    for module in sorted(module_names):
+        console.print(f"  [accent]→ {module}[/accent]")
 
     console.print()
     console.print(
