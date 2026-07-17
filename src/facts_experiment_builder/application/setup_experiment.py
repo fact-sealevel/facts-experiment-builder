@@ -92,9 +92,9 @@ def finalize_experiment_setup(
     # Gather info from port
     version = definition.version()
     schemas = {
-            m: definition.get_schema(m) for m in experiment_skeleton.all_module_names
-        }
-    
+        m: definition.get_schema(m) for m in experiment_skeleton.all_module_names
+    }
+
     # make TopLevelParams dataclass
     top_level_params = TopLevelParams(
         scenario=scenario,

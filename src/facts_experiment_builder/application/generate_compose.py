@@ -373,7 +373,6 @@ def _build_module_specs(
 
     temp_module_definition = schemas[plan.temperature_module_name]
     if plan.temperature_module_name.upper() != "NONE":
-
         temp_module_name = plan.temperature_module_name
         temperature_module = build_module_service_spec(
             metadata=metadata,
