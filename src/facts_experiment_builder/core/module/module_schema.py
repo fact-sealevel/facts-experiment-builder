@@ -42,6 +42,7 @@ class ModuleSchema:
         if self.volumes is None:
             self.volumes = {}
 
+    @property
     def input_dir_name(self) -> str:
         return self.extra.get("input_dir_name") or self.module_name
 
