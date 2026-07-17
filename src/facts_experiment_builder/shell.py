@@ -1,5 +1,7 @@
 from traitlets.config import Config
+
 """For development purposes, to easily enter an ipython shell with autoreload."""
+
 
 def main():
     import IPython

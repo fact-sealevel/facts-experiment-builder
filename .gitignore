@@ -203,3 +203,5 @@ src/facts_experiment_builder/experiment_recipes.yml
 src/facts_experiment_builder/infra/workspace_loader.py
 old stuff/
 diagrams/
+
+.facts-workspace
