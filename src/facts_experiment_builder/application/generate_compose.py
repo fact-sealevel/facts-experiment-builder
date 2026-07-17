@@ -76,6 +76,7 @@ class _ModuleSpecs:
     sealevel_modules: Dict[str, ModuleServiceSpec]
     framework_modules: Dict[str, ModuleServiceSpec]
     esl_modules: Dict[str, ModuleServiceSpec]
+    #TODO do not want these categories to be so rigid in the future
 
 
 def _log_success(msg: str, *args: object) -> None:
