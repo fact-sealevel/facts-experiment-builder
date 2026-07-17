@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict
 
-from facts_experiment_builder.infra.path_utils import is_shared_input
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_definition_source import (
     ModuleDefinitionSource,
@@ -18,6 +17,9 @@ from facts_experiment_builder.core.module.module_definition_source import (
 
 @dataclass
 class InputFileCheck:
+    """Object representing result of checking a single input file.
+    CheckModuleResult holds a list of these applied to each input file associated with that module."""
+
     field_name: str
     expected_path: Path
     exists: bool
@@ -26,16 +28,18 @@ class InputFileCheck:
 
 
 @dataclass
-class ModuleCheckResult:
+class CheckModuleResult:
     module_name: str
     checks: List[InputFileCheck] = field(default_factory=list)
 
     @property
     def n_present(self) -> int:
+        """Returns number of files checked in a given module"""
         return sum(1 for c in self.checks if not c.skipped and c.exists)
 
     @property
     def n_missing(self) -> int:
+        """Returns number of missing files found in a given module based on comparison with that module in module registry"""
         return sum(1 for c in self.checks if not c.skipped and not c.exists)
 
     @property
@@ -44,10 +48,86 @@ class ModuleCheckResult:
 
 
 @dataclass
-class DataCheckResult:
-    module_results: List[ModuleCheckResult] = field(default_factory=list)
+class CheckDataResult:
+    """Object returned by check_module_data().
+    Holds results for checking of individual modules (List[CheckModuleResult]),
+    results for check of shared input data dir (List[InputFileCheck]), and
+    any unrecognized directories found at the specified location (List[str])."""
+
+    module_results: List[CheckModuleResult] = field(default_factory=list)
     shared_checks: List[InputFileCheck] = field(default_factory=list)
     unrecognized_dirs: List[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class PlannedCheck:
+    """small data class used in _check_module to separate out deciding
+    what type of check needs to occur based on mount type, input type etc.
+    from the actual checking that occurs (exists())
+
+    Attrs:
+    - field_name: str
+    - rel_path: str | None
+    - skip_reason: str=""
+    """
+
+    field_name: str
+    rel_path: str | None  # the relative path that will be checked
+    skip_reason: str = ""  # the reason for a skip
+
+    def __post_init__(self):
+        if self.rel_path is None and self.skip_reason == "":
+            raise ValueError(
+                f"Received rel_path is '{self.rel_path}' with no skip_reason. If rel_path doesnt exist, must receive valid skip_reason."
+            )
+
+
+def resolve_input_paths(
+    data_dir: Path,
+    module_specific_input_data: Path | None,
+    shared_input_data: Path | None,
+) -> tuple[Path, Path]:
+    """Resolve and validate module-specific and shared input data paths.
+
+    Valid combinations:
+        - data_dir only: expects module_specific_input_data/ and shared_input_data/ subdirs
+        - Either or both explicit paths: override the corresponding data_dir-derived subdir
+        - Both explicit paths: data_dir is ignored for resolution
+
+    Raises:
+        ValueError: if a resolved path does not exist on disk
+    """
+    module_dir = module_specific_input_data or data_dir / "module_specific_input_data"
+    shared_dir = shared_input_data or data_dir / "shared_input_data"
+
+    if not module_dir.exists():
+        if module_specific_input_data:
+            raise ValueError(
+                f"Module-specific input data directory not found: {module_dir}\n"
+                "Create it and download module input data first. See the quickstart guide."
+            )
+        existing_subdirs = [p.name for p in data_dir.iterdir() if p.is_dir()]
+        raise ValueError(
+            f"Expected subdirectory not found: {data_dir}/module_specific_input_data\n"
+            f"Existing subdirectories at {data_dir}: {existing_subdirs}. "
+            "Names MUST match 'module_specific_input_data' and 'shared_input_data'\n"
+            "Either create this subdirectory and add module data, or specify the correct "
+            "path with --module-specific-input-data."
+        )
+
+    if not shared_dir.exists():
+        if shared_input_data:
+            raise ValueError(
+                f"Shared input data directory not found: {shared_dir}\n"
+                "Create it and add shared input data first. See the quickstart guide."
+            )
+        raise ValueError(
+            f"Expected subdirectory not found: {data_dir}/shared_input_data\n"
+            "Either create this subdirectory and add shared data, or specify the correct "
+            "path with --shared-input-data."
+        )
+
+    return module_dir, shared_dir
 
 
 def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
@@ -55,6 +135,8 @@ def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
 
     Handles the multi-command module case where a shared directory (e.g. 'ipccar5')
     provides input data for multiple modules (e.g. 'ipccar5-glaciers', 'ipccar5-icesheets').
+
+    Returns a sorted list of all modules
     """
     if dir_name in known_modules:
         return [dir_name]
@@ -65,94 +147,147 @@ def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
 _MODULE_SPECIFIC_CONTAINER_PATH = "/mnt/module_specific_in"
 
 
+def plan_fp_checks(entry: Dict[str, dict]) -> List[PlannedCheck]:
+    field_name = entry.get("name", "")
+    container_path = entry.get("mount", {}).get("container_path", "")
+
+    if container_path != _MODULE_SPECIFIC_CONTAINER_PATH:
+        return [
+            PlannedCheck(field_name, None, "uses shared fp data, checked elsewhere.")
+        ]
+    match entry.get("type"):
+        case "file":
+            raw = entry.get("filename")
+        case "dir":
+            raw = entry.get("default_value")
+        case _:
+            raw = None
+    if raw is None:
+        return [
+            PlannedCheck(
+                field_name=field_name,
+                rel_path=None,
+                skip_reason="Cannot verify without experiment config (filename depends on options)",
+            )
+        ]
+    paths = raw if isinstance(raw, list) else [raw]
+    return [PlannedCheck(field_name, p) for p in paths]
+
+
+def plan_input_checks(inp: Dict[str, dict]) -> List[PlannedCheck]:
+    """Fn to decide what to check for a given input entry."""
+
+    field_name = inp.get("name", "")
+    if inp.get("mount", {}).get("volume", "") == "output":
+        return [
+            PlannedCheck(
+                field_name,
+                None,
+                "inter-module dep. (generated by another module at runtime)",
+            )
+        ]
+    if inp.get("mount", {}).get("container_path") == "/mnt/shared_in":
+        return []
+
+    match inp.get("type"):
+        case "file":
+            raw = inp.get("filename")
+        case "dir":
+            raw = inp.get("default_value")
+        case _:
+            raw = None
+    if raw is None:
+        return [
+            PlannedCheck(
+                field_name=field_name,
+                rel_path=None,
+                skip_reason="Cannot verify without experiment config (filename depends on options)",
+            )
+        ]
+    paths = raw if isinstance(raw, list) else [raw]
+    return [PlannedCheck(field_name, p) for p in paths]
+
+
+# def execute_fp_check(plan: PlannedCheck, mdoule_input_dir: Path) -> InputFileCheck:
+
+
+def execute_check(plan: PlannedCheck, module_input_dir: Path) -> InputFileCheck:
+    assert isinstance(plan, PlannedCheck), (
+        f"Expected type(plan) == PlannedCheck. instead received '{type(plan)}"
+    )
+    assert isinstance(module_input_dir, Path), (
+        f"Expected type(module_input_dir) == Path, received '{type(module_input_dir)}"
+    )
+    # this fn accepts a plan and returns an inputfilecheck
+
+    if plan.rel_path is None:
+        return InputFileCheck(
+            field_name=plan.field_name,
+            expected_path=Path(),
+            exists=False,
+            skipped=True,
+            skip_reason=plan.skip_reason,
+        )
+    expected = module_input_dir / plan.rel_path
+    check = InputFileCheck(
+        field_name=plan.field_name,
+        expected_path=expected,
+        exists=expected.exists(),
+        skip_reason=plan.skip_reason,
+    )
+    return check
+
+
 def _check_module(
-    result,
-    module_schema,
-    module_input_dir,
-):
-    """Accepts a module schema from _load_...."""
-    for inp in module_schema.arguments.get("inputs", []):
-        field_name = inp.get("name")
-        filename = inp.get("filename")
-        mount_volume = inp.get("mount", {}).get("volume", "")
+    module_schema: ModuleSchema,
+    module_input_dir: Path,
+) -> List[InputFileCheck]:
+    # first, make plans for what checks to have based on inputs
+    plans = [
+        plan
+        for inp in module_schema.arguments.get("inputs", [])
+        for plan in plan_input_checks(inp)
+    ]
 
-        if mount_volume == "output":
-            result.checks.append(
-                InputFileCheck(
-                    field_name=field_name,
-                    expected_path=Path(),
-                    exists=False,
-                    skipped=True,
-                    skip_reason="inter-module dependency (produced by another module at runtime)",
-                )
-            )
-            continue
+    # then perform check (make expected path and check that it exsists if meant to)
+    input_file_checks = [execute_check(plan, module_input_dir) for plan in plans]
 
-        # Shared inputs are checked as a group in check_shared_data().
-        if is_shared_input(field_name):
-            continue
+    fp_plans = [
+        plan
+        for fp_inp in module_schema.arguments.get("fingerprint_params", [])
+        for plan in plan_fp_checks(fp_inp)
+    ]
 
-        # For dir inputs, use default_value as the path to check.
-        input_type = inp.get("type")
-        path_to_check = filename or (
-            inp.get("default_value") if input_type == "dir" else None
-        )
+    fp_file_checks = [execute_check(plan, module_input_dir) for plan in fp_plans]
 
-        if not path_to_check:
-            result.checks.append(
-                InputFileCheck(
-                    field_name=field_name,
-                    expected_path=Path(),
-                    exists=False,
-                    skipped=True,
-                    skip_reason="cannot verify without experiment config (filename depends on options)",
-                )
-            )
-            continue
+    combined_file_checks = input_file_checks + fp_file_checks
+    print("Number of entries in this module: ", len(combined_file_checks))
+    print(
+        f"this includes {len(input_file_checks)} from inputs section \n and {len(fp_file_checks)} from FP params section! "
+    )
 
-        expected = module_input_dir / path_to_check
-        result.checks.append(
-            InputFileCheck(
-                field_name=field_name,
-                expected_path=expected,
-                exists=expected.exists(),
-            )
-        )
+    # num_skipped = sum(1 for c in combined_file_checks if not c.skipped and c.exists)
+    skipped_checks = []
+    for check in combined_file_checks:
+        if check.skipped is True:
+            skipped_checks.append(check.field_name)
+    num_skipped = len(skipped_checks)
+    print("num skipped : ", num_skipped)
+    for c in combined_file_checks:
+        if c.skipped:
+            print(f"{c.field_name} is showing as skipped.")
 
-    # Also check fingerprint_params that mount from module-specific storage.
-    # Most fingerprint_params use shared storage (/mnt/shared_in) and are
-    # handled by check_shared_data(); only those with an explicit
-    # module-specific container path are checked here.
-    for fp in module_schema.arguments.get("fingerprint_params", []):
-        field_name = fp.get("name", "")
-        filename = fp.get("filename")
-        container_path = fp.get("mount", {}).get("container_path", "")
-
-        if container_path != _MODULE_SPECIFIC_CONTAINER_PATH:
-            continue
-
-        if not filename:
-            result.checks.append(
-                InputFileCheck(
-                    field_name=field_name,
-                    expected_path=Path(),
-                    exists=False,
-                    skipped=True,
-                    skip_reason="cannot verify without experiment config (filename depends on options)",
-                )
-            )
-            continue
-
-        expected = module_input_dir / filename
-        result.checks.append(
-            InputFileCheck(
-                field_name=field_name,
-                expected_path=expected,
-                exists=expected.exists(),
-            )
-        )
-
-    return result
+    for check in combined_file_checks:
+        print(f"Checking {check.field_name}....")
+        if check.skip_reason != "":
+            print("This input was skipped in checks because:")
+            print("Skip reason: ", check.skip_reason)
+        else:
+            print("This input wasnt skipped. Expected path is: ")
+            print(check.expected_path)
+    print("--")
+    print("")
+    return combined_file_checks  # , skipped_checks
 
 
 _SHARED_CONTAINER_PATH = "/mnt/shared_in"
@@ -190,10 +325,13 @@ def check_shared_data(
             field_name = inp.get("name", "")
             filename = inp.get("filename")
             mount_volume = inp.get("mount", {}).get("volume", "")
+            container_path = inp.get("mount", {}).get("container_path", "")
             if mount_volume == "output" or not filename:
                 continue
-            if is_shared_input(field_name):
+            if container_path == "/mnt/shared_in":
                 candidates.append((field_name, filename))
+            # if is_shared_input(field_name):
+            #    candidates.append((field_name, filename))
 
         for fp in schema.arguments.get("fingerprint_params", []):
             field_name = fp.get("name", "")
@@ -221,50 +359,60 @@ def check_shared_data(
     return checks
 
 
-def check_module_data(
+def check_data(
     module_specific_input_dir: Path,
     shared_input_dir: Path,
     definitions: ModuleDefinitionSource,
-) -> DataCheckResult:
+) -> CheckDataResult:
     """Check data directories against expected module inputs from the registry.
 
     Scans module_specific_input_dir for subdirectories, matches each to known
     module names, verifies module-specific input files, and checks shared inputs
     required across all discovered modules.
     """
-    result = DataCheckResult()
 
+    # return empty result if module spec dir isn't valid path
+    # (should already be checked by check_provided_paths in cli)
     if not module_specific_input_dir.exists():
-        return result
+        return CheckDataResult()
 
-    # known_modules = frozenset(registry.list_modules())
+    # make list, dict ofschemas for known modules from registry (received from cli)
     known_modules = definitions.module_names()
     schemas = {m: definitions.get_schema(m) for m in known_modules}
+
+    # init empty result
+    full_result = CheckDataResult()
+
+    # loop thru module-specific dir
     for entry in sorted(module_specific_input_dir.iterdir()):
+        # skip if an entry isn't a sub-dir
         if not entry.is_dir():
             continue
 
         modules = _dir_to_module_names(entry.name, known_modules)
         if not modules:
-            result.unrecognized_dirs.append(entry.name)
+            full_result.unrecognized_dirs.append(entry.name)
             continue
 
         for module_name in modules:
-            result = ModuleCheckResult(module_name=module_name)
+            # get schema
             schema = schemas[module_name]
 
-            checked_module_result = _check_module(
-                result=result,
+            # perform this modules checks
+            checks = _check_module(
                 module_schema=schema,
                 module_input_dir=entry,
             )
-            result.module_results.append(checked_module_result)
+            # bundle into a module result obj
+            module_result = CheckModuleResult(
+                module_name=schema.module_name, checks=checks
+            )
+            # add to full results obj
+            full_result.module_results.append(module_result)
 
-    discovered_names = [r.module_name for r in result.module_results]
-    result.shared_checks = check_shared_data(
-        discovered_names,
-        shared_input_dir,
-        # registry
+    discovered_names = [r.module_name for r in full_result.module_results]
+    full_result.shared_checks = check_shared_data(
+        discovered_names, shared_input_dir, schemas=schemas
     )
 
-    return result
+    return full_result

@@ -5,57 +5,12 @@ from pathlib import Path
 
 from facts_experiment_builder.cli.theme import console
 
-from facts_experiment_builder.application.check_data import check_module_data
+from facts_experiment_builder.application.check_data import (
+    check_data,
+    resolve_input_paths,
+)
 
 from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
-
-
-def resolve_input_paths(
-    data_dir: Path,
-    module_specific_input_data: Path | None,
-    shared_input_data: Path | None,
-) -> tuple[Path, Path]:
-    """Resolve and validate module-specific and shared input data paths.
-
-    Valid combinations:
-        - data_dir only: expects module_specific_input_data/ and shared_input_data/ subdirs
-        - Either or both explicit paths: override the corresponding data_dir-derived subdir
-        - Both explicit paths: data_dir is ignored for resolution
-
-    Raises:
-        ValueError: if a resolved path does not exist on disk
-    """
-    module_dir = module_specific_input_data or data_dir / "module_specific_input_data"
-    shared_dir = shared_input_data or data_dir / "shared_input_data"
-
-    if not module_dir.exists():
-        if module_specific_input_data:
-            raise ValueError(
-                f"Module-specific input data directory not found: {module_dir}\n"
-                "Create it and download module input data first. See the quickstart guide."
-            )
-        existing_subdirs = [p.name for p in data_dir.iterdir() if p.is_dir()]
-        raise ValueError(
-            f"Expected subdirectory not found: {data_dir}/module_specific_input_data\n"
-            f"Existing subdirectories at {data_dir}: {existing_subdirs}. "
-            "Names MUST match 'module_specific_input_data' and 'shared_input_data'\n"
-            "Either create this subdirectory and add module data, or specify the correct "
-            "path with --module-specific-input-data."
-        )
-
-    if not shared_dir.exists():
-        if shared_input_data:
-            raise ValueError(
-                f"Shared input data directory not found: {shared_dir}\n"
-                "Create it and add shared input data first. See the quickstart guide."
-            )
-        raise ValueError(
-            f"Expected subdirectory not found: {data_dir}/shared_input_data\n"
-            "Either create this subdirectory and add shared data, or specify the correct "
-            "path with --shared-input-data."
-        )
-
-    return module_dir, shared_dir
 
 
 def check_provided_paths(
@@ -63,6 +18,7 @@ def check_provided_paths(
     module_specific_input_data: Path | None,
     shared_input_data: Path | None,
 ) -> tuple[Path, Path]:
+    """Call resolve_input_paths on paths provided by user and raise click usage error if expected directories not found at provided paths"""
     try:
         return resolve_input_paths(
             data_dir, module_specific_input_data, shared_input_data
@@ -101,7 +57,7 @@ def check_provided_paths(
     default=Path("./facts-module-registry"),
     help="Path to the facts-module-registry directory to use in check-data. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
 )
-def check_data(
+def main(
     data_dir: Path,
     module_specific_input_data: Path | None,
     shared_input_data: Path | None,
@@ -125,16 +81,19 @@ def check_data(
         shared_input_data=shared_input_data,
     )
 
+    # Print to user the paths that are checked
     console.rule(characters="- - ", style="rule", title="Checking FACTS data directory")
     console.print(f"[muted]Module-specific inputs: {module_dir}[/muted]")
     console.print(f"[muted]Shared inputs:           {shared_dir}[/muted]\n")
 
-    result = check_module_data(
+    # Call application layer function
+    result = check_data(
         module_specific_input_dir=module_dir,
         shared_input_dir=shared_dir,
         definitions=registry,
     )
 
+    # If there are no module results in the results object, print msg to user + return
     if not result.module_results and not result.unrecognized_dirs:
         console.print("[muted]No module data directories found under:[/muted]")
         console.print(f"[muted]  {module_dir}[/muted]")
@@ -145,7 +104,8 @@ def check_data(
     for module_result in result.module_results:
         if module_result.n_checkable == 0:
             console.print(
-                f"[muted]{module_result.module_name}: no checkable inputs[/muted]"
+                f"[success]☐ {module_result.module_name} [/success]:"
+                " [muted] ~No checkable inputs~[/muted]"
             )
             continue
 
@@ -154,19 +114,19 @@ def check_data(
 
         if module_result.n_missing == 0:
             console.print(
-                f"[success]✓ {module_result.module_name}[/success] "
+                f"[success]✔ {module_result.module_name}[/success]: "
                 f"[muted]({n_present}/{n_total} files present)[/muted]"
             )
         else:
             any_missing = True
             console.print(
-                f"[danger]✗ {module_result.module_name}[/danger] "
+                f"[danger]✗ {module_result.module_name}[/danger]: "
                 f"[muted]({n_present}/{n_total} files present)[/muted]"
             )
             for check in module_result.checks:
                 if not check.skipped and not check.exists:
                     console.print(
-                        f"  [danger]missing:[/danger] [secondary]{check.expected_path}[/secondary]"
+                        f"  [danger] ❗ missing:[/danger] [secondary]{check.expected_path}[/secondary]"
                     )
 
     if result.shared_checks:
