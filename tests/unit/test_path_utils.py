@@ -1,4 +1,4 @@
-from facts_experiment_builder.infra.path_utils import (
+from facts_experiment_builder.core.module.module_service_spec import (
     resolve_input_path,
 )
 

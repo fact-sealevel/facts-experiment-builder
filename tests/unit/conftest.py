@@ -14,10 +14,12 @@ from facts_experiment_builder.core.module.arg_specs import (
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleContainerImage,
-    ModuleInputPaths,
-    ModuleOutputPaths,
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
+)
+from facts_experiment_builder.core.module.module_inputs_outputs import (
+    ModuleInputPaths,
+    ModuleOutputPaths,
 )
 
 
