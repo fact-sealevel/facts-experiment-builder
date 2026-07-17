@@ -27,7 +27,7 @@ from facts_experiment_builder.core.workflow.workflow import (
     workflows_from_metadata,
 )
 
-from facts_experiment_builder.infra.path_utils import expand_path
+from facts_experiment_builder.core.module.service_spec_utils import expand_path
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
     ModuleSchema,

@@ -1,0 +1,252 @@
+## This is like the full collection of v2 modules that can be run as services in a docker compose
+## find the module you want to incldue in your v2 experiment file and copy and paste the service specified here. 
+services: 
+  fair: 
+    image: ghcr.io/fact-sealevel/fair-temperature:0.2.1
+    command:
+      - "--pipeline-id=${PIPELINE_ID}"
+      - "--output-oceantemp-file=/mnt/fair_out/oceantemp.nc"
+      - "--nsamps=${NSAMPS}"
+      - "--scenario=${SCENARIO}"
+      - "--output-ohc-file=/mnt/fair_out/ohc.nc"
+      - "--output-gsat-file=/mnt/fair_out/gsat.nc"
+      - "--output-climate-file=/mnt/fair_out/climate.nc"
+      - "--rcmip-file=/mnt/fair_in/rcmip/rcmip-emissions-annual-means-v5-1-0.csv"
+      - "--param-file=/mnt/fair_in/parameters/fair_ar6_climate_params_v4.0.nc"
+    restart: no
+    volumes:
+      - ${FAIR_MODULE_INPUT}:/mnt/fair_in
+      - ./data/${OUTPUT_DIR}/fair:/mnt/fair_out
+  
+  ar5-glaciers:
+    image: ghcr.io/fact-sealevel/ipccar5:0.1.0 
+    pull_policy: always
+    command: 
+      - "glaciers"
+      - "--pipeline-id=${PIPELINE_ID}"
+      - "--scenario=${SCENARIO}"
+      - "--climate-fname=/mnt/fair_out/climate.nc"
+      - "--glacier-fraction-file=/mnt/ar5_glaciers_in/glacier_fraction.txt"
+      - "--start-year=${BASEYEAR} " 
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--nsamps=${NSAMPS}"
+      - "--location-file=/mnt/ar5_glaciers_in/location.lst"
+      - "--fingerprint-dir=/mnt/ar5_glaciers_in/FPRINT/"
+      - "--global-output-file=/mnt/ar5_glaciers_out/glaciers_gslr.nc"
+      - "--local-output-file=/mnt/ar5_glaciers_out/glaciers_lslr.nc"
+    restart: no
+    volumes:
+      - ${IPCCAR5_MODULE_INPUT}:/mnt/ar5_glaciers_in
+      - ./data/${OUTPUT_DIR}/ar5-glaciers:/mnt/ar5_glaciers_out
+      - ./data/${OUTPUT_DIR}/fair:/mnt/fair_out
+    depends_on:
+      fair:
+        condition: service_completed_successfully
+  
+  ar5-icesheets:
+    image: ghcr.io/fact-sealevel/ipccar5:0.1.0 
+    pull_policy: always
+    command:
+      - "icesheets"
+      - "--pipeline-id=${PIPELINE_ID}"
+      - "--scenario=${SCENARIO}"
+      - "--start-year=${BASEYEAR}" 
+      - "--climate-fname=/mnt/fair_out/climate.nc"
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--nsamps=${NSAMPS}"
+      - "--icesheet-fraction-file=/mnt/ar5_icesheets_in/icesheet_fraction.txt"
+      - "--global-gis-output-file=/mnt/ar5_icesheets_out/gis_gslr.nc"
+      - "--global-ais-output-file=/mnt/ar5_icesheets_out/ais_gslr.nc"
+      - "--global-wais-output-file=/mnt/ar5_icesheets_out/wais_gslr.nc"
+      - "--global-eais-output-file=/mnt/ar5_icesheets_out/eais_gslr.nc"
+      - "--location-file=/mnt/ar5_icesheets_in/location.lst"
+      - "--fingerprint-dir=/mnt/ar5_icesheets_in/FPRINT/"
+      - "--local-gis-output-file=/mnt/ar5_icesheets_out/gis_lslr.nc"
+      - "--local-ais-output-file=/mnt/ar5_icesheets_out/ais_lslr.nc"
+      - "--local-wais-output-file=/mnt/ar5_icesheets_out/wais_lslr.nc"
+      - "--local-eais-output-file=/mnt/ar5_icesheets_out/eais_lslr.nc"
+    restart: no
+    volumes:
+      - ${IPCCAR5_MODULE_INPUT}:/mnt/ar5_icesheets_in
+      - ./data/${OUTPUT_DIR}/ar5-icesheets:/mnt/ar5_icesheets_out  
+      - ./data/${OUTPUT_DIR}/fair:/mnt/fair_out
+    depends_on:
+      fair:
+        condition: service_completed_successfully
+  
+  sterodynamics:
+      image: ghcr.io/fact-sealevel/tlm-sterodynamics:0.3.0
+      command:
+        - "--pipeline-id=${PIPELINE_ID}"
+        - "--scenario=${SCENARIO}"
+        - "--nsamps=${NSAMPS}"
+        - "--pyear-start=${PYEAR_START}"
+        - "--pyear-step=${PYEAR_STEP}"
+        - "--pyear-end=${PYEAR_END}"
+        - "--model-dir=/mnt/sterodynamics_in/cmip6/"
+        - "--location-file=/mnt/sterodynamics_in/location.lst"
+        - "--output-lslr-file=/mnt/sterodynamics_out/lslr.nc"
+        - "--output-gslr-file=/mnt/sterodynamics_out/gslr.nc"
+        - "--expansion-coefficients-file=/mnt/sterodynamics_in/scmpy2LM_RCMIP_CMIP6calpm_n18_expcoefs.nc"
+        - "--gsat-rmses-file=/mnt/sterodynamics_in/scmpy2LM_RCMIP_CMIP6calpm_n17_gsat_rmse.nc"
+        - "--climate-data-file=/mnt/fair_out/climate.nc"
+      volumes:
+        - ./data/${OUTPUT_DIR}/fair:/mnt/fair_out
+        - ${TLM_STERO_MODULE_INPUT}:/mnt/sterodynamics_in
+        - ./data/${OUTPUT_DIR}/sterodynamics:/mnt/sterodynamics_out 
+      restart: no
+      depends_on:
+        fair:
+          condition: service_completed_successfully
+
+  bamber19-icesheets:
+    image: ghcr.io/fact-sealevel/bamber19-icesheets:0.1.0
+    command:
+      - "--pipeline-id=${PIPELINE_ID}" 
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--slr-proj-mat-file=/mnt/bamber19_in/SLRProjections190726core_SEJ_full.mat"
+      - "--location-file=/mnt/bamber19_in/location.lst"
+      - "--fingerprint-dir=/mnt/bamber19_in/FPRINT"
+      - "--output-EAIS-lslr-file=/mnt/bamber19_out/eais_lslr.nc"
+      - "--output-WAIS-lslr-file=/mnt/bamber19_out/wais_lslr.nc"
+      - "--output-GIS-lslr-file=/mnt/bamber19_out/gis_lslr.nc"
+      - "--output-AIS-gslr-file=/mnt/bamber19_out/ais_gslr.nc"
+      - "--output-EAIS-gslr-file=/mnt/bamber19_out/eais_gslr.nc"
+      - "--output-WAIS-gslr-file=/mnt/bamber19_out/wais_gslr.nc"
+      - "--output-GIS-gslr-file=/mnt/bamber19_out/gis_gslr.nc"
+      - "--output-AIS-gslr-file=/mnt/bamber19_out/ais_gslr.nc"
+    volumes:
+      - ./data/${OUTPUT_DIR}/bamber19:/mnt/bamber19_out
+      - ${BAMBER19_ICESHEETS_MODULE_INPUT}:/mnt/bamber19_in
+    restart: no
+    depends_on:
+      fair:
+        condition: service_completed_successfully
+
+  ssp-landwaterstorage:
+    image: ghcr.io/fact-sealevel/ssp-landwaterstorage:0.1.0
+    command:
+      - "--pipeline-id=${PIPELINE_ID}"
+      - "--scenario=${SCENARIO}"
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--nsamps=${NSAMPS}"
+      - "--output-lslr-file=/mnt/ssp_landwaterstorage_out/lslr.nc"
+      - "--output-gslr-file=/mnt/ssp_landwaterstorage_out/gslr.nc"
+      - "--location-file=/mnt/ssp_landwaterstorage_in/location.lst"
+      - "--pophist-file=/mnt/ssp_landwaterstorage_in/UNWPP2012_population_historical.csv"
+      - "--reservoir-file=/mnt/ssp_landwaterstorage_in/Chao2008_groundwater_impoundment.csv"
+      - "--popscen-file=/mnt/ssp_landwaterstorage_in/ssp_iam_baseline_popscenarios2100.csv"
+      - "--gwd-file=/mnt/ssp_landwaterstorage_in/Konikow2011_GWD.csv"
+      - "--gwd-file=/mnt/ssp_landwaterstorage_in/Wada2012_GWD.csv"
+      - "--gwd-file=/mnt/ssp_landwaterstorage_in/Pokhrel2012_GWD.csv"
+      - "--fp-file=/mnt/ssp_landwaterstorage_in/REL_GROUNDWATER_NOMASK.nc"
+    volumes:
+      - ${SSP_LANDWATERSTORAGE_MODULE_INPUT}:/mnt/ssp_landwaterstorage_in
+      - ./data/${OUTPUT_DIR}/ssp-landwaterstorage:/mnt/ssp_landwaterstorage_out
+  
+  deconto21-ais:
+    image: ghcr.io/fact-sealevel/deconto21-ais:0.1.0
+    command:
+      - "--pipeline-id=${PIPELINE_ID}"
+      - "--scenario=${SCENARIO}"
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--nsamps=${NSAMPS}"
+      - "--baseyear=${BASEYEAR}"
+      - "--location-file=/mnt/deconto21-ais_in/location.lst" 
+      - "--rngseed=${RNGSEED}"
+      - "--input-eais-rcp26-file=/mnt/deconto21_in/dp21_eais_rcp26.nc"
+      - "--input-eais-rcp45-file=/mnt/deconto21_in/dp21_eais_rcp45.nc"
+      - "--input-eais-rcp85-file=/mnt/deconto21_in/dp21_eais_rcp85.nc"
+      - "--input-wais-rcp26-file=/mnt/deconto21_in/dp21_wais_rcp26.nc"
+      - "--input-wais-rcp45-file=/mnt/deconto21_in/dp21_wais_rcp45.nc"
+      - "--input-wais-rcp85-file=/mnt/deconto21_in/dp21_wais_rcp85.nc"
+      - "--fpdir=/mnt/deconto21_in/FPRINT"
+      - "--output-wais-lslr-file=/mnt/deconto21_out/wais_lslr.nc"
+      - "--output-eais-lslr-file=/mnt/deconto21_out/eais_lslr.nc"
+      - "--output-gis-lslr-file=/mnt/deconto21_out/gis_lslr.nc"
+      - "--output-ais-gslr-file=/mnt/deconto21_out/ais_gslr.nc"
+      - "--output-eais-gslr-file=/mnt/deconto21_out/eais_gslr.nc"
+      - "--output-wais-gslr-file=/mnt/deconto21_out/wais_gslr.nc"
+      - "--output-gis-gslr-file=/mnt/deconto21_out/gis_gslr.nc"
+    volumes:
+      - ./data/${OUTPUT_DIR}/deconto21:/mnt/deconto21_out
+      - ${DECONTO21_AIS_MODULE_INPUT}:/mnt/deconto21_in
+    restart: no
+    depends_on:
+      fair:
+        condition: service_completed_successfully
+### INTEGRATION MODULES
+  facts-total-global:
+    image: ghcr.io/fact-sealevel/facts-total:0.1.0
+    pull_policy: always
+    command:
+      - "--item=/mnt/ar5_glaciers_out/glaciers_gslr.nc"
+      - "--item=/mnt/ar5_icesheets_out/wais_gslr.nc"
+      - "--item=/mnt/ar5_icesheets_out/eais_gslr.nc"
+      - "--item=/mnt/ar5_icesheets_out/gis_gslr.nc"
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--output-path=/mnt/output/totaling/total_gslr.nc"
+    restart: no
+    volumes:
+      - ./data/${OUTPUT_DIR}/ar5-glaciers:/mnt/ar5_glaciers_out
+      - ./data/${OUTPUT_DIR}/ar5-icesheets:/mnt/ar5_icesheets_out
+      - ./data/${OUTPUT_DIR}/totaling:/mnt/output/totaling
+    depends_on:
+      ar5-glaciers:
+        condition: service_completed_successfully
+      ar5-icesheets:
+        condition: service_completed_successfully
+  facts-total-local:
+    image: ghcr.io/fact-sealevel/facts-total:0.1.0
+    pull_policy: always
+    command:
+      - "--item=/mnt/ar5_glaciers_out/glaciers_lslr.nc"
+      - "--item=/mnt/ar5_icesheets_out/wais_lslr.nc"
+      - "--item=/mnt/ar5_icesheets_out/eais_lslr.nc"
+      - "--item=/mnt/ar5_icesheets_out/gis_lslr.nc"
+      - "--pyear-start=${PYEAR_START}"
+      - "--pyear-end=${PYEAR_END}"
+      - "--pyear-step=${PYEAR_STEP}"
+      - "--output-path=/mnt/output/totaling/total_lslr.nc"
+    restart: no
+    volumes:
+      - ./data/${OUTPUT_DIR}/ar5-glaciers:/mnt/ar5_glaciers_out
+      - ./data/${OUTPUT_DIR}/ar5-icesheets:/mnt/ar5_icesheets_out
+      - ./data/${OUTPUT_DIR}/totaling:/mnt/output/totaling
+    depends_on:
+      ar5-glaciers:
+        condition: service_completed_successfully
+      ar5-icesheets:
+        condition: service_completed_successfully
+  extremesealevel-pointsoverthreshold:
+    build: 
+      context: $HOME/Desktop/facts_work/facts_v2/extremesealevel-pointsoverthreshold
+      dockerfile: Dockerfile
+    image: extremesealevel-pointsoverthreshold:package
+    pull_policy: build
+    command:
+        - "--target-years=2050,2100"
+        - "--total-localsl-file=/mnt/output/totaling/total_lslr.nc"
+        - "--gesla-dir=/mnt/esl_data_in/gesla_data"
+        - "--output-dir=/mnt/esl_data_out/"
+    restart: no
+    volumes:
+      - ./data/${OUTPUT_DIR}/totaling:/mnt/output/totaling
+      - ${EXTREMESEALEVEL_POINTSOVERTHRESHOLD_MODULE_INPUT}:/mnt/esl_data_in
+      - ./data/${OUTPUT_DIR}/extremesealevel-pointsoverthreshold:/mnt/esl_data_out
+    depends_on:
+      facts-total-local:
+        condition: service_completed_successfully
+  
