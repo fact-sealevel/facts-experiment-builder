@@ -26,13 +26,13 @@ def main(module_registry):
     console.rule(characters="- - ", style="rule", title="list-modules")
     console.print(
         f"You ran [bold]list-modules[/bold]. \n"
-        f"I'm using the module registry at the following location: \n[secondary]{registry_path}[/secondary]."
+        f"Using the module registry at the following location: \n[secondary]{registry_path}[/secondary]."
     )
 
     console.print()
     console.print("The modules found in this registry are:")
     console.print()
-    
+
     for module in modules_names:
         console.print(f"  [accent]→ {module}[/accent]")
 
