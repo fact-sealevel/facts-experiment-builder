@@ -115,13 +115,13 @@ def main(
         if module_result.n_missing == 0:
             console.print(
                 f"[success]✔ {module_result.module_name}[/success]: "
-                f"[muted]({n_present}/{n_total} files present)[/muted]"
+                f"[muted]({n_present}/{n_total} expected entries present)[/muted]"
             )
         else:
             any_missing = True
             console.print(
                 f"[danger]✗ {module_result.module_name}[/danger]: "
-                f"[muted]({n_present}/{n_total} files present)[/muted]"
+                f"[muted]({n_present}/{n_total} expected entries present)[/muted]"
             )
             for check in module_result.checks:
                 if not check.skipped and not check.exists:

@@ -7,7 +7,7 @@ from facts_experiment_builder.cli.setup_experiment_cli import (
 from facts_experiment_builder.cli.generate_compose_cli import (
     main as generate_compose_group,
 )
-from facts_experiment_builder.cli.list_modules_cli import list_modules as list_modules
+from facts_experiment_builder.cli.list_modules_cli import main as list_modules
 from facts_experiment_builder.cli.check_data_cli import (
     main as check_data_main,
 )

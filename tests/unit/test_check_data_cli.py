@@ -62,7 +62,7 @@ def test_main_reports_all_present(tmp_path, fake_registry):
         f"Output: \n{result.output} --- \nException: \n{result.exception} --- \n"
     )
     assert "All checked modules look good" in result.output
-    assert "1/1 files present" in result.output
+    assert "1/1 expected entries present" in result.output
 
 
 def test_main_reports_missing_file(tmp_path, fake_registry):
