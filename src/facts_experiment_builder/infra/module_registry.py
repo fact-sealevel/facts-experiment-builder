@@ -37,8 +37,10 @@ class FileSystemModuleRegistry:
             try:
                 with open(path, "r") as f:
                     data = yaml.safe_load(f) or {}
-            except FileNotFoundError:
-                raise ModuleYamlNotFoundError
+            except FileNotFoundError as e:
+                raise ModuleYamlNotFoundError(
+                    module_name=module_name, module_yaml_path=path
+                ) from e
             except ValidationError as e:
                 raise ModuleSchemaInvalidError(
                     module_name=module_name, path=path, e=e
