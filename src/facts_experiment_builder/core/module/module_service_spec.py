@@ -12,6 +12,8 @@ from facts_experiment_builder.core.typed_path import (
     HostDirPath,
     HostPath,
     ExperimentSpecificInputPath,
+    _MODULE_SPECIFIC_CONTAINER_PATH,
+    _SHARED_CONTAINER_PATH,
 )
 from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
@@ -131,14 +133,6 @@ def get_required_field_with_alternatives(
         f"Required field '{primary_field}' (or alternatives: {', '.join(alternative_fields)}) "
         f"is missing from metadata{context_msg}"
     )
-
-
-@dataclass(frozen=True)
-class ScenarioConfig:
-    """Scenario configuration details."""
-
-    scenario_name: str
-    description: str
 
 
 @dataclass(frozen=True)
@@ -613,7 +607,7 @@ class ModuleServiceSpec:
         # }
 
 
-def is_shared_input(field_name: str) -> bool:
+def is_shared_input(mount: Optional[dict]) -> bool:
     """
     Determine if an input field is a shared input (shared across modules).
 
@@ -626,14 +620,21 @@ def is_shared_input(field_name: str) -> bool:
     Returns:
         True if field is a shared input, False if module-specific
     """
-    field_lower = field_name.lower()
-    general_patterns = ["location", "fingerprint", "fp"]
-    return any(pattern in field_lower for pattern in general_patterns)
+    if mount.get("container_path") == _SHARED_CONTAINER_PATH:
+        return True
+    elif mount.get("container_path") == _MODULE_SPECIFIC_CONTAINER_PATH:
+        return False
+    else:
+        raise ValueError(
+            f"Expected one of '{_SHARED_CONTAINER_PATH}' or '{_MODULE_SPECIFIC_CONTAINER_PATH}'."
+            f"Received '{mount.get('container_path')}'."
+        )
 
 
 def resolve_input_path(
     field_name: str,
     field_value: Any,
+    mount: Dict,
     shared_input_data: str,
     module_specific_input_data: str,
     module_name: str = "",
@@ -678,7 +679,7 @@ def resolve_input_path(
             f"Empty or missing value for input field '{field_name}'{context_msg}"
         )
 
-    is_general = is_shared_input(field_name)
+    is_general = is_shared_input(mount)
 
     if os.path.isabs(actual_value):
         return actual_value
@@ -851,6 +852,15 @@ def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
     return keys
 
 
+def _input_spec_by_key(module_definition: Any) -> Dict[str, dict]:
+    result = {}
+    for arg_spec in module_definition.arguments.get("inputs", []):
+        source = arg_spec.get("source", "")
+        if "." in source:
+            result[source.split(".")[-1]] = arg_spec
+    return result
+
+
 def _dir_input_keys(module_definition: Any) -> Set[str]:
     """Return set of input field names declared as directory paths (type: 'dir') in the module YAML."""
     keys: Set[str] = set()
@@ -869,7 +879,6 @@ def build_module_service_spec(
     module_name: str,
     known_module_names: List,
     module_definition: ModuleSchema,
-    # module_type: str = None,
 ) -> ModuleServiceSpec:
     """
     Build a ModuleServiceSpec for the given module from experiment metadata and module YAML.
@@ -878,7 +887,6 @@ def build_module_service_spec(
         metadata: Experiment metadata dictionary
         experiment_dir: Path to experiment directory
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
-        module_type: Optional category (e.g. 'temperature_module', 'sealevel_module')
 
     Returns:
         ModuleServiceSpec instance
@@ -966,7 +974,7 @@ def build_module_service_spec(
     # They're stored as relative paths (ie. fair-temperature/climate.nc -> /mnt/out/fair-temperature/climate.nc)
     # Prev. this was a hard-coded list of the names used for climate-data-file across different module yamls...
     output_root_relative_inputs = module_definition.get_output_volume_input_keys()
-
+    input_spec = _input_spec_by_key(module_definition)
     multiple_file_input_keys = _multiple_file_input_keys(module_definition)
     dir_input_keys = _dir_input_keys(module_definition)
 
@@ -1000,12 +1008,13 @@ def build_module_service_spec(
                 try:
                     resolved.append(
                         resolve_input_path(
-                            key,
-                            item_value,
-                            shared_input_data,
-                            module_specific_input_data,
-                            module_name,
-                            module_context,
+                            field_name=key,
+                            field_value=item_value,
+                            mount=input_spec.get(key, {}).get("mount"),
+                            shared_input_data=shared_input_data,
+                            module_specific_input_data=module_specific_input_data,
+                            module_name=module_name,
+                            context=module_context,
                         )
                     )
                 except (ValueError, KeyError, TypeError) as e:
@@ -1050,12 +1059,13 @@ def build_module_service_spec(
                 continue
             try:
                 resolved_path = resolve_input_path(
-                    key,
-                    value,
-                    shared_input_data,
-                    module_specific_input_data,
-                    module_name,
-                    module_context,
+                    field_name=key,
+                    field_value=value,
+                    mount=input_spec.get(key, {}).get("mount"),
+                    shared_input_data=shared_input_data,
+                    module_specific_input_data=module_specific_input_data,
+                    module_name=module_name,
+                    context=module_context,
                 )
                 inputs_dict[key] = (
                     HostDirPath(resolved_path)
