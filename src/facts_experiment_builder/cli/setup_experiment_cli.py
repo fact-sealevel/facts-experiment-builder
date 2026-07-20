@@ -26,10 +26,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
-
-from facts_experiment_builder.core.experiment.facts_experiment import (
-    ExperimentSpecificInputData,
-)
 from facts_experiment_builder.cli.utils import determine_root, configure_logging
 from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentAlreadyExistsError,
@@ -230,7 +226,7 @@ def main(
 
         if not sealevel_step and not supplied_totaled_sealevel_step_data:
             console.print(
-                "[muted] Note: Skipping sealevel step because no sealevel modules were passed to `setup-new-experiment --sealevel-step`. [/muted]"
+                "[muted] Note: Skipping sealevel step because no sealevel modules were passed to `feb setup-experiment --sealevel-step`. [/muted]"
             )
 
         if supplied_totaled_sealevel_step_data:
@@ -267,10 +263,6 @@ def main(
             workflow_dict = {}
         console.rule(style="rule")
         console.rule(style="rule", title="Setting up new FACTS experiment")
-        experiment_spec_data = ExperimentSpecificInputData(
-            climate_step_data=supplied_climate_step_data,
-            sealevel_step_data=supplied_totaled_sealevel_step_data,
-        )
 
         try:
             validate_module_names(
@@ -295,7 +287,6 @@ def main(
             nsamps=nsamps,
             location_file=location_file,
             module_specific_input_data=module_specific_input_data,
-            experiment_specific_input_data=experiment_spec_data,
             shared_input_data=shared_input_data,
             projection_scale=projection_scale,
             definition=registry,  # registry passed as protocol

@@ -85,7 +85,6 @@ def finalize_experiment_setup(
     nsamps: int,
     location_file: str,
     module_specific_input_data: str,
-    experiment_specific_input_data: str,
     shared_input_data: str,
     projection_scale: str,
     definition: ModuleDefinitionSource,
@@ -113,13 +112,20 @@ def finalize_experiment_setup(
         experiment_skeleton, workflows=workflows_dict
     )
 
+    # handle exp specific data
+    experiment_spec_data = [
+        experiment_skeleton.climate_data,
+        experiment_skeleton.supplied_totaled_sealevel_step_data,
+    ]
+    experiment_spec_data = [i for i in experiment_spec_data if i is not None]
+
     # Create FactsExperiment from template
     experiment_obj = experiment_skeleton_to_facts_experiment(
         experiment_name=experiment_name,
         skeleton=skeleton_with_workflows,
         top_level_params=top_level_params,
         module_specific_input_data=module_specific_input_data,
-        experiment_specific_input_data=experiment_specific_input_data,  # supplied_climate_step_data,
+        experiment_specific_input_data=experiment_spec_data,  # supplied_climate_step_data,
         shared_input_data=shared_input_data,
         projection_scale=projection_scale,
         schemas=schemas,

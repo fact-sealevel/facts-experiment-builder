@@ -8,14 +8,6 @@ from facts_experiment_builder.cli.utils import (
     determine_root,
 )
 
-# from facts_experiment_builder.infra.experiment_manager import (
-#     make_experiment_path_from_experiment_name,
-#     make_experiment_metadata_path_from_experiment_dir,
-#     experiment_metadata_file_exists,
-#     experiment_directory_exists,
-#     resolve_custom_experiment_compose_path,
-#     resolve_default_experiment_compose_path,
-# )
 from facts_experiment_builder.infra.experiment_storage import (
     FileSystemExperimentStorage,
 )
