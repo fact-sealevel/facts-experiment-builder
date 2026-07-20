@@ -8,7 +8,6 @@ This script follows a domain-driven design pattern:
 
 Usage:
     python -m facts_experiment_builder.application.generate_compose <experiment_dir>
-
 """
 
 from dataclasses import dataclass
@@ -20,6 +19,9 @@ from facts_experiment_builder.core.module.module_service_spec import (
     build_module_service_spec,
 )
 from facts_experiment_builder.core.experiment import FactsExperiment
+from facts_experiment_builder.application.experiment_helpers import (
+    collect_metadata_param_keys,
+)
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
 
 from facts_experiment_builder.core.workflow.workflow import (
@@ -29,7 +31,6 @@ from facts_experiment_builder.core.workflow.workflow import (
 
 from facts_experiment_builder.core.module.service_spec_utils import expand_path
 from facts_experiment_builder.core.module.module_schema import (
-    collect_metadata_param_keys,
     ModuleSchema,
 )
 
@@ -106,10 +107,11 @@ def _validate_climate_file_inputs(
     sealevel_modules: List[str],
     schemas: Dict[str, ModuleSchema],
 ) -> None:
-    """Validate that sealevel modules have climate file inputs when no temperature module is specified.
+    """Validate that sealevel modules have climate file inputs when no temperature
+    module is specified.
 
-    Pure logic — accepts pre-loaded schemas. Raises ValueError listing any modules
-    that require a climate file but have no value provided in metadata.
+    Pure logic — accepts pre-loaded schemas. Raises ValueError listing any modules that
+    require a climate file but have no value provided in metadata.
     """
     missing_climate_files = []
 
@@ -151,12 +153,11 @@ def _collect_workflow_output_paths_by_type(
     *,
     container_prefix: str = "/mnt/total_out",
 ) -> List[str]:
-    """
-    Collect container paths for workflow module outputs that match the given output_type
-    and have pass_to_total=True in their module schema.
+    """Collect container paths for workflow module outputs that match the given
+    output_type and have pass_to_total=True in their module schema.
 
-    For each module in the workflow, reads metadata[mod].outputs; each value must be
-    a dict with "value" and "output_type". If a module schema is present in `schemas`,
+    For each module in the workflow, reads metadata[mod].outputs; each value must be a
+    dict with "value" and "output_type". If a module schema is present in `schemas`,
     only outputs whose OutputFileSpec has pass_to_total=True are included. Outputs from
     modules not found in `schemas` are included for backward compatibility.
     """
@@ -206,7 +207,8 @@ def _build_facts_total_section_for_workflow(
     facts_total_image: str,
     output_type: str,
 ) -> Dict[str, Any]:
-    """Build the synthetic metadata section for a facts-total workflow service with empty inputs.item and type-specific output-path."""
+    """Build the synthetic metadata section for a facts-total workflow service with
+    empty inputs.item and type-specific output-path."""
     return {
         "inputs": {"item": []},
         "outputs": {"output-path": wf.total_output_filename_for_type(output_type)},
@@ -224,7 +226,8 @@ def _populate_section_with_global_outputs(
     wf: Workflow,
     schemas: Dict[str, "ModuleSchema"],
 ) -> None:
-    """Extend section["inputs"]["item"] with container paths for outputs with output_type "global"."""
+    """Extend section["inputs"]["item"] with container paths for outputs with
+    output_type "global"."""
     paths = _collect_workflow_output_paths_by_type(metadata, wf, "global", schemas)
     section["inputs"]["item"].extend(paths)
 
@@ -235,7 +238,8 @@ def _populate_section_with_local_outputs(
     wf: Workflow,
     schemas: Dict[str, "ModuleSchema"],
 ) -> None:
-    """Extend section["inputs"]["item"] with container paths for outputs with output_type "local"."""
+    """Extend section["inputs"]["item"] with container paths for outputs with
+    output_type "local"."""
     paths = _collect_workflow_output_paths_by_type(metadata, wf, "local", schemas)
     section["inputs"]["item"].extend(paths)
 
@@ -249,7 +253,8 @@ def _create_facts_total_compose_service(
     known_module_names: List,
     schema: ModuleSchema,
 ) -> Dict[str, Any]:
-    """Build the compose service dict for a facts-total workflow from its synthetic section."""
+    """Build the compose service dict for a facts-total workflow from its synthetic
+    section."""
     metadata_copy = dict(metadata)
     metadata_copy[service_name] = section
 
@@ -267,7 +272,8 @@ def _create_facts_total_compose_service(
 
 
 def check_metadata_has_required_fields(metadata_obj, required_fields):
-    """This function accepts a list of required fields and a metadata object and subsets the metadata to required fields."""
+    """This function accepts a list of required fields and a metadata object and subsets
+    the metadata to required fields."""
     # Subset
     required_fields_meta = {
         k: v for k, v in metadata_obj.items() if k in required_fields
@@ -284,8 +290,7 @@ def check_metadata_has_required_fields(metadata_obj, required_fields):
 
 
 def extract_experiment_dir_from_metadata_path(metadata_path):
-    """This function extracts the experiment directory from the metadata path obj"""
-
+    """This function extracts the experiment directory from the metadata path obj."""
     experiment_dir = metadata_path.parent
     if experiment_dir == metadata_path:
         raise ValueError(
@@ -302,7 +307,6 @@ def _make_experiment_plan(
 
     Ths fn is only data transformation, there should be no filesystem I/O.
     """
-
     # This should raise an error if user has not completed necessary fields in experiment-config.yaml
     check_metadata_has_required_fields(
         metadata_obj=metadata, required_fields=_REQUIRED_FIELDS
@@ -633,8 +637,7 @@ def _build_compose_services(
 def generate_compose(
     metadata: Dict[str, Any], experiment_dir: Path, definition
 ) -> Dict[str, Any]:
-    """
-    Generate Docker Compose dict from already-loaded experiment metadata.
+    """Generate Docker Compose dict from already-loaded experiment metadata.
 
     Args:
         metadata: Loaded experiment-config.yaml as a dict

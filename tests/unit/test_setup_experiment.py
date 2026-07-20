@@ -7,6 +7,7 @@ from facts_experiment_builder.application.setup_experiment import (
 )
 from facts_experiment_builder.application.experiment_helpers import (
     hydrate_experiment,
+    collect_metadata_param_keys,
 )
 from facts_experiment_builder.infra.write_experiment_metadata import format_module_value
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
@@ -14,7 +15,6 @@ from facts_experiment_builder.core.experiment.experiment_skeleton import (
 )
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
-    collect_metadata_param_keys,
 )
 from facts_experiment_builder.infra.experiment_storage import (
     FileSystemExperimentStorage,
