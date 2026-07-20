@@ -38,8 +38,15 @@ dev = [
     "pytest>=8.0.0",
     "ruff>=0.14.5",
     "diff-cover>=10.3.0",
+    "docformatter>=1.7.8",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+
+[tool.coverage.report]
+show_missing = true
