@@ -1,7 +1,7 @@
 """In-memory representation of a module schema (analogous to *_module.yaml).
 
-Does not contain everything needed to run a module; used to build
-experiment-metadata content and, with experiment data, to build ModuleServiceSpec.
+Does not contain everything needed to run a module; used to build experiment-metadata
+content and, with experiment data, to build ModuleServiceSpec.
 """
 
 from dataclasses import dataclass, field
@@ -48,7 +48,6 @@ class ModuleSchema:
 
     def get_file_outputs(self) -> List[Dict[str, Any]]:
         """File outputs (have filename + output_type)."""
-
         outputs = self.arguments.get("outputs", {})
         if not isinstance(outputs, dict):
             raise ValueError(
@@ -95,9 +94,12 @@ class ModuleSchema:
         return None
 
     def get_output_volume_input_keys(self) -> set:
-        """Set of input names/source-keys that mount from the output volume (that is not module-specific, is for mult. modules)
+        """Set of input names/source-keys that mount from the output volume (that is not
+        module-specific, is for mult.
 
-        This function returns both the YAML arg name ('climate-data-file') and the source-derived metadata key ('climate_data_file') so the adapter can match either form.
+        modules)         This function returns both the YAML arg name ('climate-data-
+        file') and the source-derived metadata key ('climate_data_file') so the adapter
+        can match either form.
         """
         output_vol = self._output_volume_key()
         if not output_vol:
@@ -115,7 +117,8 @@ class ModuleSchema:
         return keys
 
     def get_climate_output_type(self) -> Optional[str]:
-        """Return the climate output name this module needs, derived from its climate input spec.
+        """Return the climate output name this module needs, derived from its climate
+        input spec.
 
         Reads climate_step_output from the input entry named 'climate-data-file' or
         'input-data-file'. Returns None if this module has no such input.
@@ -160,39 +163,6 @@ class ModuleSchema:
             output_types=data.get("output_types"),
             extra=extra,
         )
-
-
-def collect_metadata_param_keys(
-    schemas: List["ModuleSchema"], section: str
-) -> Dict[str, str]:
-    """
-    This function loops through the ModuleSchema (rep. of module yaml) for each module in an ExperimentSkeleton object.
-    It is looking for a specific section ('top-level','options','inputs',outputs', etc.)
-    It pulls out the keyname (ie. 'pipeline-id' for 'metadata.pipeline-id') as well as help text, if it is included in that object's field in the module yaml file.
-
-    Return {key_name: help_text} for args in `section` sourced from metadata.*.
-
-    Iterates over all schemas and collects argument specs in the given section
-    (e.g. "top_level" or "fingerprint_params") whose source starts with "metadata.".
-    The key name is the part after "metadata." (e.g. "pipeline-id", "location-file").
-    Deduplicates across schemas — first help text seen wins.
-
-    Args:
-        schemas: Loaded module schemas for the experiment.
-        section: Argument section name in the module YAML ("top_level", "fingerprint_params", etc.)
-
-    Returns:
-        Dict mapping key_name to help_text.
-    """
-    result: Dict[str, str] = {}
-    for schema in schemas:
-        for arg_spec in schema.arguments.get(section, []):
-            source = arg_spec.get("source", "")
-            if source.startswith("metadata."):
-                key_name = source[len("metadata.") :]
-                if key_name not in result:
-                    result[key_name] = arg_spec.get("help", f"Enter {key_name}")
-    return result
 
 
 @dataclass(frozen=True)

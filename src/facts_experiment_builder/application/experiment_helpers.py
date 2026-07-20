@@ -10,7 +10,6 @@ from facts_experiment_builder.core.components.metadata_bundle import (
 )
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
-    collect_metadata_param_keys,
 )
 from facts_experiment_builder.core.steps.climate_step import (
     ClimateStep,
@@ -22,7 +21,7 @@ from facts_experiment_builder.core.steps.extreme_sealevel_step import (
 )
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, List
 
 
 def hydrate_experiment(
@@ -30,9 +29,35 @@ def hydrate_experiment(
     schemas: Dict[str, ModuleSchema],
     top_level_context: Optional[Dict[str, Any]] = None,
 ) -> tuple:
-    """From experiment skeleton and dict of modules schemas, return the four hydrated steps of the experiment.
+    """Hydrate experiment steps from an ExperimentSkeleton object and modules schemas.
 
-    Errors from unknown module names propagate immediately — no silent failures.
+    Resolves the climate, sealevel, totaling, extreme sealevel steps by looking up each module named in `skeleton` within `schemas, then delegating to the corresponding step's `.from_module_schemas(s)` constructor. Steps whose module is unset (or, `"NONE"`) are hydrated from alternate data supplied by user.
+
+    Parameters
+    ----------
+    skeleton: ExperimentSkeleton
+        The experiment skeleton describing which modules to user for each step (climate, sealevel, totaling, extreme sealevel) along with any alternate/supplied data and region overrides.
+    schemas: Dict of {str: ModuleSchema}
+        Mapping fro module name to its loaded schema, used to look up the schema for each module named in `skeleton`.
+    top_level_context: dict of {str: Any}, optional
+        Additional context passed through to sealevel step hydration.
+        Default is None
+
+    Returns:
+    --------
+    climate_step: ClimateStep
+        Hydrated from `skeleton.climate_module`'s schema if present and not `"NONE"`; otherwise, built from `skeleton.climate_data` or marked as not needed when totaled sealevel data was supplied directly.
+    sealevel_step: SealevelStep
+        Hydrated from the schemas of `skeleton.sealevel_module` if present, using `climate_files` resolved during climate step hydration; otherwise built from `skeleton.supplied_totaled_sealevel_step_data`. For module regions, uses values specified by user attached to skeleton object.
+    totaling_step: TotalingStep
+        Hydrated from `skeleton.totaling_module`'s schema if present; otherwise a default-constructed step.
+    extreme_sealevel_step: `ExtremeSealevelStep
+        Hydrated from `skeleton.extremesealevel_module`'s schema if present; otherwise a default-constructed step.
+
+    Raises
+    ------
+    KeyError
+        If a module name referenced by `skeleton` is not present in `schemas`. Propagates immediately instead of silent failures.
     """
     climate_files: Optional[Dict[str, str]] = None
     sealevel_schemas = None
@@ -92,6 +117,39 @@ def hydrate_experiment(
     return climate_step, sealevel_step, totaling_step, extreme_sealevel_step
 
 
+def collect_metadata_param_keys(
+    schemas: List["ModuleSchema"], section: str
+) -> Dict[str, str]:
+    """This function loops through the ModuleSchema (rep.
+
+    of module yaml) for each module in an ExperimentSkeleton object. It is looking for a specific section ('top-level','options','inputs',outputs', etc.)
+    It pulls out the keyname (ie. 'pipeline-id' for 'metadata.pipeline-id') as well as help text, if it is included in that object's field in the module yaml file.
+
+    Return {key_name: help_text} for args in `section` sourced from metadata.*.
+
+    Iterates over all schemas and collects argument specs in the given section
+    (e.g. "top_level" or "fingerprint_params") whose source starts with "metadata.".
+    The key name is the part after "metadata." (e.g. "pipeline-id", "location-file").
+    Deduplicates across schemas — first help text seen wins.
+
+    Args:
+        schemas: Loaded module schemas for the experiment.
+        section: Argument section name in the module YAML ("top_level", "fingerprint_params", etc.)
+
+    Returns:
+        Dict mapping key_name to help_text.
+    """
+    result: Dict[str, str] = {}
+    for schema in schemas:
+        for arg_spec in schema.arguments.get(section, []):
+            source = arg_spec.get("source", "")
+            if source.startswith("metadata."):
+                key_name = source[len("metadata.") :]
+                if key_name not in result:
+                    result[key_name] = arg_spec.get("help", f"Enter {key_name}")
+    return result
+
+
 def experiment_skeleton_to_facts_experiment(
     experiment_name: str,
     skeleton: ExperimentSkeleton,
@@ -102,10 +160,42 @@ def experiment_skeleton_to_facts_experiment(
     shared_input_data: Optional[str] = None,
     projection_scale: str = "local",
 ) -> FactsExperiment:
-    """
-    From skeleton, top level params and module schemas, assemble full facts experiment
+    """Assemble a FactsExperiment object from an ExperimentSkeleton, top-level params
+    and module schemas. Hydrates experiment steps via `hydrate_experiment()`, extracts
+    top-level and fingerprint parameter metadata from module schemas, resolves
+    input/output data paths and organizes everything into a `FactsExperiment` object.
 
-    Unknown module names raise FileNotFoundError to avoid no silent failures.
+    Parameters
+    ----------
+    experiment_name: str
+        Name of experiment, used to derive output data path
+    skeleton: ExperimentSkeleton
+        The experiment skeleton describing which modules or supplied data to use for each step along with workflows and module regions specified by user.
+    top_level_params: TopLevelParams
+        Values for top-level parameters specified by user via CLI (includes pipeline_id, scenario, baseyear, pyear_start, pyear_end, pyear_step, nsamps, location-file). Used to populate `cli_values` and the top-level and fingerprint parameter bundles used in experiment-config.ymal.
+    schemas: dict of {str: ModuleSchemas}
+        Mapping from module name to its loaded schema. Used to hydrate experiment steps and to collect top-level/fingerprint param keys across all modules.
+    module_specific_input_data: str, optional
+        Path to module-specific input data, Default is None
+    experiment_specific_input_data: str, optional
+        Path to experiment-specific input data (e.g. alternate data to use instead of a module at the climate step).
+        Default is None
+    shared_input_data: str, Optional
+        Path to shared input data, Default is None.
+    projection_scale: str, optional
+        Projection scale for experiment (local or global). Default is `"local"`.
+        NOTE: This does not change anything about how individual modules are executed, just what totaling services are created.
+        TODO: When we change the fingerprinting step, this will be impacted/part of those changes.
+
+    Returns
+    -------
+    FactsExperiment
+        The fully assembled experiment, including hydrated steps, top-level parameter bundles, fingerprint parameter bundles, resolved paths, workflows and projection scales.
+
+    Raises
+    ------
+    FileNotFoundError
+        If `skeleton` references a module name not present in `schemas`.
     """
     list_of_schemas = list(schemas.values())
 
