@@ -122,7 +122,6 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         location_file="location.lst",
         module_specific_input_data="path/to/data",
         shared_input_data="path/to/shared/data",
-        experiment_specific_input_data=None,
         projection_scale="local",
         definition=definitions,
     )

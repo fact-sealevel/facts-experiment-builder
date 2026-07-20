@@ -5,6 +5,7 @@ from facts_experiment_builder.cli.setup_experiment_cli import (
     main,
 )
 import re
+from pathlib import Path
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m]")
 
@@ -114,7 +115,7 @@ def test_setup_experiment_fails_with_invalid_module_name(
     )
 
 
-def test_setup_new_experiment_fails_without_climate_step_info(fake_registry, tmp_path):
+def test_setup_experiment_fails_without_climate_step_info(fake_registry, tmp_path):
     registry = fake_registry({"fake-module": {"module_name": "fake-module"}})
     result = runner.invoke(
         main,
@@ -137,3 +138,23 @@ def test_setup_new_experiment_fails_without_climate_step_info(fake_registry, tmp
         f" --- output ---\n{result.output}\n"
         f" --- output ---\n{result.exception}\n"
     )
+
+
+def test_setup_experiment_fails_with_invalid_registry_path(tmp_path):
+    invalid_reg_path = Path(tmp_path, "module-registry")
+    result = runner.invoke(
+        main,
+        [
+            "--experiment-name",
+            "test_exp",
+            "--root",
+            str(tmp_path),
+            "--module-registry",
+            str(invalid_reg_path),
+            "--climate-step",
+            "fair-temperature",
+        ],
+    )
+    print(f" --- output ---\n{result.output}\n --- output ---\n{result.exception}\n")
+    assert result.exit_code != 0
+    assert f"'{invalid_reg_path}' does not exist." in str(result.output)

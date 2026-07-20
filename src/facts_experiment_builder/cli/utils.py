@@ -12,11 +12,12 @@ from facts_experiment_builder.infra.module_registry import (
 def make_registry(registry_path: Path) -> FileSystemModuleRegistry:
     try:
         return FileSystemModuleRegistry(registry_path=registry_path.absolute())
-    except ModuleRegistryNotFound:
+    except ModuleRegistryNotFound as e:
         raise click.UsageError(
             f"Module registry not found at '{registry_path}"
             "Check where you are running this command from "
             " Also check that you have run `feb init`"
+            f"Error: {e}"
         )
 
 

@@ -19,7 +19,8 @@ class FileSystemModuleRegistry:
             raise ValueError("registry path must be absolute")
         if not registry_path.is_dir():
             raise ModuleRegistryNotFound(registry_path)
-
+        if not registry_path.exists():
+            raise ModuleNotFoundError(registry_path)
         self._registry_path = registry_path
         self._schemas: dict[str, ModuleSchema] = {}
         self._names: frozenset | None = None
