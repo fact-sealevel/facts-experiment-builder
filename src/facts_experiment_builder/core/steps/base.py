@@ -8,7 +8,9 @@ from facts_experiment_builder.core.module.module_experiment_spec import (
 
 class ExperimentStep(Protocol):
     """Protocol defining the interfact for experiment step objects.
-    Any class that implements is_configured(), module_specs() and to_dict() satisfies the requirements of this protocol.
+
+    Any class that implements is_configured(), module_specs() and to_dict() satisfies
+    the requirements of this protocol.
     """
 
     def is_configured(self) -> bool: ...

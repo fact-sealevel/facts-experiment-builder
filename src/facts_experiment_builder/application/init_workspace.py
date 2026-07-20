@@ -42,7 +42,10 @@ class WorkspaceInitResult:
 
 
 def ensure_experiments_dir(workspace_dir: Path) -> InitStepResult:
-    """Create experiments/ if absent. Returns CREATED or ALREADY_EXISTS."""
+    """Create experiments/ if absent.
+
+    Returns CREATED or ALREADY_EXISTS.
+    """
     experiments = workspace_dir / "experiments"
     if experiments.exists():
         return InitStepResult(StepStatus.ALREADY_EXISTS, "Already exists.", experiments)
@@ -56,8 +59,8 @@ def ensure_registry_cloned(
 ) -> InitStepResult:
     """Clone facts-module-registry if absent.
 
-    Returns CREATED, ALREADY_EXISTS, or FAILED. Never raises — failure is
-    encoded in the return value so the CLI layer decides how to handle it.
+    Returns CREATED, ALREADY_EXISTS, or FAILED. Never raises — failure is encoded in the
+    return value so the CLI layer decides how to handle it.
     """
     registry_dir = workspace_dir / REGISTRY_DIR_NAME
     if registry_dir.exists():
@@ -88,8 +91,8 @@ def ensure_registry_cloned(
 def ensure_gitignore(workspace_dir: Path) -> InitStepResult:
     """Add facts-module-registry/ to .gitignore, creating the file if needed.
 
-    Prevents the cloned registry from being accidentally staged if the user
-    later runs `git init` in their workspace.
+    Prevents the cloned registry from being accidentally staged if the user later runs
+    `git init` in their workspace.
     """
     gitignore_path = workspace_dir / ".gitignore"
     entry = f"{REGISTRY_DIR_NAME}/"
@@ -112,7 +115,10 @@ def ensure_workspace_marker(
     workspace_dir: Path,
     registry_url: str = REGISTRY_URL,
 ) -> InitStepResult:
-    """Write .facts-workspace YAML marker if absent. Never overwrites."""
+    """Write .facts-workspace YAML marker if absent.
+
+    Never overwrites.
+    """
     marker_path = workspace_dir / WORKSPACE_MARKER_FILENAME
     if marker_path.exists():
         return InitStepResult(StepStatus.ALREADY_EXISTS, "Already exists.", marker_path)
@@ -130,9 +136,9 @@ def init_workspace(
 ) -> WorkspaceInitResult:
     """Orchestrate all three init steps in dependency order.
 
-    The marker is written last — it only exists when both prerequisites
-    succeeded (or were already present). If the registry clone fails the
-    marker step is skipped and returns FAILED.
+    The marker is written last — it only exists when both prerequisites succeeded (or
+    were already present). If the registry clone fails the marker step is skipped and
+    returns FAILED.
     """
     experiments_result = ensure_experiments_dir(workspace_dir)
     registry_result = ensure_registry_cloned(workspace_dir, registry_url)

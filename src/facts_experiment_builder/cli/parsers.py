@@ -1,4 +1,5 @@
-"""CLI input parsers: translate raw option strings into values for the application layer."""
+"""CLI input parsers: translate raw option strings into values for the application
+layer."""
 
 from typing import List, Optional
 

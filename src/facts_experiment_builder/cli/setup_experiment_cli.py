@@ -1,7 +1,6 @@
 """CLI for setting up new experiments using Jinja2 templating.
 
 This script uses Jinja2-based YAML generation from setup_experiment.py.
-
 """
 
 from pathlib import Path
@@ -195,13 +194,12 @@ def main(
     debug_target,
 ):
     """Set up a new experiment with setup-experiment CLI command.
+
     This function includes a number of steps: \n
         - Creates a sub-directory in experiments/ for this experiment. Raises error if one already exists \n
         - Check that all required arguments were received \n
         - If facts-total passed, collects workflows with user prompts
-
     """
-
     if debug_target:
         configure_logging(debug_target)
     elif debug:

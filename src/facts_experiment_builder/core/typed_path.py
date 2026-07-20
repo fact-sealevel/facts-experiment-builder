@@ -1,4 +1,8 @@
-"""Typed path values: host or container. Used so the command builder can apply a single rule (container pass-through, host rewrite)."""
+"""Typed path values: host or container.
+
+Used so the command builder can apply a single rule (container pass-through, host
+rewrite).
+"""
 
 from dataclasses import dataclass
 from typing import List, Literal, Union
@@ -33,12 +37,14 @@ class TypedPath:
 
 
 def HostPath(path: str) -> TypedPath:
-    """Path on the host filesystem; builder will rewrite to container path via module YAML mount spec."""
+    """Path on the host filesystem; builder will rewrite to container path via module
+    YAML mount spec."""
     return TypedPath(path=path, kind="host")
 
 
 def HostDirPath(path: str) -> TypedPath:
-    """Host path to a directory; builder rewrites to container path and appends a trailing slash."""
+    """Host path to a directory; builder rewrites to container path and appends a
+    trailing slash."""
     return TypedPath(path=path, kind="host_dir")
 
 
@@ -50,8 +56,8 @@ def ContainerPath(path: str) -> TypedPath:
 def ExperimentSpecificInputPath(path: str) -> TypedPath:
     """Host path to a user-supplied experiment data file.
 
-    Builder routes to /mnt/experiment_specific_in/<filename> and adds
-    a volume mount for the file's parent directory.
+    Builder routes to /mnt/experiment_specific_in/<filename> and adds a volume mount for
+    the file's parent directory.
     """
     return TypedPath(path=path, kind="experiment_specific_in")
 

@@ -22,9 +22,8 @@ from facts_experiment_builder.application.init_workspace import (
 def init(registry_url: str) -> None:
     """Initialize a FACTS workspace in the current directory.
 
-    Creates experiments/, clones the module registry, and writes a
-    .facts-workspace marker file. Safe to re-run on an already-initialized
-    workspace.
+    Creates experiments/, clones the module registry, and writes a .facts-workspace
+    marker file. Safe to re-run on an already-initialized workspace.
     """
     workspace_dir = Path.cwd()
 

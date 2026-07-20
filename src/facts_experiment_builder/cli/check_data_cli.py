@@ -18,7 +18,8 @@ def check_provided_paths(
     module_specific_input_data: Path | None,
     shared_input_data: Path | None,
 ) -> tuple[Path, Path]:
-    """Call resolve_input_paths on paths provided by user and raise click usage error if expected directories not found at provided paths"""
+    """Call resolve_input_paths on paths provided by user and raise click usage error if
+    expected directories not found at provided paths."""
     try:
         return resolve_input_paths(
             data_dir, module_specific_input_data, shared_input_data
@@ -65,10 +66,10 @@ def main(
 ) -> None:
     """Check a FACTS data directory against expected module inputs.
 
-    Scans module_specific_input_data/ for downloaded modules and verifies
-    that all expected input files are present based on the module registry.
-    Modules are detected automatically from subdirectory names — only modules
-    you have downloaded data for will be checked.
+    Scans module_specific_input_data/ for downloaded modules and verifies that all
+    expected input files are present based on the module registry. Modules are detected
+    automatically from subdirectory names — only modules you have downloaded data for
+    will be checked.
     """
     # Make registry
     registry_path = module_registry.absolute()

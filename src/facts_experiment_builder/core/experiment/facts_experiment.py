@@ -66,7 +66,8 @@ _STRUCTURAL_KEYS: Set[str] = (
 
 
 def _is_top_level_param_value(value: Any) -> bool:
-    """True if value looks like a top-level param (scalar, None, or clue/value bundle)."""
+    """True if value looks like a top-level param (scalar, None, or clue/value
+    bundle)."""
     if value is None or isinstance(value, (str, int, float, bool)):
         return True
     if isinstance(value, dict):
@@ -75,10 +76,10 @@ def _is_top_level_param_value(value: Any) -> bool:
 
 
 class FactsExperiment:
-    """
-    In-memory representation of an experiment (analoguous to experiment-config.yaml).
-    Used to generate run-environment artifacts (e.g. experiment-compose.yaml).
-    Loaded from or written to experiment-config.yaml.
+    """In-memory representation of an experiment (analoguous to experiment-config.yaml).
+
+    Used to generate run-environment artifacts (e.g. experiment-compose.yaml). Loaded
+    from or written to experiment-config.yaml.
     """
 
     def __init__(
@@ -117,9 +118,8 @@ class FactsExperiment:
 
     @property
     def top_level_params(self) -> Dict[str, Any]:
-        """Top-level parameters shared across modules
-        (pipeline-id, scenario, baseyear, pyear_start, pyear_end, pyear_step, nsamps, seed).
-        """
+        """Top-level parameters shared across modules (pipeline-id, scenario, baseyear,
+        pyear_start, pyear_end, pyear_step, nsamps, seed)."""
         return self._top_level_params
 
     @property

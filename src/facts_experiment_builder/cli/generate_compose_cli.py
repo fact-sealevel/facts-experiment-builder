@@ -49,8 +49,8 @@ class _ClickEchoHandler(logging.Handler):
 def _configure_feb_logging() -> None:
     """Wire the ClickEchoHandler onto the facts_experiment_builder namespace logger.
 
-    Called at CLI invocation time (not import time) so that tests importing from
-    sibling modules don't accidentally install the handler and break caplog capture.
+    Called at CLI invocation time (not import time) so that tests importing from sibling
+    modules don't accidentally install the handler and break caplog capture.
     """
     feb_logger = logging.getLogger("facts_experiment_builder")
     if not any(isinstance(h, _ClickEchoHandler) for h in feb_logger.handlers):
@@ -101,7 +101,6 @@ def main(
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
-
     _configure_feb_logging()
     module_registry_path = module_registry.absolute()
     registry = FileSystemModuleRegistry(registry_path=module_registry_path)

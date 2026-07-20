@@ -44,7 +44,8 @@ def prepare_experiment_setup(
     extremesealevel_step,
     storage: FileSystemExperimentStorage,
 ) -> PrepareExperimentOutput:
-    """Handles initial experiment setup orchestration logic, through to creating skeleton and until workflows owuld be created (need user prompt for this.)"""
+    """Handles initial experiment setup orchestration logic, through to creating
+    skeleton and until workflows owuld be created (need user prompt for this.)"""
     # first, check that experiment name was passed with parent dir
 
     # Create an experiment name object

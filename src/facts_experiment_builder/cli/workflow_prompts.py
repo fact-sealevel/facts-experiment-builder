@@ -38,8 +38,9 @@ def _collect_workflows(
 
 
 def _collect_single_workflow(complete_modules_list: list[str]) -> tuple[str, str]:
-    """
-    Prompts user to enter a name for a workflow followed by the modules to include in the workflow.
+    """Prompts user to enter a name for a workflow followed by the modules to include in
+    the workflow.
+
     Once workflow is received from user, parses response and validates against list of modules included in experiment to ensure no invalid modules.
     Returns: tuple(workflow_name, str of modules in workflow separated by ',' )
     """
@@ -57,10 +58,11 @@ def _collect_single_workflow(complete_modules_list: list[str]) -> tuple[str, str
 
 
 def _create_all_modules_workflow(complete_modules_list: list[str]) -> tuple[str, str]:
-    """Creates an entry in workflows dict for all sealevel modules included in the experiment.
+    """Creates an entry in workflows dict for all sealevel modules included in the
+    experiment.
+
     Similar to _collect_single_workflow but with a fixed workflow name. Used for default "--total-all-modules=True".
     Returns: ("all-modules": [modules]]).
-
     """
     workflow_name = "all-modules"
     module_list = complete_modules_list
@@ -72,7 +74,8 @@ def _validate_modules_list_workflow(
     workflow_modules: list[str],
     experiment_modules: list[str],
 ) -> None:
-    """Validates the modules listed for a workflow against the modules listed for the experiment."""
+    """Validates the modules listed for a workflow against the modules listed for the
+    experiment."""
     try:
         validate_module_names(workflow_modules, experiment_modules)
     except ValueError as e:

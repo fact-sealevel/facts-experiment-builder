@@ -8,7 +8,8 @@ ModuleOutputType = Literal["local", "global", "total", "esl"]
 
 @dataclass(frozen=True)
 class ModuleInputPaths:
-    """Input paths for a module: module-specific and general dirs, plus resolved input_dir."""
+    """Input paths for a module: module-specific and general dirs, plus resolved
+    input_dir."""
 
     input_dir: str
     module_specific_input_dir: str
@@ -50,7 +51,10 @@ def build_module_input_paths(
     shared_input_dir: str = "",
     module_name: str = "",
 ) -> ModuleInputPaths:
-    """Build and validate ModuleInputPaths. Raises ValueError if invalid."""
+    """Build and validate ModuleInputPaths.
+
+    Raises ValueError if invalid.
+    """
     if module_specific_input_dir is None:
         raise ValueError(
             f"module_specific_input_dir is None when building paths for {module_name}."
@@ -82,7 +86,10 @@ def build_module_input_paths(
 def build_module_output_paths(
     output_dir: str, output_type: ModuleOutputType, module_name: str = ""
 ) -> ModuleOutputPaths:
-    """Build and validate ModuleOutputPaths. Raises ValueError if invalid."""
+    """Build and validate ModuleOutputPaths.
+
+    Raises ValueError if invalid.
+    """
     if output_dir is None:
         raise ValueError(
             f"output_dir is None when building paths for {module_name}. "

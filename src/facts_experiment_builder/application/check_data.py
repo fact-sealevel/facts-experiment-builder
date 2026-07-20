@@ -1,8 +1,8 @@
 """Application logic for checking a FACTS data directory against the module registry.
 
-Inspects module_specific_input_data/ and shared_input_data/ directories and
-verifies that expected input files declared in each module's YAML are present.
-Has no Click or console imports — all output decisions belong to the CLI layer.
+Inspects module_specific_input_data/ and shared_input_data/ directories and verifies
+that expected input files declared in each module's YAML are present. Has no Click or
+console imports — all output decisions belong to the CLI layer.
 """
 
 from dataclasses import dataclass, field
@@ -22,7 +22,10 @@ from facts_experiment_builder.core.typed_path import (
 @dataclass
 class InputFileCheck:
     """Object representing result of checking a single input file.
-    CheckModuleResult holds a list of these applied to each input file associated with that module."""
+
+    CheckModuleResult holds a list of these applied to each input file associated with
+    that module.
+    """
 
     field_name: str
     expected_path: Path
@@ -38,12 +41,13 @@ class CheckModuleResult:
 
     @property
     def n_present(self) -> int:
-        """Returns number of files checked in a given module"""
+        """Returns number of files checked in a given module."""
         return sum(1 for c in self.checks if not c.skipped and c.exists)
 
     @property
     def n_missing(self) -> int:
-        """Returns number of missing files found in a given module based on comparison with that module in module registry"""
+        """Returns number of missing files found in a given module based on comparison
+        with that module in module registry."""
         return sum(1 for c in self.checks if not c.skipped and not c.exists)
 
     @property
@@ -54,9 +58,11 @@ class CheckModuleResult:
 @dataclass
 class CheckDataResult:
     """Object returned by check_module_data().
-    Holds results for checking of individual modules (List[CheckModuleResult]),
-    results for check of shared input data dir (List[InputFileCheck]), and
-    any unrecognized directories found at the specified location (List[str])."""
+
+    Holds results for checking of individual modules (List[CheckModuleResult]), results
+    for check of shared input data dir (List[InputFileCheck]), and any unrecognized
+    directories found at the specified location (List[str]).
+    """
 
     module_results: List[CheckModuleResult] = field(default_factory=list)
     shared_checks: List[InputFileCheck] = field(default_factory=list)
@@ -65,9 +71,9 @@ class CheckDataResult:
 
 @dataclass(frozen=True)
 class PlannedCheck:
-    """small data class used in _check_module to separate out deciding
-    what type of check needs to occur based on mount type, input type etc.
-    from the actual checking that occurs (exists())
+    """Small data class used in _check_module to separate out deciding what type of
+    check needs to occur based on mount type, input type etc. from the actual checking
+    that occurs (exists())
 
     Attrs:
     - field_name: str
@@ -138,7 +144,8 @@ def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
     """Map a data directory name to one or more module names.
 
     Handles the multi-command module case where a shared directory (e.g. 'ipccar5')
-    provides input data for multiple modules (e.g. 'ipccar5-glaciers', 'ipccar5-icesheets').
+    provides input data for multiple modules (e.g. 'ipccar5-glaciers',
+    'ipccar5-icesheets').
 
     Returns a sorted list of all modules
     """
@@ -177,7 +184,6 @@ def plan_fp_checks(entry: Dict[str, dict]) -> List[PlannedCheck]:
 
 def plan_input_checks(inp: Dict[str, dict]) -> List[PlannedCheck]:
     """Fn to decide what to check for a given input entry."""
-
     field_name = inp.get("name", "")
     if inp.get("mount", {}).get("volume", "") == "output":
         return [
@@ -358,11 +364,10 @@ def check_data(
 ) -> CheckDataResult:
     """Check data directories against expected module inputs from the registry.
 
-    Scans module_specific_input_dir for subdirectories, matches each to known
-    module names, verifies module-specific input files, and checks shared inputs
-    required across all discovered modules.
+    Scans module_specific_input_dir for subdirectories, matches each to known module
+    names, verifies module-specific input files, and checks shared inputs required
+    across all discovered modules.
     """
-
     # return empty result if module spec dir isn't valid path
     # (should already be checked by check_provided_paths in cli)
     if not module_specific_input_dir.exists():

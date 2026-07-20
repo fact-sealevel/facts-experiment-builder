@@ -14,10 +14,11 @@ logger = logging.getLogger(__name__)
 
 
 def _map_get(mapping: Dict[str, Any], val: Any) -> Any:
-    """Look up val in mapping, tolerating int vs. string key mismatches.
+    """Look up val in mapping, tolerating int vs.
 
-    YAML parses bare integers as int, but a value coming from the CLI may be a
-    string.  Try val as-is, then str(val), then int(val) for numeric strings.
+    string key mismatches.     YAML parses bare integers as int, but a value coming from
+    the CLI may be a     string.  Try val as-is, then str(val), then int(val) for
+    numeric strings.
     """
     result = mapping.get(val)
     if result is None:
@@ -33,12 +34,12 @@ def _map_get(mapping: Dict[str, Any], val: Any) -> Any:
 def _multi_key_miss(arg_spec: dict, key: str, val: Any, parent: Any) -> Optional[str]:
     """Called when a multi-key filename_map lookup fails to find an entry.
 
-    ``parent`` is the map node that was searched (before the failed step), so
-    its keys are the valid options to show the user.
+    ``parent`` is the map node that was searched (before the failed step), so its keys
+    are the valid options to show the user.
 
-    If no plain ``filename`` fallback exists on the arg spec, raises ValueError
-    with the invalid key/value and the valid choices.
-    If a fallback exists, returns it silently (backward-compatible).
+    If no plain ``filename`` fallback exists on the arg spec, raises ValueError with the
+    invalid key/value and the valid choices. If a fallback exists, returns it silently
+    (backward-compatible).
     """
     fallback = arg_spec.get("filename")
     if fallback is None:
@@ -125,8 +126,8 @@ def _resolve_filename(arg_spec: dict, options_context: Dict[str, Any]) -> Option
 def _options_defaults_from_schema(options_specs: list[dict]) -> Dict[str, Any]:
     """Extract {option-name: default_value} from the schema's options specs.
 
-    Both kebab-case and snake_case keys are included so filename_map lookups
-    work regardless of which form appears in the map.
+    Both kebab-case and snake_case keys are included so filename_map lookups work
+    regardless of which form appears in the map.
     """
     context: Dict[str, Any] = {}
     for opt_spec in options_specs:
@@ -142,7 +143,8 @@ def _build_options_context(
     prefilled_options: Dict[str, Any],
     top_level_context: Dict[str, Any],
 ) -> Dict[str, Any]:
-    """Merge options context with priority: top_level < schema defaults < prefilled_options.
+    """Merge options context with priority: top_level < schema defaults <
+    prefilled_options.
 
     Both kebab-case and snake_case forms of prefilled_options keys are included.
     """
@@ -240,8 +242,8 @@ def _build_section_from_fields(
 
 @dataclass
 class ModuleExperimentSpec:
-    """
-    In-memory representation of one module's section in experiment-config.yaml.
+    """In-memory representation of one module's section in experiment-config.yaml.
+
     Fields mirror the dict shape used in the YAML:
         inputs:  {field_name: clue/value-bundle-or-plain-value}
         options: {field_name: clue/value-bundle-or-plain-value}
@@ -346,7 +348,7 @@ class ModuleExperimentSpec:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize back to raw dict used in experiment-config.yaml"""
+        """Serialize back to raw dict used in experiment-config.yaml."""
         d: Dict[str, Any] = {
             "inputs": dict(self.inputs),
             "options": dict(self.options),

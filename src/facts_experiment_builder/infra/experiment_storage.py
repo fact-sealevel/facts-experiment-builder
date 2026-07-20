@@ -66,5 +66,6 @@ class FileSystemExperimentStorage:
         return target
 
     def experiment_dir(self, exp: ExperimentName):
-        """Returns the path to an experiment directory based on name and storage location."""
+        """Returns the path to an experiment directory based on name and storage
+        location."""
         return self._target_for(exp)

@@ -1,7 +1,7 @@
 """Argument value transforms used when building module commands.
 
-Transforms convert values from experiment metadata into the form expected by
-individual modules (e.g. scenario names for ssp-landwaterstorage).
+Transforms convert values from experiment metadata into the form expected by individual
+modules (e.g. scenario names for ssp-landwaterstorage).
 """
 
 from typing import Any

@@ -40,9 +40,9 @@ def parse_module_regions(module_regions_args: tuple) -> Dict[str, List[str]]:
 class ExperimentSkeleton:
     """Captures module names / data paths and workflows from CLI inputs.
 
-    Created in the CLI before workflow collection and before any module YAMLs
-    are loaded.  Pass to ``hydrate_experiment()`` in the application layer to
-    produce a fully-formed ``FactsExperiment``.
+    Created in the CLI before workflow collection and before any module YAMLs are
+    loaded.  Pass to ``hydrate_experiment()`` in the application layer to produce a
+    fully-formed ``FactsExperiment``.
     """
 
     climate_module: Optional[str] = None  # None if data provided

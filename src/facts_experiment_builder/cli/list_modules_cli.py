@@ -19,8 +19,11 @@ from facts_experiment_builder.application.list_modules import (
     help="Path to the facts-module-registry directory that is used in list-modules command.",
 )
 def main(module_registry):
-    """List all modules in the registry. These are all of the modules that can be included in experiments built with facts-experiment-builder."""
+    """List all modules in the registry.
 
+    These are all of the modules that can be included in experiments built with facts-
+    experiment-builder.
+    """
     modules_names, registry_path = list_modules(registry_path=module_registry)
 
     console.rule(characters="- - ", style="rule", title="list-modules")

@@ -1,4 +1,4 @@
-"""Metadata bundle helpers: clue/value dict creation, detection"""
+"""Metadata bundle helpers: clue/value dict creation, detection."""
 
 from typing import Dict, Any
 

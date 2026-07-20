@@ -1,7 +1,7 @@
 """Shared Rich theme and console for facts-experiment-builder CLI output.
 
-Mid-range lapaz colormap stops — visible on both light and dark terminals.
-Avoids the near-black (#190B35) and near-white (#F9F3C5) extremes.
+Mid-range lapaz colormap stops — visible on both light and dark terminals. Avoids the
+near-black (#190B35) and near-white (#F9F3C5) extremes.
 """
 
 from rich.console import Console

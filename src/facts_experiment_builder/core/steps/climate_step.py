@@ -26,7 +26,8 @@ class ClimateStep(ExperimentStep):
 
     @classmethod
     def not_needed(cls) -> "ClimateStep":
-        """Use when totaled sealevel data is provided and no climate step is required."""
+        """Use when totaled sealevel data is provided and no climate step is
+        required."""
         return cls(module_spec=None, alternate_climate_data=None, _not_needed=True)
 
     def is_configured(self) -> bool:

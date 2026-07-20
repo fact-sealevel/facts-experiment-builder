@@ -1,8 +1,8 @@
 """Pydantic models for module YAML argument spec components.
 
-These models validate the structure of dicts inside ModuleSchema.arguments —
-catching unknown fields, wrong types, and missing required keys at YAML load
-time (in ModuleSchema.from_dict).
+These models validate the structure of dicts inside ModuleSchema.arguments — catching
+unknown fields, wrong types, and missing required keys at YAML load time (in
+ModuleSchema.from_dict).
 """
 
 from typing import Any, Dict, List, Optional, Union

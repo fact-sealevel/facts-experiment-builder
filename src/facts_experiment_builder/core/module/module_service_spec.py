@@ -1,4 +1,5 @@
-"""Module in service: has all information needed to run a module and slot into an experiment implementation (e.g. one compose service)."""
+"""Module in service: has all information needed to run a module and slot into an
+experiment implementation (e.g. one compose service)."""
 
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,7 +45,8 @@ from facts_experiment_builder.core.transforms import scenario_name_ssp_landwater
 
 @dataclass(frozen=True)
 class ModuleServiceSpecComponents:
-    """Dataclass holding all inputs required for a ModuleServiceSpec (experiment-specific paths, values, image, metadata)."""
+    """Dataclass holding all inputs required for a ModuleServiceSpec (experiment-
+    specific paths, values, image, metadata)."""
 
     module_name: str
     options: Dict[str, Any]
@@ -59,7 +61,8 @@ class ModuleServiceSpecComponents:
 
 
 class ModuleServiceSpec:
-    """Has all information needed to run a module and slot into an experiment implementation (e.g. one compose service).
+    """Has all information needed to run a module and slot into an experiment
+    implementation (e.g. one compose service).
 
     Built from a ModuleSchema (module YAML) plus experiment-specific inputs.
     """
@@ -69,8 +72,7 @@ class ModuleServiceSpec:
         components: ModuleServiceSpecComponents,
         module_definition: ModuleSchema,
     ):
-        """
-        Initialize ModuleServiceSpec.
+        """Initialize ModuleServiceSpec.
 
         Args:
             components: Experiment-specific inputs (paths, values, image, metadata)
@@ -111,8 +113,7 @@ class ModuleServiceSpec:
     def _build_command_args(
         self, suppress_output_types: Optional[set] = None
     ) -> List[str]:
-        """
-        Build command arguments from YAML configuration.
+        """Build command arguments from YAML configuration.
 
         Returns:
             List of command-line arguments (with command name first if specified)
@@ -176,7 +177,8 @@ class ModuleServiceSpec:
         return command_args
 
     def _host_path_to_container(self, path_str: str, arg_spec: Dict[str, Any]) -> str:
-        """Transform a host path to container path using mount and transform from arg_spec."""
+        """Transform a host path to container path using mount and transform from
+        arg_spec."""
         mount = arg_spec.get("mount", {})
         transform = arg_spec.get("transform")
         container_path = (mount.get("container_path") or "").rstrip("/")
@@ -202,8 +204,7 @@ class ModuleServiceSpec:
         self,
         arg_spec: Dict[str, Any],
     ) -> Any:
-        """
-        Process a single argument specification.
+        """Process a single argument specification.
 
         Args:
             arg_spec: Argument specification from YAML
@@ -309,8 +310,7 @@ class ModuleServiceSpec:
         return value
 
     def _process_output_argument(self, arg_spec: Dict[str, Any]) -> Any:
-        """
-        Process a single output argument: resolve value from module_inputs.outputs.*
+        """Process a single output argument: resolve value from module_inputs.outputs.*
         and build container path as <container_path>/<module_name>/<filename>.
 
         Returns:
@@ -353,8 +353,7 @@ class ModuleServiceSpec:
         return value
 
     def _build_volumes(self) -> List[str]:
-        """
-        Build volumes list from YAML configuration.
+        """Build volumes list from YAML configuration.
 
         Returns:
             List of volume mount strings in format "host_path:container_path"
@@ -401,8 +400,7 @@ class ModuleServiceSpec:
     def _build_depends_on(
         self, temperature_service_name: Optional[str] = None
     ) -> Dict[str, Any]:
-        """
-        Build depends_on dictionary from YAML configuration.
+        """Build depends_on dictionary from YAML configuration.
 
         If uses_climate_file is True, automatically adds dependency on temperature service.
         Also processes any explicit depends_on entries from YAML (for backward compatibility).
@@ -449,11 +447,13 @@ class ModuleServiceSpec:
         return depends_on
 
     def _build_environment(self) -> Dict[str, str]:
-        """Build environment variable dict for args declared with envvar in the module YAML.
+        """Build environment variable dict for args declared with envvar in the module
+        YAML.
 
-        For each input arg that has an `envvar` key, the resolved container-path value (if any)
-        is added to the environment dict under the declared variable name.  Args with no
-        resolvable value are omitted — the container's own defaults or host environment handle them.
+        For each input arg that has an `envvar` key, the resolved container-path value
+        (if any) is added to the environment dict under the declared variable name. Args
+        with no resolvable value are omitted — the container's own defaults or host
+        environment handle them.
         """
         environment: Dict[str, str] = {}
         for arg_spec in self.module_definition.arguments.get("inputs", []):
@@ -470,8 +470,7 @@ class ModuleServiceSpec:
         temperature_service_name: Optional[str] = None,
         suppress_output_types: Optional[set] = None,
     ) -> Dict[str, Any]:
-        """
-        Generate Docker Compose service configuration.
+        """Generate Docker Compose service configuration.
 
         Args:
             temperature_service_name: Optional name of the temperature service (e.g., "fair-temperature") to map "fair" dependencies to
@@ -497,8 +496,7 @@ class ModuleServiceSpec:
         )
 
     def generate_asyncflow_config(self) -> Dict[str, Any]:
-        """
-        Generate AsyncFlow configuration.
+        """Generate AsyncFlow configuration.
 
         Returns:
             Dictionary representing AsyncFlow configuration
@@ -521,8 +519,8 @@ def build_module_service_spec(
     known_module_names: List,
     module_definition: ModuleSchema,
 ) -> ModuleServiceSpec:
-    """
-    Build a ModuleServiceSpec for the given module from experiment metadata and module YAML.
+    """Build a ModuleServiceSpec for the given module from experiment metadata and
+    module YAML.
 
     Args:
         metadata: Experiment metadata dictionary
@@ -532,7 +530,6 @@ def build_module_service_spec(
     Returns:
         ModuleServiceSpec instance
     """
-
     module_context = f"{module_name} module"
 
     module_metadata = get_required_field(metadata, module_name, module_context)

@@ -1,4 +1,5 @@
-"""Build Docker Compose service dict from resolved service pieces (image, command, volumes, depends_on)."""
+"""Build Docker Compose service dict from resolved service pieces (image, command,
+volumes, depends_on)."""
 
 from typing import Dict, Any, List, Optional
 
@@ -10,8 +11,7 @@ def build_compose_service_dict(
     depends_on: Optional[Dict[str, Any]] = None,
     environment: Optional[Dict[str, str]] = None,
 ) -> Dict[str, Any]:
-    """
-    Build a Docker Compose service dictionary from a ModuleServiceSpec.
+    """Build a Docker Compose service dictionary from a ModuleServiceSpec.
 
     Args:
         image_str: Full image string (e.g. "repo/image:tag")

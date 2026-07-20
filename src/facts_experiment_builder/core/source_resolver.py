@@ -1,11 +1,12 @@
-"""Resolve values from dot-separated source paths into a context (metadata, module_inputs)."""
+"""Resolve values from dot-separated source paths into a context (metadata,
+module_inputs)."""
 
 from typing import Dict, Any
 
 
 def resolve_value(source: str, context: Dict[str, Any]) -> Any:
-    """
-    Resolve a value from a source path like 'metadata.pipeline-id' or 'module_inputs.inputs.rcmip_fname'.
+    """Resolve a value from a source path like 'metadata.pipeline-id' or
+    'module_inputs.inputs.rcmip_fname'.
 
     The context dict typically has keys 'metadata' (experiment metadata) and 'module_inputs'
     (ModuleServiceSpecComponents or similar), so that source strings in module YAML can

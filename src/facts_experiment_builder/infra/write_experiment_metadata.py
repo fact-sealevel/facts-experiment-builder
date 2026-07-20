@@ -87,8 +87,7 @@ workflows:
 
 
 def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
-    """
-    Format a single key-value pair in a module section, handling clue/value dicts.
+    """Format a single key-value pair in a module section, handling clue/value dicts.
 
     Handles clue/value dicts created by create_metadata_bundle() where the value
     can be None if not provided from CLI. In that case, only the clue comment
@@ -188,8 +187,7 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
 
 
 def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
-    """
-    Format a module section with comment handling and clue/value support.
+    """Format a module section with comment handling and clue/value support.
 
     Uses 2-space indentation to match the actual YAML file format.
     Handles clue/value dicts by rendering clues as comments.
@@ -215,8 +213,7 @@ def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
 
 
 def format_simple_value(value: Any) -> str:
-    """
-    Format a simple YAML value (not a metadata value dict).
+    """Format a simple YAML value (not a metadata value dict).
 
     Args:
         value: Simple value to format
@@ -242,8 +239,7 @@ def format_simple_value(value: Any) -> str:
 
 
 def format_yaml_value(value: Any) -> str:
-    """
-    Format a YAML value with clue/value dict structure.
+    """Format a YAML value with clue/value dict structure.
 
     Handles metadata values created by create_metadata_bundle() which can optionally
     include values passed from CLI arguments. The format is:
@@ -287,8 +283,7 @@ def write_metadata_yaml_jinja2(
     output_path: Path,
     module_registry_version: str | None = None,
 ):
-    """
-    Write metadata to YAML file using Jinja2 templating.
+    """Write metadata to YAML file using Jinja2 templating.
 
     Accepts a FactsExperiment.
 

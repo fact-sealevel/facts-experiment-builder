@@ -7,7 +7,8 @@ import os
 
 
 def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
-    """Return set of input field names that are multiple file inputs (from module YAML)."""
+    """Return set of input field names that are multiple file inputs (from module
+    YAML)."""
     keys: Set[str] = set()
     for arg_spec in module_definition.arguments.get("inputs", []):
         if not arg_spec.get("multiple", False):
@@ -31,7 +32,8 @@ def _input_spec_by_key(module_definition: Any) -> Dict[str, dict]:
 
 
 def _dir_input_keys(module_definition: Any) -> Set[str]:
-    """Return set of input field names declared as directory paths (type: 'dir') in the module YAML."""
+    """Return set of input field names declared as directory paths (type: 'dir') in the
+    module YAML."""
     keys: Set[str] = set()
     for arg_spec in module_definition.arguments.get("inputs", []):
         if arg_spec.get("type") != "dir":
@@ -43,8 +45,8 @@ def _dir_input_keys(module_definition: Any) -> Set[str]:
 
 
 def expand_path(path_str: Any, context: str = "") -> str:
-    """
-    Expand environment variables and ~ in path strings, then resolve to an absolute path.
+    """Expand environment variables and ~ in path strings, then resolve to an absolute
+    path.
 
     Resolving to absolute ensures all downstream path operations (volume mounts,
     container path computation) work correctly regardless of the working directory
@@ -80,8 +82,7 @@ def expand_path(path_str: Any, context: str = "") -> str:
 
 
 def is_shared_input(mount: Optional[dict]) -> bool:
-    """
-    Determine if an input field is a shared input (shared across modules).
+    """Determine if an input field is a shared input (shared across modules).
 
     Shared inputs include location files and fingerprint directories.
     These should be resolved using 'shared-input-data' base path.
@@ -112,8 +113,8 @@ def resolve_input_path(
     module_name: str = "",
     context: str = "",
 ):
-    """
-    Resolve an input file path based on whether it's a general or module-specific input.
+    """Resolve an input file path based on whether it's a general or module-specific
+    input.
 
     Shared inputs (location_file, fingerprint_dir, etc.) use 'shared-input-data'.
     Module-specific inputs use 'module-specific-input-data/{module_name}/{file_name}'.
@@ -132,7 +133,6 @@ def resolve_input_path(
     Raises:
         ValueError: If field_value is invalid or path cannot be resolved
     """
-
     if isinstance(field_value, dict):
         actual_value = field_value.get("value", "")
     elif isinstance(field_value, str):
@@ -185,8 +185,7 @@ def resolve_input_path(
 
 
 def resolve_output_path(field_value: Any, output_data_location: str, context: str = ""):
-    """
-    Resolve an output file path using the output-data-location base path.
+    """Resolve an output file path using the output-data-location base path.
 
     Args:
         field_value: Value from metadata (can be string path or dict with 'value' key)
@@ -199,7 +198,6 @@ def resolve_output_path(field_value: Any, output_data_location: str, context: st
     Raises:
         ValueError: If field_value is invalid or path cannot be resolved
     """
-
     if output_data_location is None:
         context_msg = f" in {context}" if context else ""
         raise ValueError(
@@ -239,8 +237,7 @@ def resolve_output_path(field_value: Any, output_data_location: str, context: st
 def get_required_field(
     metadata: Dict[str, Any], field_name: str, context: str = ""
 ) -> Any:
-    """
-    Get a required field from metadata, raising an error if missing.
+    """Get a required field from metadata, raising an error if missing.
 
     Args:
         metadata: Metadata dictionary
@@ -267,8 +264,7 @@ def get_required_field_with_alternatives(
     alternative_fields: List[str],
     context: str = "",
 ) -> Any:
-    """
-    Get a required field, trying primary first, then alternatives.
+    """Get a required field, trying primary first, then alternatives.
 
     Args:
         metadata: Metadata dictionary
@@ -301,8 +297,7 @@ def get_required_field_with_alternatives(
 
 
 def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[str, str]:
-    """
-    Extract experiment-level paths from metadata.
+    """Extract experiment-level paths from metadata.
 
     Args:
         metadata: Experiment metadata dictionary
