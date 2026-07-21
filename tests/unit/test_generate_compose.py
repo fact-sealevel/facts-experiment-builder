@@ -9,6 +9,7 @@ from facts_experiment_builder.application.generate_compose import (
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from pathlib import Path
 
+
 def _make_climate_schema(input_name: str) -> ModuleSchema:
     source_key = input_name.replace("-", "_")
     return ModuleSchema(
