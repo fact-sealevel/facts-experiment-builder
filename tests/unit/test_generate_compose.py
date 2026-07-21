@@ -9,37 +9,6 @@ from facts_experiment_builder.application.generate_compose import (
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from pathlib import Path
 
-
-# TODO REWRITE THIS TO USE REGISTRY INSTEAD!
-# def test_module_requires_climate_file_false_when_key_false(
-#     tmp_path: Path, module_registry
-# ):
-#     """Test _module_requires_climate_file function."""
-#     module_yaml = tmp_path / "test_module_module.yaml"
-#     module_yaml.write_text("climate_file_required: false \n")
-
-#     with patch(
-#         "facts_experiment_builder.application.generate_compose.find_module_yaml_path",
-#         return_value=module_yaml,
-#     ):
-#         result = generate_compose._module_requires_climate_file(
-#             module_name="test-module", registry=module_registry
-#         )
-#         assert not result
-
-# TODO REWRITE THIS TO USE REGISTRY INSTEAD!
-# def test_module_requires_climate_file_true_when_key_true(
-#     climate_required_true_module_yaml,
-#     # patched_find_module_yaml_path,
-#     module_registry,
-# ):
-#     """Test _module_requires_climate_file function."""
-#     result = generate_compose._module_requires_climate_file(
-#         module_name="test-module", registry=module_registry
-#     )
-#     assert result
-
-
 def _make_climate_schema(input_name: str) -> ModuleSchema:
     source_key = input_name.replace("-", "_")
     return ModuleSchema(
