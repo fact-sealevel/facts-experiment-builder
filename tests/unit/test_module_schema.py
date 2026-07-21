@@ -183,8 +183,6 @@ def test_from_dict_normalizes_none_volumes():
     schema = ModuleSchema.from_dict({"module_name": "foo", "volumes": None})
     assert schema.volumes == {}
 
-    # def test_from_dict_collects_per_workflow():
-    #     """from_dict puts unknown keys into extra."""
     schema = ModuleSchema.from_dict({"module_name": "foo", "per_workflow": True})
     assert schema.per_workflow is True
 

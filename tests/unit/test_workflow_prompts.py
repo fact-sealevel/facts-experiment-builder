@@ -6,49 +6,6 @@ from facts_experiment_builder.cli.workflow_prompts import (
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list_str,
 )
-# def test_validate_modules_list_workflow_passes_for_valid():
-#     experiment_modules_list = [
-#         "ipccar5-icesheets",
-#         "ipccar5-glaciers",
-#         "ssp-landwaterstorage",
-#     ]
-#     workflow_modules_list = [
-#         "ipccar5-icesheets",
-#         "ipccar5-glaciers",
-#     ]
-#     _validate_modules_list_workflow(workflow_modules_list, experiment_modules_list)
-
-
-# def test_validate_modules_list_workflow_fails_for_invalid():
-#     experiment_modules_list = [
-#         "ipccar5-icesheets",
-#         "ipccar5-glaciers",
-#         "ssp-landwaterstorage",
-#     ]
-#     workflow_modules_list = [
-#         "ipccar5-icesheets",
-#         "ipccar5-glaciers",
-#         "tlm-sterodynamics",
-#     ]
-#     with pytest.raises(click.UsageError):
-#         _validate_modules_list_workflow(workflow_modules_list, experiment_modules_list)
-
-
-# @pytest.mark.parametrize(
-#     "step_module, step_data, expectation",
-#     [
-#         ("a-module", None, nullcontext()),
-#         (None, "/path/to/data", nullcontext()),
-#         ("a-module", "/path/to/data", pytest.raises(click.UsageError)),
-#         (None, None, pytest.raises(click.UsageError)),
-#     ],
-# )
-# def test_check_experiment_step(step_module, step_data, expectation):
-#     with expectation:
-#         _check_required_experiment_step(
-#             step_module, step_data, "--step-module", "--step-data"
-#         )
-
 
 # --- _create_all_modules_workflow ---
 
