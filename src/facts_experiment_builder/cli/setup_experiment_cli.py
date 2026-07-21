@@ -59,7 +59,7 @@ USER_FACING_ERRORS = (
     "--experiment-name",
     type=str,
     required=True,
-    help="Name of the experiment and parent directory, e.g. experiments/my_first_experiment",
+    help="Name of the experiment and parent directory, e.g. experiments/my_first_experiment. This is used in conjunction with `--root` (by default, present working directory) to create an experiment directory that holds config files and output data associated with the experiment.",
 )
 @click.option(
     "--climate-step", type=str, required=False, help="Name of the temperature module"
