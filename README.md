@@ -15,7 +15,7 @@
 - `feb check-data` to verify that all expected module input files are present, and 
 - `feb list-modules` to see all available modules in your registry. 
 
-An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) implementation.
+An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) (`async-flow-experiment.py`) or [Apptainer](https://apptainer.org/) implementation that should be more suitable for HPC systems.
 
 >[!IMPORTANT]
 > Experiment configuration files are not executable files. They only specify an experiment, while implementation files such as `experiment-compose.yaml` created by `generate-compose` function as execution scripts. 
@@ -83,16 +83,20 @@ Before creating experiments you will need to initialize a workspace, download mo
 
 If you are new to FACTS and the terms associated with it, we recommend reviewing the [FACTS Glossary](docs/FACTS_GLOSSARY.md) before proceeding.
 
-The examples below demonstrate creating and running a FACTS experiment called `my_first_experiment`. Files for this experiment will be in `./experiments/my_first_experiment/`.
+The examples below demonstrate creating and running a FACTS experiment called `my_first_experiment`. 
 
 ## Create an experiment
+
+> [!NOTE]
+> Notice that the example experiment name, `experiments/my_first_experiment` contains a parent path. You can have different directories to hold different groups of experiments (ie. `experiments/` and `updated_experiments/`, etc.). **It is not required, but we *highly* recommend including an experiment parent directory in your experiment name.** `feb init` creates `experiments/` by default. If you want to use a different parent directory in your experiment name, it must be created *before* you use it in an experiment. 
+
 
 Use the `feb setup-experiment` command like this: 
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment \
---experiment-name my_first_experiment \
+--experiment-name experiments/my_first_experiment \ # <- include a parent directory in the experiment name
 --climate-step fair-temperature \
---sealevel-step bamber19-icesheets,deconto21-ais,fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,kopp14-verticallandmotion,ssp-landwaterstorage \
+--sealevel-step fittedismip-gris,larmip-ais,ipccar5-glaciers,ipccar5-icesheets,tlm-sterodynamics,kopp14-verticallandmotion,ssp-landwaterstorage \
 --extremesealevel-step extremesealevel-pointsoverthreshold \
 --pipeline-id aaa --scenario ssp126 --baseyear 2005 \
 --pyear-start 2020 --pyear-end 2150 --pyear-step 10 \
@@ -116,7 +120,7 @@ Inspect the experiment configuration file and ensure that all of the fields in t
 
 ## Run an experiment
 
-In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
+In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our newly-created experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
 
 FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we only provide a [Docker Compose](https://docs.docker.com/compose/) implementation. If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
 
@@ -124,15 +128,16 @@ facts-experiment-builder provides a command, `feb generate-compose`, to generate
 
 Create the file by specifying the name of the experiment:
 ```shell
-uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb generate-compose --experiment-name my_first_experiment
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb generate-compose \
+--experiment-name experiments/my_first_experiment # <- remember to specify experiment parent directory
 ```
 
 Inspect the compose file and when you are ready to run the experiment, execute it like this:
 ```shell
-docker compose -f experiments/my_first_experiment/experiment-compose.yaml up
+docker compose -f ./experiments/my_first_experiment/experiment-compose.yaml up
 ```
 
-**Not yet implemented: async-flow equivalent of `generate-compose`.**
+**Not yet implemented: async-flow or apptainer equivalent of `generate-compose`.**
 
 ## Features
 facts-experiment-builder is a command line application with five main commands:
@@ -145,18 +150,19 @@ Usage: feb init [OPTIONS]
 
   Initialize a FACTS workspace in the current directory.
 
-  Creates experiments/, clones the module registry, and writes a
-  .facts-workspace marker file. Safe to re-run on an already-initialized
-  workspace.
+  Creates experiments/, clones the module registry, and writes a .facts-
+  workspace marker file. Safe to re-run on an already-initialized workspace.
 
 Options:
   --registry-url TEXT  Git URL of the facts-module-registry to clone.
-                       [default: https://github.com/fact-sealevel/facts-module-registry.git]
+                       [default: https://github.com/fact-sealevel/facts-
+                       module-registry.git]
   -h, --help           Show this message and exit.
 ```
 
 >[!NOTE]
 > After running `feb init`, you can see all available modules by running `feb list-modules`. This prints the names of all modules in your local `facts-module-registry` — these are the valid values for `--climate-step`, `--sealevel-step`, and `--extremesealevel-step`.
+
 > ```shell
 > uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb list-modules
 > ```
@@ -169,23 +175,27 @@ Each step accepts either a module name or a path to pre-existing data:
 - `--sealevel-step` / `--supplied-totaled-sealevel-step-data`: run sealevel module(s) or provide sealevel output directly (totaling is automatically skipped when `--supplied-totaled-sealevel-step-data` is used)
 
 ```shell
-Usage: setup-experiment [OPTIONS]
+Usage: feb setup-experiment [OPTIONS]
 
-  Set up a new experiment with setup-new-experiment CLI command. This function
-  includes a number of steps:
+  Set up a new experiment with setup-experiment CLI command.
+
+  This function includes a number of steps:
 
       - Creates a sub-directory in experiments/ for this experiment. Raises
       error if one already exists
 
-      - Check that all required arguments were Received
+      - Check that all required arguments were received
 
-      - Create a SkeletonExperiment object. This only includes information
-      about which modules will be included in the experiment.
-
-      - If facts-total passed, collects workflows w/ user prompts
+      - If facts-total passed, collects workflows with user prompts
 
 Options:
-  --experiment-name TEXT          Name of the experiment  [required]
+  --experiment-name TEXT          Name of the experiment and parent directory,
+                                  e.g. experiments/my_first_experiment. This
+                                  is used in conjunction with `--root` (by
+                                  default, present working directory) to
+                                  create an experiment directory that holds
+                                  config files and output data associated with
+                                  the experiment.  [required]
   --climate-step TEXT             Name of the temperature module
   --supplied-climate-step-data PATH
                                   Path to data to use in place of running a
@@ -225,6 +235,11 @@ Options:
                                   module-name=REGION1,REGION2. Repeatable.
                                   Example: --module-regions
                                   emulandice2-glaciers=RGI01,RGI02
+  --root PATH                     Project root directory, will default to
+                                  current working directory.
+  --module-registry DIRECTORY     Path to the facts-module-registry directory
+                                  to use in experiment setup.  [default:
+                                  facts-module-registry]
   --debug                         Enable debug logging globally.
   --debug-target TEXT             enable debug logging for a specific module
                                   only.
@@ -240,14 +255,23 @@ Usage: feb generate-compose [OPTIONS]
   Generate Docker Compose file from experiment metadata.
 
 Options:
-  --experiment-name TEXT     Name of the experiment (will look in experiments/
-                             directory)  [required]
-  --custom-output-path PATH  Output path for compose file. If not provided,
-                             will use ../experiment_dir/experiment-
-                             compose.yaml. If provided, must include full path
-                             to file and use filename 'experiment-
-                             compose.yaml'
-  -h, --help                 Show this message and exit.
+  --experiment-name TEXT       Name of the experiment, including parent
+                               directory, if applicable.  [required]
+  --custom-output-path PATH    Output path for compose file. If not provided,
+                               will use ../experiment_dir/experiment-
+                               compose.yaml. If provided, must include full
+                               path to file and use filename 'experiment-
+                               compose.yaml'
+  --root PATH                  Project root directory, will default to current
+                               working directory.
+  --debug                      Enable debug mode
+  --module-registry DIRECTORY  Path to the facts-module-registry directory to
+                               use in generate-compose. MUst be same as that
+                               used in setup-experiment. Default value points
+                               to the registry that is created if running from
+                               facts2-workspace after running `feb init`.
+                               [default: facts-module-registry]
+  -h, --help                   Show this message and exit.
 ```
 
 **`list-modules`**
@@ -256,11 +280,16 @@ Lists all modules available in your local `facts-module-registry`. Use this to s
 ```shell
 Usage: feb list-modules [OPTIONS]
 
-  List all modules in the registry. These are all of the modules that can be
-  included in experiments built with facts-experiment-builder.
+  List all modules in the registry.
+
+  These are all of the modules that can be included in experiments built with
+  facts- experiment-builder.
 
 Options:
-  -h, --help  Show this message and exit.
+  --module-registry DIRECTORY  Path to the facts-module-registry directory
+                               that is used in list-modules command.
+                               [default: facts-module-registry]
+  -h, --help                   Show this message and exit.
 ```
 
 **`check-data`**
@@ -272,25 +301,39 @@ Usage: feb check-data [OPTIONS]
   Check a FACTS data directory against expected module inputs.
 
   Scans module_specific_input_data/ for downloaded modules and verifies that
-  all expected input files are present based on the module registry.
+  all expected input files are present based on the module registry. Modules
+  are detected automatically from subdirectory names — only modules you have
+  downloaded data for will be checked.
 
 Options:
-  --data-dir PATH                   Root data directory. Expects
-                                    module_specific_input_data/ and
-                                    shared_input_data/ subdirectories.
-                                    [default: data]
-  --module-specific-input-data PATH
-                                    Path to module-specific input data
-                                    directory. Overrides --data-dir derived
-                                    path.
-  --shared-input-data PATH          Path to shared input data directory.
-                                    Overrides --data-dir derived path.
-  -h, --help                        Show this message and exit.
+  --data-dir DIRECTORY            Base data directory. By default, expects
+                                  module-specific and shared input data in
+                                  module_specific_input_data/ and
+                                  shared_input_data/ subdirectories. Can be
+                                  overridden with --module-specific-input-data
+                                  and --shared-input-data.  [default: /Users/e
+                                  mmamarshall/Desktop/facts_work/facts_v2/fact
+                                  s2-workspace/data]
+  --module-specific-input-data DIRECTORY
+                                  Explicit path to module-specific input data
+                                  directory. Overrides data_dir for this
+                                  purpose.
+  --shared-input-data DIRECTORY   Explicit path to shared input data
+                                  directory. Overrides data_dir for this
+                                  purpose.
+  --module-registry DIRECTORY     Path to the facts-module-registry directory
+                                  to use in check-data. MUst be same as that
+                                  used in setup-experiment. Default value
+                                  points to the registry that is created if
+                                  running from facts2-workspace after running
+                                  `feb init`.  [default: facts-module-
+                                  registry]
+  -h, --help                      Show this message and exit.
 ```
 
 ## Other experiment configurations 
 ---
-You can bypass running a module at the climate step and instead pass your own data for this step that will be passed to the sea-level step. Below is an example of creating an experiment using pre-existing climate data instead of running a module at the climate step:
+You can bypass running a module during the climate step and instead pass your own data for this step that will be passed to the sea-level step. Below is an example of creating an experiment using pre-existing climate data instead of running a module at the climate step:
 ```shell
 uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb setup-experiment \
 --experiment-name toy_experiment_with_climate_data --scenario ssp585 \

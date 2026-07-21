@@ -56,7 +56,7 @@ def _configure_feb_logging() -> None:
     "--experiment-name",
     type=str,
     required=True,
-    help="Name of the experiment (will look in experiments/ directory)",
+    help="Name of the experiment, including parent directory, if applicable.",
 )
 @click.option(
     "--custom-output-path",
