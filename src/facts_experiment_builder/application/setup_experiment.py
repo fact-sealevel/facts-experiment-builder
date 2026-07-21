@@ -124,6 +124,7 @@ def finalize_experiment_setup(
         experiment_name=experiment_name,
         skeleton=skeleton_with_workflows,
         top_level_params=top_level_params,
+        experiment_path=experiment_path,
         module_specific_input_data=module_specific_input_data,
         experiment_specific_input_data=experiment_spec_data,  # supplied_climate_step_data,
         shared_input_data=shared_input_data,

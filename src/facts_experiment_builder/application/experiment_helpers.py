@@ -20,7 +20,7 @@ from facts_experiment_builder.core.steps.extreme_sealevel_step import (
     ExtremeSealevelStep,
 )
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
-
+from pathlib import Path
 from typing import Dict, Optional, Any, List
 
 
@@ -154,7 +154,8 @@ def experiment_skeleton_to_facts_experiment(
     experiment_name: str,
     skeleton: ExperimentSkeleton,
     top_level_params: "TopLevelParams",
-    schemas,
+    schemas: Dict[str, ModuleSchema],
+    experiment_path: Path,
     module_specific_input_data: Optional[str] = None,
     experiment_specific_input_data: Optional[str] = None,
     shared_input_data: Optional[str] = None,
@@ -247,7 +248,7 @@ def experiment_skeleton_to_facts_experiment(
         ),
         "output-data-location": create_metadata_bundle(
             "Output path",
-            f"./experiments/{experiment_name}/data/output",
+            Path(experiment_path, "output").as_posix(),
         ),
         **(
             {
