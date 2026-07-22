@@ -38,7 +38,7 @@ tar -xzf data/module_specific_input_data/fair-temperature/fair_temperature_prepr
 
 ```bash
 mkdir -p data/module_specific_input_data/fair2-climate
-curl -L https://zenodo.org/records/11506798/files/fair2_climate_project_data.tgz -o data/module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz
+curl -L https://zenodo.org/records/18190680/files/fair2_climate_project_data.tgz -o data/module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz
 tar -xzf data/module_specific_input_data/fair2-climate/fair2_climate_project_data.tgz -C data/module_specific_input_data/fair2-climate
 ```
 
