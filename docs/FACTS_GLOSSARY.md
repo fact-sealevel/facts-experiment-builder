@@ -6,7 +6,7 @@ Helpful guide to terms and how they are used in the FACTS v2 ecosystem.
 
 ## System / Ecosystem Level
 
-### FACTS v2
+### FACTS2
 Framework for Assessing Changes To Sea-level, version 2. A modular, containerized system for producing probabilistic projections of future sea-level rise. Each component of the computation (temperature, ice sheets, glaciers, extreme sea-level etc.) is encapsulated in an independent Docker container called a **module**.
 
 ### Module ecosystem

@@ -118,6 +118,9 @@ Once you've completed the workflows section, you'll see messages with informatio
 
 Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [experiment configuration file overview](docs/EXPERIMENT-CONFIG-OVERVIEW.md) page. 
 
+>[!NOTE]
+> For details on running vertical land motion modules separately from other sea-level modules, see [Separating vertical land motion processes in FACTS experiments](./docs/FACTS_OVERVIEW.md).
+
 ## Run an experiment
 
 In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our newly-created experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
