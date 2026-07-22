@@ -265,32 +265,12 @@ def _check_module(
     fp_file_checks = [execute_check(plan, module_input_dir) for plan in fp_plans]
 
     combined_file_checks = input_file_checks + fp_file_checks
-    print("Number of entries in this module: ", len(combined_file_checks))
-    print(
-        f"this includes {len(input_file_checks)} from inputs section \n and {len(fp_file_checks)} from FP params section! "
-    )
 
-    # num_skipped = sum(1 for c in combined_file_checks if not c.skipped and c.exists)
     skipped_checks = []
     for check in combined_file_checks:
         if check.skipped is True:
             skipped_checks.append(check.field_name)
-    num_skipped = len(skipped_checks)
-    print("num skipped : ", num_skipped)
-    for c in combined_file_checks:
-        if c.skipped:
-            print(f"{c.field_name} is showing as skipped.")
 
-    for check in combined_file_checks:
-        print(f"Checking {check.field_name}....")
-        if check.skip_reason != "":
-            print("This input was skipped in checks because:")
-            print("Skip reason: ", check.skip_reason)
-        else:
-            print("This input wasnt skipped. Expected path is: ")
-            print(check.expected_path)
-    print("--")
-    print("")
     return combined_file_checks  # , skipped_checks
 
 
