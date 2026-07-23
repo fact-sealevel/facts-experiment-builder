@@ -8,7 +8,10 @@ If you are new to FACTS and/or FACTS2, please checkout our [glossary](./FACTS_GL
 
 FACTS modules represent different physical processes that contribute to global mean sea level (GMSL) and relative sea level (RSL) change. A FACTS experiment involves combining multiple modules in a coherent probabilistic framework. However, due to the highly spatially and temporally-variable nature of many vertical land motion processes that impact sea-level, researchers may prefer to evaluate these effects separately from other modules. 
 
-As of version 0.5.0 of the FACTS-experiment-builder (FEB), there is not explicit support for evaluating vertical land motion processes separately from other sea-level modules in an experiment. Instead, we suggest the following approach:
-- Configure and run a FACTS experiment *exluding* vertical land motion modules.
-- Run vertical land motion modules separately/offline (see individual modules for instructions)
-- Combine results as appropriate/needed
+To accommodate this separation, we suggest the following approach:
+
+- Configure and run a FACTS experiment excluding vertical land motion modules (e.g. do not include the VLM modules in sealevel-step of feb setup-experiment),
+- Run vertical land motion modules separately/offline (see individual modules for instructions),
+- Combine results as appropriate/needed by running the [facts-total](https://github.com/fact-sealevel/facts-total) module directly, outside of FEB.
+
+Evaluating vertical land motion processes separately from other sea-level modules in an experiment is not explicitly supported as of version 0.5.0 of the FACTS-experiment-builder (FEB), but is planned for a future release.
