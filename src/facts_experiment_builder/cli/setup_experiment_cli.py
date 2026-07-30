@@ -143,17 +143,20 @@ USER_FACING_ERRORS = (
 @click.option(
     "--workspace-dir",
     type=click.Path(
-        path_type=Path, exists=True,
-        dir_okay=True, file_okay=False, resolve_path=True),
+        path_type=Path, exists=True, dir_okay=True, file_okay=False, resolve_path=True
+    ),
     default=Path.cwd(),
     show_default=True,
     help="Workspace directory, will default to current working directory.",
 )
 @click.option(
     "--module-registry",
-    type=click.Path(exists=True, file_okay=False, 
-                    path_type=Path, dir_okay=True, 
-                    ),
+    type=click.Path(
+        exists=True,
+        file_okay=False,
+        path_type=Path,
+        dir_okay=True,
+    ),
     default=Path("./facts-module-registry"),
     show_default=True,
     envvar="FEB_MODULE_REGISTRY_DIR",

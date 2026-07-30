@@ -20,6 +20,7 @@ def make_registry(registry_path: Path) -> FileSystemModuleRegistry:
             f"Error: {e}"
         )
 
+
 def configure_logging(debug_target):
     if not debug_target:
         return
