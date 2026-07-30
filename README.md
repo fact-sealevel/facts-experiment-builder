@@ -191,9 +191,9 @@ Usage: feb setup-experiment [OPTIONS]
 Options:
   --experiment-name TEXT          Name of the experiment and parent directory,
                                   e.g. experiments/my_first_experiment. This
-                                  is used in conjunction with `--root` (by
-                                  default, present working directory) to
-                                  create an experiment directory that holds
+                                  is used in conjunction with `--workspace-
+                                  dir` (by default, present working directory)
+                                  to create an experiment directory that holds
                                   config files and output data associated with
                                   the experiment.  [required]
   --climate-step TEXT             Name of the temperature module
@@ -235,8 +235,10 @@ Options:
                                   module-name=REGION1,REGION2. Repeatable.
                                   Example: --module-regions
                                   emulandice2-glaciers=RGI01,RGI02
-  --root PATH                     Project root directory, will default to
-                                  current working directory.
+  --workspace-dir DIRECTORY       Workspace directory, will default to current
+                                  working directory.  [default: /Users/emmamar
+                                  shall/Desktop/facts_work/facts_v2/facts-
+                                  experiment-builder]
   --module-registry DIRECTORY     Path to the facts-module-registry directory
                                   to use in experiment setup.  [default:
                                   facts-module-registry]
@@ -262,8 +264,10 @@ Options:
                                compose.yaml. If provided, must include full
                                path to file and use filename 'experiment-
                                compose.yaml'
-  --root PATH                  Project root directory, will default to current
-                               working directory.
+  --workspace-dir PATH         Workspace directory, will default to current
+                               working directory.  [default: /Users/emmamarsha
+                               ll/Desktop/facts_work/facts_v2/facts-
+                               experiment-builder; required]
   --debug                      Enable debug mode
   --module-registry DIRECTORY  Path to the facts-module-registry directory to
                                use in generate-compose. MUst be same as that
