@@ -4,14 +4,10 @@ from click.testing import CliRunner
 from facts_experiment_builder.cli.setup_experiment_cli import (
     main,
 )
-import re
 from pathlib import Path
 
-ANSI = re.compile(r"\x1b\[[0-9;]*m]")
 
 
-def plain(text: str) -> str:
-    return ANSI.sub("", text)
 
 
 runner = CliRunner()
