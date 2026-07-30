@@ -4,17 +4,14 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose,
 )
-from facts_experiment_builder.cli.utils import (
-    determine_root,
-)
 
-from facts_experiment_builder.infra.experiment_storage import (
+from facts_experiment_builder.io.experiment_storage import (
     FileSystemExperimentStorage,
 )
-from facts_experiment_builder.infra.experiment_loader import load_experiment_metadata
-from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
+from facts_experiment_builder.io.experiment_loader import load_experiment_metadata
+from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.core.experiment.name import ExperimentName
-from facts_experiment_builder.infra.write_compose import (
+from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
 )
@@ -65,11 +62,11 @@ def _configure_feb_logging() -> None:
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
 @click.option(
-    "--root",
-    type=click.Path(path_type=Path),
-    default=None,
+    "--workspace-dir",
+    type=click.Path(path_type=Path, exists=True,dir_okay=True, resolve_path=True),
+    default=Path.cwd(),
     show_default=True,
-    help="Project root directory, will default to current working directory.",
+    help="Workspace directory, will default to current working directory.",
 )
 @click.option(
     "--debug",
@@ -88,7 +85,7 @@ def _configure_feb_logging() -> None:
 def main(
     experiment_name,
     custom_output_path,
-    root,
+    workspace_dir,
     module_registry,
     debug,
 ) -> None:
@@ -109,7 +106,7 @@ def main(
     console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
 
     exp = ExperimentName.parse(experiment_name)
-    storage = FileSystemExperimentStorage(determine_root(root))
+    storage = FileSystemExperimentStorage(workspace_dir)
 
     experiment_path = storage.experiment_dir(exp)
     output_path = (

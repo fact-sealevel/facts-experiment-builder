@@ -4,7 +4,7 @@ from facts_experiment_builder.core.module.module_schema import ModuleSchema
 import subprocess
 from pydantic import ValidationError
 import yaml
-from facts_experiment_builder.infra.exceptions import ModuleYamlNotFoundError
+from facts_experiment_builder.io.exceptions import ModuleYamlNotFoundError
 
 
 class ModuleRegistryNotFound(Exception):

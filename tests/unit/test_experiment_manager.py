@@ -1,4 +1,4 @@
-from facts_experiment_builder.infra.experiment_manager import (
+from facts_experiment_builder.io.experiment_manager import (
     make_experiment_metadata_path_from_experiment_dir,
     experiment_metadata_file_exists,
 )

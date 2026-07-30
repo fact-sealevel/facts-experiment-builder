@@ -3,7 +3,6 @@
 import logging
 
 from facts_experiment_builder.cli.utils import (
-    determine_root,
     configure_logging,
 )
 

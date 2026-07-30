@@ -1,4 +1,4 @@
-from facts_experiment_builder.infra.experiment_storage import (
+from facts_experiment_builder.io.experiment_storage import (
     FileSystemExperimentStorage,
     ExperimentParentNotFoundError,
     ExperimentRootNotFoundError,

@@ -30,7 +30,7 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
     build_module_input_paths,
     build_module_output_paths,
 )
-from facts_experiment_builder.infra.compose_service_writer import (
+from facts_experiment_builder.io.compose_service_writer import (
     build_compose_service_dict,
 )
 from facts_experiment_builder.core.module.module_schema import (

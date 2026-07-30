@@ -3,7 +3,7 @@
 from pathlib import Path
 import logging
 import click
-from facts_experiment_builder.infra.module_registry import (
+from facts_experiment_builder.io.module_registry import (
     ModuleRegistryNotFound,
     FileSystemModuleRegistry,
 )
@@ -19,19 +19,6 @@ def make_registry(registry_path: Path) -> FileSystemModuleRegistry:
             " Also check that you have run `feb init`"
             f"Error: {e}"
         )
-
-
-def determine_root(cli_root: Path | None) -> Path:
-    """For determining the project root directory that will be used for setting up and
-    organizing experiment direcotries and files.
-
-    If user provides a root path in `setup-experiment`, this will be prioritized.
-    Otherwise takes cwd. Always returns a resolved absolute path.
-    """
-    if cli_root:
-        return cli_root.resolve(strict=True)
-    return Path.cwd().resolve(strict=True)
-
 
 def configure_logging(debug_target):
     if not debug_target:

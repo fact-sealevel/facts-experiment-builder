@@ -26,19 +26,19 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
-from facts_experiment_builder.cli.utils import determine_root, configure_logging
+from facts_experiment_builder.cli.utils import configure_logging
 from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentAlreadyExistsError,
 )
 
 from facts_experiment_builder.core.experiment.name import InvalidExperimentNameError
-from facts_experiment_builder.infra.experiment_storage import (
+from facts_experiment_builder.io.experiment_storage import (
     FileSystemExperimentStorage,
     ExperimentParentNotFoundError,
     ExperimentRootNotFoundError,
     ExperimentStorageError,
 )
-from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
+from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 
 import logging
 
@@ -59,7 +59,7 @@ USER_FACING_ERRORS = (
     "--experiment-name",
     type=str,
     required=True,
-    help="Name of the experiment and parent directory, e.g. experiments/my_first_experiment. This is used in conjunction with `--root` (by default, present working directory) to create an experiment directory that holds config files and output data associated with the experiment.",
+    help="Name of the experiment and parent directory, e.g. experiments/my_first_experiment. This is used in conjunction with `--workspace-dir` (by default, present working directory) to create an experiment directory that holds config files and output data associated with the experiment.",
 )
 @click.option(
     "--climate-step", type=str, required=False, help="Name of the temperature module"
@@ -141,15 +141,19 @@ USER_FACING_ERRORS = (
     ),
 )
 @click.option(
-    "--root",
-    type=click.Path(path_type=Path),
-    default=None,
+    "--workspace-dir",
+    type=click.Path(
+        path_type=Path, exists=True,
+        dir_okay=True, file_okay=False, resolve_path=True),
+    default=Path.cwd(),
     show_default=True,
-    help="Project root directory, will default to current working directory.",
+    help="Workspace directory, will default to current working directory.",
 )
 @click.option(
     "--module-registry",
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    type=click.Path(exists=True, file_okay=False, 
+                    path_type=Path, dir_okay=True, 
+                    ),
     default=Path("./facts-module-registry"),
     show_default=True,
     envvar="FEB_MODULE_REGISTRY_DIR",
@@ -185,7 +189,7 @@ def main(
     projection_scale,
     module_regions,
     module_registry,
-    root,
+    workspace_dir,
     debug,
     debug_target,
 ):
@@ -206,8 +210,7 @@ def main(
         module_registry_path = module_registry.absolute()
         registry = FileSystemModuleRegistry(registry_path=module_registry_path)
         valid_module_names = registry.module_names()
-        root = determine_root(root)
-        storage = FileSystemExperimentStorage(root)
+        storage = FileSystemExperimentStorage(workspace_dir)
 
         console.rule(
             characters="- - ",

@@ -42,6 +42,110 @@ def test_cli_fails_without_required_args():
         or "Error" in result.output
     )
 
+def test_cli_succeeds_with_existing_dir_as_workspace_dir(tmp_path, fake_registry):
+    registry = fake_registry(
+                {
+                    "fair-temperature": {"module_name": "fair-temperature"},
+                    "ipccar5-icesheets": {"module_name": "ipccar5-icesheets"},
+                    "ipccar5-glaciers": {"module_name": "ipccar5-icesheets"},
+                    "facts-total": {"module_name": "facts-total"},
+                }
+            )
+
+    workspace_dir = Path(tmp_path, "workspace")
+    workspace_dir.mkdir()
+
+    result = runner.invoke(main, [
+            "--experiment-name", "test-exp",
+            "--climate-step", "fair-temperature",
+            "--workspace-dir",str(workspace_dir),
+            "--module-registry", str(registry)
+        ])
+    assert result.exit_code == 0,(
+            f" exit_code={result.exit_code}\n"
+            f" --- output ---\n{result.output}\n"
+            f" -- exception ---\n{result.exception!r}"
+        )
+
+def test_cli_fails_with_nonexisting_dir_as_workspace_dir(tmp_path, fake_registry):
+    registry = fake_registry(
+                {
+                    "fair-temperature": {"module_name": "fair-temperature"},
+                    "ipccar5-icesheets": {"module_name": "ipccar5-icesheets"},
+                    "ipccar5-glaciers": {"module_name": "ipccar5-icesheets"},
+                    "facts-total": {"module_name": "facts-total"},
+                }
+            )
+
+    workspace_dir = Path(tmp_path, "workspace")
+
+    result = runner.invoke(main, [
+            "--experiment-name", "test-exp",
+            "--climate-step", "fair-temperature",
+            "--workspace-dir",str(workspace_dir),
+            "--module-registry", str(registry)
+        ])
+    assert result.exit_code != 0,(
+            f" exit_code={result.exit_code}\n"
+            f" --- output ---\n{result.output}\n"
+            f" -- exception ---\n{result.exception!r}"
+        )
+    assert "does not exist." in result.output
+
+
+def test_cli_fails_with_file_passed_as_workspace_dir(tmp_path, fake_registry):
+    registry = fake_registry(
+            {
+                "fair-temperature": {"module_name": "fair-temperature"},
+                "ipccar5-icesheets": {"module_name": "ipccar5-icesheets"},
+                "ipccar5-glaciers": {"module_name": "ipccar5-icesheets"},
+                "facts-total": {"module_name": "facts-total"},
+            }
+        )
+
+    workspace_file = Path(tmp_path, "some_file.yaml")
+    workspace_dir = Path(tmp_path, "some_dir")
+    workspace_dir.mkdir()
+    workspace_file.touch()
+    result = runner.invoke(main, [
+        "--experiment-name", "test-exp",
+        "--climate-step", "fair-temperature",
+        "--workspace-dir",str(workspace_file),
+        "--module-registry", str(registry)
+    ])
+    assert result.exit_code == 2, (
+            f" exit_code={result.exit_code}\n"
+            f" --- output ---\n{result.output}\n"
+            f" -- exception ---\n{result.exception!r}"
+        )
+    assert "is a file" in result.output
+
+def test_cli_fails_with_file_passed_as_module_registry(tmp_path, fake_registry):
+    registry = fake_registry(
+            {
+                "fair-temperature": {"module_name": "fair-temperature"},
+                "ipccar5-icesheets": {"module_name": "ipccar5-icesheets"},
+                "ipccar5-glaciers": {"module_name": "ipccar5-icesheets"},
+                "facts-total": {"module_name": "facts-total"},
+            }
+        )
+
+    registry_file = Path(tmp_path, "some_file.yaml")
+    workspace_dir = Path(tmp_path, "some_dir")
+    workspace_dir.mkdir()
+    registry_file.touch()
+    result = runner.invoke(main, [
+        "--experiment-name", "test-exp",
+        "--climate-step", "fair-temperature",
+        "--workspace-dir",str(workspace_dir),
+        "--module-registry", str(registry_file)
+    ])
+    assert result.exit_code == 2, (
+            f" exit_code={result.exit_code}\n"
+            f" --- output ---\n{result.output}\n"
+            f" -- exception ---\n{result.exception!r}"
+        )
+    assert "is a file" in result.output
 
 def test_setup_experiment_succeeds_with_valid_modules(
     tmp_path, fake_registry, decline_extra_prompts
@@ -66,7 +170,7 @@ def test_setup_experiment_succeeds_with_valid_modules(
             "fair-temperature",
             "--sealevel-step",
             "ipccar5-icesheets,ipccar5-glaciers",
-            "--root",
+            "--workspace-dir",
             str(tmp_path),
             "--module-registry",
             str(registry),
@@ -102,7 +206,7 @@ def test_setup_experiment_fails_with_invalid_module_name(
             "ipccar5-icesheets,ipccar5-glaciers,invalid-module-name",
             "--module-registry",
             str(registry),
-            "--root",
+            "--workspace-dir",
             str(tmp_path),
         ],
     )
@@ -122,7 +226,7 @@ def test_setup_experiment_fails_without_climate_step_info(fake_registry, tmp_pat
         [
             "--experiment-name",
             "test-exp",
-            "--root",
+            "--workspace-dir",
             str(tmp_path),
             "--module-registry",
             str(registry),
@@ -147,7 +251,7 @@ def test_setup_experiment_fails_with_invalid_registry_path(tmp_path):
         [
             "--experiment-name",
             "test_exp",
-            "--root",
+            "--workspace-dir",
             str(tmp_path),
             "--module-registry",
             str(invalid_reg_path),

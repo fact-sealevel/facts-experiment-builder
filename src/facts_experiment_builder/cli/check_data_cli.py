@@ -10,7 +10,7 @@ from facts_experiment_builder.application.check_data import (
     resolve_input_paths,
 )
 
-from facts_experiment_builder.infra.module_registry import FileSystemModuleRegistry
+from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 
 
 def check_provided_paths(
