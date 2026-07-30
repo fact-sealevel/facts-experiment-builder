@@ -66,6 +66,7 @@ def _configure_feb_logging() -> None:
     type=click.Path(path_type=Path, exists=True, dir_okay=True, resolve_path=True),
     default=Path.cwd(),
     show_default=True,
+    required=True,
     help="Workspace directory, will default to current working directory.",
 )
 @click.option(
