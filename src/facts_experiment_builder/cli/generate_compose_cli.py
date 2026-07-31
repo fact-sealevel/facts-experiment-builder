@@ -4,13 +4,15 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose,
 )
+from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
+# from facts_experiment_builder.io.experiment_storage import (
+# FileSystemExperimentStorage,
 
-from facts_experiment_builder.io.experiment_storage import (
-    FileSystemExperimentStorage,
-)
 from facts_experiment_builder.io.experiment_loader import load_experiment_metadata
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
-from facts_experiment_builder.core.experiment.name import ExperimentName
+from facts_experiment_builder.core.experiment.paths import (
+    ExperimentName,
+)
 from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
@@ -107,27 +109,30 @@ def main(
     console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
 
     exp = ExperimentName.parse(experiment_name)
-    storage = FileSystemExperimentStorage(workspace_dir)
-
-    experiment_path = storage.experiment_dir(exp)
-    output_path = (
-        custom_output_path.resolve()
-        if custom_output_path is not None
-        else storage.compose_path(exp)
+    # storage = FileSystemExperimentStorage(workspace_dir)
+    experiment_paths = ExperimentPathContainer(
+        workspace_dir=workspace_dir, experiment_name=exp
     )
+    # experiment_path = storage.experiment_dir(exp)
+    experiment_path = experiment_paths.experiment_dir
+    # output_path = (
+    #     custom_output_path.resolve()
+    #     if custom_output_path is not None
+    #     else storage.compose_path(exp)
+    # )
+    # TODO come back and fix this. add custom otuput to experiment paths as option
+    output_path = experiment_paths.output_dir
 
     assert experiment_path.is_dir(), f"Expected '{experiment_path}' to be a directory."
     # experiment_directory_exists(experiment_directory=experiment_path)
     # then, get path to config file
-    experiment_metadata_path = storage.config_path(exp=exp)
-    # experiment_metadata_path = make_experiment_metadata_path_from_experiment_dir(
-    #    experiment_path=experiment_path
-    # )
+    # experiment_metadata_path = storage.config_path(exp=exp)
+    experiment_metadata_path = experiment_paths.config_path
+
     # Ensure the file exists
     assert experiment_metadata_path.exists(), (
         f"Expected '{experiment_metadata_path}' exists."
     )
-    # experiment_metadata_file_exists(experiment_metadata_path)
 
     console.print(
         f"[success]✓ Found experiment metadata file:[/success] [secondary]{experiment_metadata_path}[/secondary]"

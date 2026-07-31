@@ -16,9 +16,6 @@ from facts_experiment_builder.core.experiment.experiment_skeleton import (
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
 )
-from facts_experiment_builder.io.experiment_storage import (
-    FileSystemExperimentStorage,
-)
 from tests.unit.helpers import InMemoryModuleDefinitions
 
 
@@ -79,9 +76,9 @@ def test_hydrate_experiment_builds_climate_step():
 
 
 def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
-    storage = FileSystemExperimentStorage(tmp_path)
     experiment_name = "fake_experiment_location/experiment_name"
-    Path(tmp_path / "fake_experiment_location").mkdir()
+    workspace_dir = Path(tmp_path / "fake_experiment_location")
+    workspace_dir.mkdir()
 
     definitions = InMemoryModuleDefinitions(
         {
@@ -101,10 +98,10 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         sealevel_step="tlm-sterodynamics,larmip-ais",
         supplied_totaled_sealevel_step_data=None,
         extremesealevel_step=None,
-        storage=storage,
+        workspace_dir=workspace_dir,
     )
     skeleton = output.experiment_skeleton
-    experiment_path = output.experiment_path
+    experiment_path = output.experiment_paths
     workflow_dict = {"all-modules": ["tlm-sterodynamics", "larmip-ais"]}
 
     finalize_experiment_setup(
@@ -125,7 +122,7 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         projection_scale="local",
         definition=definitions,
     )
-    config_path = experiment_path / "experiment-config.yaml"
+    config_path = experiment_path.config_path
     assert config_path.exists()
 
 
@@ -133,8 +130,8 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
 
 
 def test_prepare_experiment_setup_returns_correct_output_type(tmp_path):
-    storage = FileSystemExperimentStorage(tmp_path)
-    Path(tmp_path / "fake_experiment_location").mkdir()
+    workspace_dir = Path(tmp_path / "fake_experiment_location")
+    workspace_dir.mkdir()
     output = prepare_experiment_setup(
         experiment_name="fake_experiment_location/experiment_name",
         module_regions=None,
@@ -143,7 +140,7 @@ def test_prepare_experiment_setup_returns_correct_output_type(tmp_path):
         sealevel_step="tlm-sterodynamics,larmip-ais",
         supplied_totaled_sealevel_step_data=None,
         extremesealevel_step=None,
-        storage=storage,
+        workspace_dir=workspace_dir,
     )
     assert isinstance(output, PrepareExperimentOutput)
 

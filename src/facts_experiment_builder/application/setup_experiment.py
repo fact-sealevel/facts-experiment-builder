@@ -13,7 +13,9 @@ from facts_experiment_builder.core.experiment.experiment_skeleton import (
     ExperimentSkeleton,
     parse_module_regions,
 )
-from facts_experiment_builder.core.experiment.name import ExperimentName
+from facts_experiment_builder.core.experiment.paths import (
+    ExperimentName,
+)
 from facts_experiment_builder.io.write_experiment_metadata import (
     write_metadata_yaml_jinja2,
 )
@@ -21,8 +23,10 @@ from facts_experiment_builder.application.experiment_helpers import (
     experiment_skeleton_to_facts_experiment,
 )
 from facts_experiment_builder.io.experiment_storage import (
-    FileSystemExperimentStorage,
+    # FileSystemExperimentStorage,
+    make_output_dir,
 )
+from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
 import logging
 
 logger = logging.getLogger(__name__)
@@ -30,29 +34,62 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class PrepareExperimentOutput:
-    experiment_path: str
+    """Object to hold output of prepare_experiment_setup()."""
+
+    experiment_paths: ExperimentPathContainer
     experiment_skeleton: ExperimentSkeleton
 
 
 def prepare_experiment_setup(
     experiment_name: str,
     module_regions: str,
-    climate_step,
-    supplied_climate_step_data,
-    sealevel_step,
-    supplied_totaled_sealevel_step_data,
-    extremesealevel_step,
-    storage: FileSystemExperimentStorage,
+    climate_step: str,
+    supplied_climate_step_data: Path,
+    sealevel_step: str,
+    supplied_totaled_sealevel_step_data: Path,
+    extremesealevel_step: str,
+    workspace_dir: Path,
+    # storage: FileSystemExperimentStorage,
 ) -> PrepareExperimentOutput:
-    """Handles initial experiment setup orchestration logic, through to creating
-    skeleton and until workflows owuld be created (need user prompt for this.)"""
-    # first, check that experiment name was passed with parent dir
+    """Performs first stage of experiment setup and creates ExperimentSkeleton.
 
+    Parses requested experiment name and resolves experiment's directory layout. Calls io.make_output_dir() to create direcotories. Parses module regions, if applicable and builds an :class:`ExperimentSkeleton` from supplied step configuration. Execution stops before workflows are assembled (this step requires user input). Returned paths and skeleton are passed to :func:`finalize_experiment_setup`.
+
+    Parameters
+    ----------
+    experiment_name: str
+        Raw experiment name as supplied by caller, including its parent directory component, if present. Parsed into an :class:`ExperimentName`.
+
+    module_regions: str
+        Unparsed module-to-region specification, expanded by :fun:`parse_module_regions`.
+    climate_step: str
+        Name of module to run at the climate step of the experiment
+    supplied_climate_step_data: Path
+        Path to data to use in place of running module at climate step.
+    sealevle_step: str
+        Name(s) of modules to run at the sea-level step of the experiment
+    supplied_totaled_sealevel_step_data: Path
+        Path to data to use in place of running modules at sea-level step of experiment.
+    extremesealevel_step: str
+        Name of module to run at extreme sealevel-module step of experiment.
+    workspace_dir: Path
+        Workspace directory, already resolved by CLI layer, under which the experiment directory is created.
+
+    Returns
+    -------
+    PrepareExperimentOutput
+        Bundle containing the :class:`ExperimentPathContainer` for the experiment and the :class:`ExperimentSkeleton` built from the step configuration.
+    """
     # Create an experiment name object
     experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
 
     # Create experiment path from resolved root (handled in cli layer)
-    experiment_path = storage.create(experiment_name_obj)
+    # experiment_path = storage.create(experiment_name_obj)
+    experiment_path_obj = ExperimentPathContainer(
+        workspace_dir=workspace_dir, experiment_name=experiment_name_obj
+    )
+    # Make direcotries related to this experiment
+    make_output_dir(experiment_paths=experiment_path_obj)
 
     parsed_module_regions = parse_module_regions(module_regions)
     # Create experiment skeleton
@@ -66,14 +103,14 @@ def prepare_experiment_setup(
     )
 
     output = PrepareExperimentOutput(
-        experiment_path=experiment_path, experiment_skeleton=skeleton
+        experiment_paths=experiment_path_obj, experiment_skeleton=skeleton
     )
     return output
 
 
 def finalize_experiment_setup(
-    experiment_name,
-    experiment_path: Path,
+    experiment_name: str,
+    experiment_paths: ExperimentPathContainer,
     experiment_skeleton: ExperimentSkeleton,
     workflows_dict: Dict,
     pipeline_id: str,
@@ -88,13 +125,67 @@ def finalize_experiment_setup(
     shared_input_data: str,
     projection_scale: str,
     definition: ModuleDefinitionSource,
-):
+) -> Path:
+    """Complete an experiment setup and writes its configuration metadata to disk.
+
+    This is the final stage of the experiment setup flow. It pulls module version and schema information from ``definition``, assembles the top-level runtime parameters, attaches the resolved workflows to an existing :class:`ExperimentSkeleton`, converts the result into a concrete ``FactsExperiment``, and renders the experiment configuration YAML.
+
+    Parameters
+    ----------
+    experiment_name : str
+        Human-readable name of the experiment, recorded in the config file.
+    experiment_paths : ExperimentPathContainer
+        Container holding the resolved filesystem locations for hte experiment, including the experiment directory and the configuration file path.
+    experiment_skeleton : ExperimentSkeleton
+        Paritally populated experiment descriptino produced in prepare_exerpiment_setup(). Supplies module names, and any climate or supplied totaled sea-level step data.
+    workflows_dict : Dict
+        Mapping of workflow names to their definitions, attached to a copy of ``experiment_skeleton``.
+    pipeline_id : str
+        Identifier of the pipeline this experiment belongs to.
+    scenario : str
+        Name of emissions or forcing scenario being projected
+    baseyear : int
+        Reference year against which projections are computed.
+    pyear_start : int
+        First year of projection time series
+    pyear_end : int
+        Last year of projection time series
+    pyear_step : int
+        Interval (in years) of projection time series
+    nsamps : int
+        Number of samples to generate
+    location_file : str
+        Path to location file used in experiment
+    module_specific_input_data : str
+        Path to module-specific input data
+    shared_input_data : str
+        Path to input data shared across modules
+    projection_scale : str
+        Indicates whether this experiment generates global (GMSL) or local (RSL) projections of sea level change.
+    definition : ModuleDefinitionSource
+        Source of module metadata. Queried for the module registry version and schema of each module named in ``experiment_skeleton``.
+
+    Returns
+    -------
+    Path
+        Path to the experiment config file written in this function
+    See Also
+    --------
+    experiment_skeleton_to_facts_experiment : Builds the concrete experiment object.
+    write_metadata_yaml_jinja2 : Renders the configuration file from a template.
+
+    Notes
+    -----
+    ``experiment_skeleton`` is not mutated; :func:`dataclasses.replace` is used to
+    produce a copy carrying ``workflows_dict``. Experiment-specific input data is
+    collected from the skeleton's climate and supplied sea-level step fields, with
+    ``None`` entries dropped, so an experiment supplying neither yields an empty list.
+    """
     # Gather info from port
     version = definition.version()
     schemas = {
         m: definition.get_schema(m) for m in experiment_skeleton.all_module_names
     }
-
     # make TopLevelParams dataclass
     top_level_params = TopLevelParams(
         scenario=scenario,
@@ -118,13 +209,12 @@ def finalize_experiment_setup(
         experiment_skeleton.supplied_totaled_sealevel_step_data,
     ]
     experiment_spec_data = [i for i in experiment_spec_data if i is not None]
-
     # Create FactsExperiment from template
     experiment_obj = experiment_skeleton_to_facts_experiment(
         experiment_name=experiment_name,
         skeleton=skeleton_with_workflows,
         top_level_params=top_level_params,
-        experiment_path=experiment_path,
+        experiment_path=experiment_paths.experiment_dir,
         module_specific_input_data=module_specific_input_data,
         experiment_specific_input_data=experiment_spec_data,  # supplied_climate_step_data,
         shared_input_data=shared_input_data,
@@ -132,10 +222,13 @@ def finalize_experiment_setup(
         schemas=schemas,
     )
     # Write metadata file using templtae
-    metadata_path = experiment_path / "experiment-config.yaml"
+    metadata_path = (
+        experiment_paths.config_path
+    )  # experiment_path / "experiment-config.yaml"
 
     write_metadata_yaml_jinja2(
         experiment=experiment_obj,
         output_path=metadata_path,
         module_registry_version=version,
     )
+    return metadata_path

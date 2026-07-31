@@ -26,32 +26,17 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
+from facts_experiment_builder.core.experiment.paths import (
+    ExperimentPathContainer,
+)
 from facts_experiment_builder.cli.utils import configure_logging
-from facts_experiment_builder.core.experiment.exceptions import (
-    ExperimentAlreadyExistsError,
-)
 
-from facts_experiment_builder.core.experiment.name import InvalidExperimentNameError
-from facts_experiment_builder.io.experiment_storage import (
-    FileSystemExperimentStorage,
-    ExperimentParentNotFoundError,
-    ExperimentRootNotFoundError,
-    ExperimentStorageError,
-)
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 
 import logging
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)
-
-USER_FACING_ERRORS = (
-    InvalidExperimentNameError,
-    ExperimentParentNotFoundError,
-    ExperimentRootNotFoundError,
-    ExperimentStorageError,
-    ExperimentAlreadyExistsError,
-)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -208,138 +193,135 @@ def main(
     elif debug:
         configure_logging("all")
 
-    try:
-        # First resolve path to ensure its absolute
-        module_registry_path = module_registry.absolute()
-        registry = FileSystemModuleRegistry(registry_path=module_registry_path)
-        valid_module_names = registry.module_names()
-        storage = FileSystemExperimentStorage(workspace_dir)
+    # try:
+    # First resolve path to ensure its absolute
+    module_registry_path = module_registry.absolute()
+    registry = FileSystemModuleRegistry(registry_path=module_registry_path)
+    valid_module_names = registry.module_names()
+    # storage = FileSystemExperimentStorage(workspace_dir)
 
-        console.rule(
-            characters="- - ",
-            style="rule",
-            title="Initiating setup of a new FACTS experiment",
-        )
+    console.rule(
+        characters="- - ",
+        style="rule",
+        title="Initiating setup of a new FACTS experiment",
+    )
+    console.print(
+        "[primary]Step 1:[/primary] Reviewing the information you provided..."
+    )
+    console.print(
+        "[muted] The program will raise an error in step one if the following situations: \n"
+        "[muted] - If there is already an experiment matching the provided --experiment-name,[/muted] \n"
+        "[muted] - If you do not pass either a module to run, or data to bypass running the module, for a required step,\n"
+        "[muted] - If you try to define a workflow that includes a module not present in the sea-level step of the experiment.\n"
+    )
+
+    if not sealevel_step and not supplied_totaled_sealevel_step_data:
         console.print(
-            "[primary]Step 1:[/primary] Reviewing the information you provided..."
+            "[muted] Note: Skipping sealevel step because no sealevel modules were passed to `feb setup-experiment --sealevel-step`. [/muted]"
         )
+
+    if supplied_totaled_sealevel_step_data:
         console.print(
-            "[muted] The program will raise an error in step one if the following situations: \n"
-            "[muted] - If there is already an experiment matching the provided --experiment-name,[/muted] \n"
-            "[muted] - If you do not pass either a module to run, or data to bypass running the module, for a required step,\n"
-            "[muted] - If you try to define a workflow that includes a module not present in the sea-level step of the experiment.\n"
+            "[muted]Note: Totaling step is being skipped because --supplied-totaled-sealevel-step-data was provided.[/muted]"
         )
-
-        if not sealevel_step and not supplied_totaled_sealevel_step_data:
-            console.print(
-                "[muted] Note: Skipping sealevel step because no sealevel modules were passed to `feb setup-experiment --sealevel-step`. [/muted]"
-            )
-
-        if supplied_totaled_sealevel_step_data:
-            console.print(
-                "[muted]Note: Totaling step is being skipped because --supplied-totaled-sealevel-step-data was provided.[/muted]"
-            )
-        prepared_experiment = prepare_experiment_setup(
-            storage=storage,
-            experiment_name=experiment_name,
-            module_regions=module_regions,
-            climate_step=climate_step,
-            supplied_climate_step_data=supplied_climate_step_data,
-            sealevel_step=sealevel_step,
-            supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-            extremesealevel_step=extremesealevel_step,
-        )
-        skeleton = prepared_experiment.experiment_skeleton
-        experiment_path = prepared_experiment.experiment_path
-
-        testing_schemas = {}
-        for m in skeleton.all_module_names:
-            try:
-                testing_schemas[m] = registry.get_schema(m)
-            except ValidationError as e:
-                raise ValueError(f"shcema validation failed for module: '{m}") from e
-        # If framework includes facts-total, collect workflows and attach to skeleton
-        sl_modules = skeleton.sealevel_modules
-        if is_totaling_needed(sealevel_step=sealevel_step):
-            workflow_dict = _collect_workflows(
-                complete_modules_list=sl_modules,
-                total_all_modules=total_all_modules,
-            )
-        else:
-            workflow_dict = {}
-        console.rule(style="rule")
-        console.rule(style="rule", title="Setting up new FACTS experiment")
-
+    prepared_experiment = prepare_experiment_setup(
+        workspace_dir=workspace_dir,
+        experiment_name=experiment_name,
+        module_regions=module_regions,
+        climate_step=climate_step,
+        supplied_climate_step_data=supplied_climate_step_data,
+        sealevel_step=sealevel_step,
+        supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
+        extremesealevel_step=extremesealevel_step,
+    )
+    skeleton = prepared_experiment.experiment_skeleton
+    path_obj = prepared_experiment.experiment_paths
+    assert isinstance(path_obj, ExperimentPathContainer), (
+        f"Expected type = 'ExperimentPathContainer'. Received '{type(path_obj)}'"
+    )
+    testing_schemas = {}
+    for m in skeleton.all_module_names:
         try:
-            validate_module_names(
-                skeleton.all_module_names, valid_modules=valid_module_names
-            )
-        except ValueError as e:
-            raise ValueError(
-                f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
-            ) from e
-
-        finalize_experiment_setup(
-            experiment_name=experiment_name,
-            experiment_path=experiment_path,
-            experiment_skeleton=skeleton,
-            workflows_dict=workflow_dict,
-            pipeline_id=pipeline_id,
-            scenario=scenario,
-            baseyear=baseyear,
-            pyear_end=pyear_end,
-            pyear_start=pyear_start,
-            pyear_step=pyear_step,
-            nsamps=nsamps,
-            location_file=location_file,
-            module_specific_input_data=module_specific_input_data,
-            shared_input_data=shared_input_data,
-            projection_scale=projection_scale,
-            definition=registry,  # registry passed as protocol
+            testing_schemas[m] = registry.get_schema(m)
+        except ValidationError as e:
+            raise ValueError(f"shcema validation failed for module: '{m}") from e
+    # If framework includes facts-total, collect workflows and attach to skeleton
+    sl_modules = skeleton.sealevel_modules
+    if is_totaling_needed(sealevel_step=sealevel_step):
+        workflow_dict = _collect_workflows(
+            complete_modules_list=sl_modules,
+            total_all_modules=total_all_modules,
         )
+    else:
+        workflow_dict = {}
+    console.rule(style="rule")
+    console.rule(style="rule", title="Setting up new FACTS experiment")
 
-        print_experiment_directory_created(experiment_name, experiment_path)
-
-        print_experiment_modules(experiment_skeleton=skeleton)
-        print_experiment_workflows(experiment_skeleton=skeleton)
-        # Print what, if any, optional parameters were provided
-        print_global_params_info(
-            pipeline_id=pipeline_id,
-            scenario=scenario,
-            baseyear=baseyear,
-            pyear_start=pyear_start,
-            pyear_end=pyear_end,
-            pyear_step=pyear_step,
-            nsamps=nsamps,
-            location_file=location_file,
-            module_specific_input_data=module_specific_input_data,
-            shared_input_data=shared_input_data,
+    try:
+        validate_module_names(
+            skeleton.all_module_names, valid_modules=valid_module_names
         )
+    except ValueError as e:
+        raise ValueError(
+            f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
+        ) from e
 
-        console.rule(style="rule", title="Generating experiment-config.yaml")
+    metadata_path = finalize_experiment_setup(
+        experiment_name=experiment_name,
+        experiment_paths=path_obj,
+        experiment_skeleton=skeleton,
+        workflows_dict=workflow_dict,
+        pipeline_id=pipeline_id,
+        scenario=scenario,
+        baseyear=baseyear,
+        pyear_end=pyear_end,
+        pyear_start=pyear_start,
+        pyear_step=pyear_step,
+        nsamps=nsamps,
+        location_file=location_file,
+        module_specific_input_data=module_specific_input_data,
+        shared_input_data=shared_input_data,
+        projection_scale=projection_scale,
+        definition=registry,  # registry passed as protocol
+    )
 
-        console.print("[primary]Step 5: Writing metadata file using...[/primary]")
-        metadata_path = experiment_path / "experiment-config.yaml"
+    print_experiment_directory_created(experiment_name, path_obj)
 
-        console.print(
-            f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
-        )
+    print_experiment_modules(experiment_skeleton=skeleton)
+    print_experiment_workflows(experiment_skeleton=skeleton)
+    # Print what, if any, optional parameters were provided
+    print_global_params_info(
+        pipeline_id=pipeline_id,
+        scenario=scenario,
+        baseyear=baseyear,
+        pyear_start=pyear_start,
+        pyear_end=pyear_end,
+        pyear_step=pyear_step,
+        nsamps=nsamps,
+        location_file=location_file,
+        module_specific_input_data=module_specific_input_data,
+        shared_input_data=shared_input_data,
+    )
 
-        # Summary
-        console.rule(
-            style="rule",
-            title="[success]✨ Experiment directory setup complete![/success]",
-        )
-        console.print("\n[primary]Next steps:[/primary]")
-        console.print(
-            f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]"
-        )
-        console.print(
-            "     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]"
-        )
-        console.print("  [muted]2.[/muted] Generate Docker Compose file.")
-    except USER_FACING_ERRORS as e:
-        raise click.ClickException(str(e)) from e
+    console.rule(style="rule", title="Generating experiment-config.yaml")
+
+    console.print("[primary]Step 5: Writing metadata file using...[/primary]")
+
+    console.print(
+        f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
+    )
+
+    # Summary
+    console.rule(
+        style="rule",
+        title="[success]✨ Experiment directory setup complete![/success]",
+    )
+    console.print("\n[primary]Next steps:[/primary]")
+    console.print(f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]")
+    console.print(
+        "     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]"
+    )
+    console.print("  [muted]2.[/muted] Generate Docker Compose file.")
 
 
 def print_experiment_directory_created(experiment_name: str, experiment_path: "Path"):
