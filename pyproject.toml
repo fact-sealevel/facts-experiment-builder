@@ -47,6 +47,7 @@ pythonpath = ["src"]
 
 [tool.coverage.run]
 source = ["src"]
+omit = ["*/shell.py"]
 
 [tool.coverage.report]
 show_missing = true
