@@ -58,7 +58,7 @@ def _configure_feb_logging() -> None:
     help="Name of the experiment, including parent directory, if applicable.",
 )
 @click.option(
-    "--custom-output-path",
+    "--custom-compose-path",
     type=click.Path(),
     default=None,
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
@@ -87,7 +87,7 @@ def _configure_feb_logging() -> None:
 )
 def main(
     experiment_name,
-    custom_output_path,
+    custom_compose_path,
     workspace_dir,
     module_registry,
     debug,
@@ -121,7 +121,7 @@ def main(
     #     else storage.compose_path(exp)
     # )
     # TODO come back and fix this. add custom otuput to experiment paths as option
-    output_path = experiment_paths.output_dir
+    compose_path = experiment_paths.compose_path
 
     assert experiment_path.is_dir(), f"Expected '{experiment_path}' to be a directory."
     # experiment_directory_exists(experiment_directory=experiment_path)
@@ -151,7 +151,7 @@ def main(
         )
     # Load experiment metadata file in as dict
     metadata_dict = load_experiment_metadata(experiment_metadata_path)
-
+    
     try:
         compose_dict = generate_compose(
             metadata=metadata_dict,
@@ -183,14 +183,14 @@ def main(
     console.print("[primary]Step 5:[/primary] Writing compose YAML content to file...")
     write_compose_yaml(
         compose_content=yaml_content,
-        output_path=output_path,
+        compose_path=compose_path,
     )
     console.print(
-        f"[success]✓ Generated Docker Compose file:[/success] [secondary]{output_path}[/secondary]"
+        f"[success]✓ Generated Docker Compose file:[/success] [secondary]{compose_path}[/secondary]"
     )
     console.print("\n[primary]Next steps:[/primary]")
     console.print(
-        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {output_path.relative_to(Path.cwd())} up[/accent]"
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path.relative_to(Path.cwd())} up[/accent]"
     )
     console.rule(
         style="rule",
