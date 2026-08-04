@@ -1,5 +1,4 @@
 from pathlib import Path
-from facts_experiment_builder.core.experiment import FactsExperiment
 from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 from facts_experiment_builder.core.experiment.experiment_config import (
     ExperimentConfig,
@@ -206,111 +205,7 @@ def format_yaml_value(value: Any) -> str:
     return result
 
 
-def prepare_experiment_config(
-    experiment: FactsExperiment,
-    config_path: Path,
-    module_registry_version: str | None = None,
-):
-    """Write metadata to YAML file using Jinja2 templating.
-
-    Accepts a FactsExperiment.
-
-    Args:
-        experiment: FactsExperiment
-        config_path: Path to output config YAML file (typically experiment-config.yaml)
-    """
-    # Build manifest and module_sections from steps
-    fw = (
-        [experiment.totaling_step.module_name]
-        if experiment.totaling_step.is_present
-        else []
-    )
-    esl = (
-        [experiment.extreme_sealevel_step.module_name]
-        if experiment.extreme_sealevel_step.is_present
-        else []
-    )
-    manifest = {
-        "temperature_module": experiment.climate_step.module_name or "NONE",
-        "sealevel_modules": experiment.sealevel_step.module_names,
-        "framework_modules": fw,
-        "esl_modules": esl,
-    }
-    module_sections: Dict[str, Any] = {}
-    for step in experiment.list_all_steps():
-        for spec in step.module_specs():
-            module_sections[spec.module_name] = spec.to_dict()
-
-    # Included modules (temperature_module, sealevel_modules, framework_modules, esl_modules)
-    # These are the keys that appear in the "Modules included in experiment" section
-    included_modules = []
-    if "temperature_module" in manifest:
-        included_modules.append("temperature_module")
-    if "sealevel_modules" in manifest:
-        included_modules.append("sealevel_modules")
-    if "framework_modules" in manifest and manifest["framework_modules"]:
-        included_modules.append("framework_modules")
-    if "esl_modules" in manifest and manifest["esl_modules"]:
-        included_modules.append("esl_modules")
-
-    # Inputs section (module-specific-input-data, shared-input-data, location-file-name)
-    inputs = []
-    if "module-specific-input-data" in experiment.paths:
-        inputs.append("module-specific-input-data")
-    if "shared-input-data" in experiment.paths:
-        inputs.append("shared-input-data")
-    if "experiment-specific-input-data" in experiment.paths:
-        inputs.append("experiment-specific-input-data")
-    if "supplied-totaled-sealevel-step-data" in experiment.paths:
-        inputs.append("supplied-totaled-sealevel-step-data")
-
-    # Outputs section (output-data-location)
-    outputs = []
-    if "output-data-location" in experiment.paths:
-        outputs.append("output-data-location")
-
-    # Module-specific sections (all keys that are module names)
-    # Exclude top-level params, included_modules, inputs, outputs, and experiment_name
-    excluded_keys = (
-        set(experiment.top_level_params.keys())
-        | set(experiment.fingerprint_params.keys())
-        | set(included_modules)
-        | set(inputs)
-        | set(outputs)
-        | {"experiment_name"}
-    )
-    module_keys = [
-        key
-        for key in module_sections.keys()
-        if key not in excluded_keys and isinstance(module_sections[key], dict)
-    ]
-
-    # Sort module_keys so temperature_module appears first if it exists
-    temperature_module_name = manifest.get("temperature_module")
-    if (
-        temperature_module_name
-        and isinstance(temperature_module_name, str)
-        and temperature_module_name.upper() != "NONE"
-    ):
-        if temperature_module_name in module_keys:
-            module_keys.remove(temperature_module_name)
-            module_keys.insert(0, temperature_module_name)
-    return (
-        config_path,
-        experiment,
-        manifest,
-        module_sections,
-        included_modules,
-        inputs,
-        outputs,
-        module_keys,
-        module_registry_version,
-    )
-
-
-def write_metadata_yaml_jinja2(
-    experiment_config: ExperimentConfig,
-):
+def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Add custom functions and filters
     def format_value(value):
         result = format_yaml_value(value)
@@ -339,19 +234,10 @@ def write_metadata_yaml_jinja2(
 
     # Render template
     try:
-        rendered = template.render(
-            experiment=experiment_config.experiment,
-            manifest=experiment_config.manifest,
-            module_sections=experiment_config.module_sections,
-            included_modules=experiment_config.included_modules,
-            inputs=experiment_config.inputs,
-            outputs=experiment_config.outputs,
-            module_keys=experiment_config.module_keys,
-            module_registry_version=experiment_config.module_registry_version,
-        )
+        rendered = template.render(**vars(experiment_config))
     except Exception as e:
         raise ValueError(f"Error rendering Jinja2 template: {e}") from e
 
     # Write to file
-    with open(experiment_config.config_path, "w") as f:
+    with open(config_path, "w") as f:
         f.write(rendered)
