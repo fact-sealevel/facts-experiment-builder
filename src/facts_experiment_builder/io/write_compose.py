@@ -280,8 +280,8 @@ def format_compose_yaml(content: str) -> str:
 
 def write_compose_yaml(
     compose_content: str,
-    output_path: Path,
+    compose_path: Path,
 ) -> None:
     """Write Docker Compose YAML to file."""
-    with open(output_path, "w") as f:
+    with open(compose_path, "w") as f:
         f.write(compose_content)
