@@ -87,7 +87,6 @@ def prepare_experiment_setup(
     experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
 
     # Create experiment path from resolved root (handled in cli layer)
-    # experiment_path = storage.create(experiment_name_obj)
     experiment_path_obj = ExperimentPathContainer(
         workspace_dir=workspace_dir, experiment_name=experiment_name_obj
     )
@@ -226,19 +225,13 @@ def finalize_experiment_setup(
     )
     # Write metadata file using templtae
     metadata_path = experiment_paths.config_path
-
     experiment_config = facts_experiment_to_config(
         experiment_obj=experiment_obj,
-        output_path=metadata_path,
+        config_path=metadata_path,
         module_registry_version=version,
     )
 
-    # write_metadata_yaml_jinja2(
-    #     experiment=experiment_obj,
-    #     output_path=metadata_path,
-    #     module_registry_version=version,
-    # )
     write_metadata_yaml_jinja2(
-        experiment_config=experiment_config, module_registry_version=version
+        experiment_config=experiment_config, 
     )
     return metadata_path
