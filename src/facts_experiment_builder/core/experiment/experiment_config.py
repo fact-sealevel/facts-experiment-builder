@@ -10,7 +10,7 @@ from typing import Iterable
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    output_path: Path
+    config_path: Path
     experiment: FactsExperiment
     manifest: dict
     module_sections: dict  # Need to define what this is more clearly. This is the dict of all of the module-specific sections (built from ModuleExeprimentSpec) in 2nd half of config
@@ -18,7 +18,7 @@ class ExperimentConfig:
     inputs: list  # inputs section at top of config
     outputs: list  # outputs section at top of config
     module_keys: list  # this is a list of all the modules that have sections in second part of config--need to cleanup how its made
-
+    module_registry_version: str
 
 @dataclass(frozen=True)
 class ExperimentManifest:
@@ -121,15 +121,15 @@ def make_module_keys(
 
 def facts_experiment_to_config(
     experiment_obj: FactsExperiment,
-    output_path: Path,
+    config_path: Path,
     module_registry_version: str | None = None,
 ):
     # Get totaling, esl module names, if present
-    climate_modules = (
-        [experiment_obj.climate_step.module_name]
-        if experiment_obj.climate_step.is_present
-        else []
-    )
+    # climate_modules = (
+    #      [experiment_obj.climate_step.module_name]
+    #      if experiment_obj.climate_step.is_present
+    #      else []
+    # )
 
     framework_modules = (
         [experiment_obj.totaling_step.module_name]
@@ -143,7 +143,7 @@ def facts_experiment_to_config(
     )
     # make manifest
     manifest = {
-        "climate_module": climate_modules,
+        "climate_module": experiment_obj.climate_step.module_name or "NONE", #climate_modules,
         "sealevel_modules": experiment_obj.sealevel_step.module_names,
         "framework_modules": framework_modules,
         "esl_modules": esl_module,
@@ -167,7 +167,7 @@ def facts_experiment_to_config(
         module_sections=module_sections,
     )
     return ExperimentConfig(
-        output_path=output_path,
+        config_path=config_path,
         manifest=manifest,
         experiment=experiment_obj,
         module_sections=module_sections,
@@ -175,4 +175,5 @@ def facts_experiment_to_config(
         inputs=inputs,
         outputs=outputs,
         module_keys=module_keys,
+        module_registry_version=module_registry_version
     )
