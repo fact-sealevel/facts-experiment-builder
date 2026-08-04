@@ -6,11 +6,7 @@ from facts_experiment_builder.core.experiment.experiment_config import (
 from typing import Any, List, Dict
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
-try:
-    from markupsafe import Markup
-except ImportError:
-    # Fallback for older Jinja2 versions
-    from jinja2 import Markup
+from markupsafe import Markup
 
 
 def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
@@ -95,6 +91,7 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
                 nested_lines = format_module_value(
                     nested_key, nested_value, indent=indent + 2
                 )
+
                 lines.extend(nested_lines)
     elif isinstance(value, list):
         # List value (like sealevel_modules)
