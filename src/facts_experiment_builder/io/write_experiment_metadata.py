@@ -208,7 +208,7 @@ def format_yaml_value(value: Any) -> str:
 
 def prepare_experiment_config(
     experiment: FactsExperiment,
-    output_path: Path,
+    config_path: Path,
     module_registry_version: str | None = None,
 ):
     """Write metadata to YAML file using Jinja2 templating.
@@ -217,7 +217,7 @@ def prepare_experiment_config(
 
     Args:
         experiment: FactsExperiment
-        output_path: Path to output YAML file (typically experiment-config.yaml)
+        config_path: Path to output config YAML file (typically experiment-config.yaml)
     """
     # Build manifest and module_sections from steps
     fw = (
@@ -296,7 +296,7 @@ def prepare_experiment_config(
             module_keys.remove(temperature_module_name)
             module_keys.insert(0, temperature_module_name)
     return (
-        output_path,
+        config_path,
         experiment,
         manifest,
         module_sections,
@@ -309,16 +309,7 @@ def prepare_experiment_config(
 
 
 def write_metadata_yaml_jinja2(
-    # output_path,
-    # experiment,
-    # manifest,
-    # module_sections,
-    # included_modules,
-    # inputs,
-    # outputs,
-    # module_keys,
     experiment_config: ExperimentConfig,
-    module_registry_version,
 ):
     # Add custom functions and filters
     def format_value(value):
@@ -344,7 +335,6 @@ def write_metadata_yaml_jinja2(
     env.filters["format_value"] = format_value
 
     # Create template
-    # template = env.from_string(YAML_TEMPLATE)
     template = env.get_template("experiment-config.yaml.j2")
 
     # Render template
@@ -357,11 +347,11 @@ def write_metadata_yaml_jinja2(
             inputs=experiment_config.inputs,
             outputs=experiment_config.outputs,
             module_keys=experiment_config.module_keys,
-            module_registry_version=module_registry_version,
+            module_registry_version=experiment_config.module_registry_version,
         )
     except Exception as e:
         raise ValueError(f"Error rendering Jinja2 template: {e}") from e
 
     # Write to file
-    with open(experiment_config.output_path, "w") as f:
+    with open(experiment_config.config_path, "w") as f:
         f.write(rendered)
