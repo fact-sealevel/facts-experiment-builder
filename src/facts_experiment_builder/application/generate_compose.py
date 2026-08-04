@@ -1,14 +1,5 @@
 #!/usr/bin/env python3
-"""Generate Docker Compose file from experiment metadata.
-
-This script follows a domain-driven design pattern:
-- experiment-config.yaml is the "user interface" (UI layer)
-- Module service specs are created from experiment metadata (Adapter layer)
-- Docker compose files are the "engine" (Infrastructure layer)
-
-Usage:
-    python -m facts_experiment_builder.application.generate_compose <experiment_dir>
-"""
+"""Generate Docker Compose file from experiment config."""
 
 from dataclasses import dataclass
 from pathlib import Path
