@@ -223,7 +223,7 @@ def test_extract_experiment_dir_raises_for_root_path():
 
 def test_extract_all_module_names_returns_all_modules():
     metadata = {
-        "temperature_module": "fair-temperature",
+        "climate_module": "fair-temperature",
         "sealevel_modules": ["bamber19-icesheets", "tlm-sterodynamics"],
         "framework_modules": ["facts-total"],
         "esl_modules": ["extremesealevel-pointsoverthreshold"],

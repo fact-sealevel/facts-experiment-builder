@@ -151,7 +151,7 @@ def main(
         )
     # Load experiment metadata file in as dict
     metadata_dict = load_experiment_metadata(experiment_metadata_path)
-    
+
     try:
         compose_dict = generate_compose(
             metadata=metadata_dict,

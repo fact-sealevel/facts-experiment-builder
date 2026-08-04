@@ -64,7 +64,9 @@ class SealevelStep(ExperimentStep):
 
     @classmethod
     def from_dict(
-        cls, module_names: List[str], metadata: Dict[str, Any]
+        cls, 
+        module_names: List[str], 
+        metadata: Dict[str, Any]
     ) -> "SealevelStep":
         specs = [
             ModuleExperimentSpec.from_dict(name, metadata.get(name) or {})
