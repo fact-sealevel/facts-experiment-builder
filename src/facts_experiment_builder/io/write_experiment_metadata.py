@@ -1,89 +1,17 @@
 from pathlib import Path
 from facts_experiment_builder.core.experiment import FactsExperiment
 from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
+from facts_experiment_builder.core.experiment.experiment_config import (
+    ExperimentConfig,
+)
 from typing import Any, List, Dict
-from jinja2 import Environment, BaseLoader
+from jinja2 import Environment, PackageLoader, StrictUndefined
 
 try:
     from markupsafe import Markup
 except ImportError:
     # Fallback for older Jinja2 versions
     from jinja2 import Markup
-
-# Jinja2 template for experiment metadata YAML
-YAML_TEMPLATE = """
-### Experiment configuration YAML file ###
-# This is the main configuration file that describes the specified FACTS experiment.
-# It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`.
-# The values included here are defaults based on the default values for each module specified in /modules/module_name/defaults.yml.
-
-# **How to use this file:**
-# 1. Fill in the desired values for the top-level parameters of the experiment.
-# 2. Specify the location of the input data to be used in this experiment.
-# 3. Specify the location file to be used in this experiment.
-# 4. Review the module-level inputs, options, and outputs to ensure they are correct.
-
-# **IMPORTANT**
-# This file does not 'run' a FACTS experiment, it merely specifies an experiment. Once you have completed filling out this file, run:
-# `uv run generate-compose <experiment_directorY> to generate a Docker Compose file that corresponds to this experiment.
-# Then, run `docker compose -f <compose_file> up` to run the experiment.
-
-# About this experiment:
-# Date created: {{ experiment.date_created}}
-# Module registry version: {{ module_registry_version or "unknown" }}
-experiment_name:
-{{ format_value(experiment.experiment_name) }}
-
-projection_scale:
-{{ format_value(experiment.projection_scale) }}
-
-##----- Top-level params -----##
-{% for key, value in experiment.top_level_params.items() %}
-{{ key }}:
-{{ format_value(value) }}
-{% endfor %}
-
-##----- Modules included in experiment -----##
-{% for module_key in included_modules %}
-{% if module_key in manifest %}
-{{ module_key }}:
-{{ format_value(manifest[module_key]) }}
-{% endif %}
-{% endfor %}
-
-##----- Workflows (facts-total) -----##
-{% if experiment.workflows %}
-workflows:
-{% for wf_name, wf_modules in experiment.workflows.items() %}
-  {{ wf_name }}: "{{ wf_modules }}"
-{% endfor %}
-{% endif %}
-
-##----- Inputs -----##
-{% for key in inputs %}
-{% if key in experiment.paths %}
-{{ key }}:
-{{ format_value(experiment.paths[key]) }}
-{% endif %}
-{% endfor %}
-
-##----- Outputs -----##
-{% for key in outputs %}
-{% if key in experiment.paths %}
-{{ key }}:
-{{ format_value(experiment.paths[key]) }}
-{% endif %}
-{% endfor %}
-
-
-##--------------------------------------------------------##
-##--------------------------------------------------------##
-##----- Module-specific inputs, options, and outputs -----##
-{% for module_key in module_keys %}
-{{ module_key }}:
-{{ format_module(module_key, module_sections[module_key]) }}
-{% endfor %}
-"""
 
 
 def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
@@ -278,7 +206,7 @@ def format_yaml_value(value: Any) -> str:
     return result
 
 
-def write_metadata_yaml_jinja2(
+def prepare_experiment_config(
     experiment: FactsExperiment,
     output_path: Path,
     module_registry_version: str | None = None,
@@ -367,14 +295,31 @@ def write_metadata_yaml_jinja2(
         if temperature_module_name in module_keys:
             module_keys.remove(temperature_module_name)
             module_keys.insert(0, temperature_module_name)
-
-    # Create Jinja2 environment
-    env = Environment(
-        loader=BaseLoader(),
-        trim_blocks=True,
-        lstrip_blocks=True,
+    return (
+        output_path,
+        experiment,
+        manifest,
+        module_sections,
+        included_modules,
+        inputs,
+        outputs,
+        module_keys,
+        module_registry_version,
     )
 
+
+def write_metadata_yaml_jinja2(
+    # output_path,
+    # experiment,
+    # manifest,
+    # module_sections,
+    # included_modules,
+    # inputs,
+    # outputs,
+    # module_keys,
+    experiment_config: ExperimentConfig,
+    module_registry_version,
+):
     # Add custom functions and filters
     def format_value(value):
         result = format_yaml_value(value)
@@ -385,29 +330,38 @@ def write_metadata_yaml_jinja2(
         result = format_module(key, data)
         return Markup(result)
 
+    # create jinja2 env
+    env = Environment(
+        loader=PackageLoader("facts_experiment_builder", "templates"),
+        undefined=StrictUndefined,
+        trim_blocks=True,
+        lstrip_blocks=True,
+        keep_trailing_newline=True,
+    )
     env.globals["format_value"] = format_value
     env.globals["format_module"] = format_module_func
     # Also add as filter for alternative syntax
     env.filters["format_value"] = format_value
 
     # Create template
-    template = env.from_string(YAML_TEMPLATE)
+    # template = env.from_string(YAML_TEMPLATE)
+    template = env.get_template("experiment-config.yaml.j2")
 
     # Render template
     try:
         rendered = template.render(
-            experiment=experiment,
-            manifest=manifest,
-            module_sections=module_sections,
-            included_modules=included_modules,
-            inputs=inputs,
-            outputs=outputs,
-            module_keys=module_keys,
+            experiment=experiment_config.experiment,
+            manifest=experiment_config.manifest,
+            module_sections=experiment_config.module_sections,
+            included_modules=experiment_config.included_modules,
+            inputs=experiment_config.inputs,
+            outputs=experiment_config.outputs,
+            module_keys=experiment_config.module_keys,
             module_registry_version=module_registry_version,
         )
     except Exception as e:
         raise ValueError(f"Error rendering Jinja2 template: {e}") from e
 
     # Write to file
-    with open(output_path, "w") as f:
+    with open(experiment_config.output_path, "w") as f:
         f.write(rendered)

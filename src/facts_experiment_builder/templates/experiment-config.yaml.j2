@@ -1,0 +1,74 @@
+
+### Experiment configuration YAML file ###
+# This is the main configuration file that describes the specified FACTS experiment.
+# It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`.
+# The values included here are defaults based on the default values for each module specified in /modules/module_name/defaults.yml.
+
+# **How to use this file:**
+# 1. Fill in the desired values for the top-level parameters of the experiment.
+# 2. Specify the location of the input data to be used in this experiment.
+# 3. Specify the location file to be used in this experiment.
+# 4. Review the module-level inputs, options, and outputs to ensure they are correct.
+
+# **IMPORTANT**
+# This file does not 'run' a FACTS experiment, it merely specifies an experiment. Once you have completed filling out this file, run:
+# `uv run generate-compose <experiment_directorY> to generate a Docker Compose file that corresponds to this experiment.
+# Then, run `docker compose -f <compose_file> up` to run the experiment.
+
+# About this experiment:
+# Date created: {{ experiment.date_created}}
+# Module registry version: {{ module_registry_version or "unknown" }}
+experiment_name:
+{{ format_value(experiment.experiment_name) }}
+
+projection_scale:
+{{ format_value(experiment.projection_scale) }}
+
+##----- Top-level params -----##
+{% for key, value in experiment.top_level_params.items() %}
+{{ key }}:
+{{ format_value(value) }}
+{% endfor %}
+
+##----- Modules included in experiment -----##
+{% for module_key in included_modules %}
+{% if module_key in manifest %}
+{{ module_key }}:
+{{ format_value(manifest[module_key]) }}
+{% endif %}
+{% endfor %}
+
+##----- Workflows (facts-total) -----##
+{% if experiment.workflows %}
+workflows:
+{% for wf_name, wf_modules in experiment.workflows.items() %}
+  {{ wf_name }}: "{{ wf_modules }}"
+{% endfor %}
+{% endif %}
+
+##----- Inputs -----##
+{% for key in inputs %}
+{% if key in experiment.paths %}
+{{ key }}:
+{{ format_value(experiment.paths[key]) }}
+{% endif %}
+{% endfor %}
+
+##----- Outputs -----##
+{% for key in outputs %}
+{% if key in experiment.paths %}
+{{ key }}:
+{{ format_value(experiment.paths[key]) }}
+{% endif %}
+{% endfor %}
+
+
+##--------------------------------------------------------##
+##--------------------------------------------------------##
+##----- Module-specific inputs, options, and outputs -----##
+{% for module_key in module_keys %}
+{{ module_key }}:
+{{ format_module(module_key, module_sections[module_key]) }}
+{% endfor %}
+
+

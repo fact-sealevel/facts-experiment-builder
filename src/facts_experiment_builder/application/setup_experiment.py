@@ -26,6 +26,9 @@ from facts_experiment_builder.io.experiment_storage import (
     # FileSystemExperimentStorage,
     make_output_dir,
 )
+from facts_experiment_builder.core.experiment.experiment_config import (
+    facts_experiment_to_config,
+)
 from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
 import logging
 
@@ -222,13 +225,20 @@ def finalize_experiment_setup(
         schemas=schemas,
     )
     # Write metadata file using templtae
-    metadata_path = (
-        experiment_paths.config_path
-    )  # experiment_path / "experiment-config.yaml"
+    metadata_path = experiment_paths.config_path
 
-    write_metadata_yaml_jinja2(
-        experiment=experiment_obj,
+    experiment_config = facts_experiment_to_config(
+        experiment_obj=experiment_obj,
         output_path=metadata_path,
         module_registry_version=version,
+    )
+
+    # write_metadata_yaml_jinja2(
+    #     experiment=experiment_obj,
+    #     output_path=metadata_path,
+    #     module_registry_version=version,
+    # )
+    write_metadata_yaml_jinja2(
+        experiment_config=experiment_config, module_registry_version=version
     )
     return metadata_path
