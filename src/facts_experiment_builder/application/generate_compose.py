@@ -87,7 +87,7 @@ def _log_success(msg: str, *args: object) -> None:
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
     """Extract a flat list of all module names from the experiment manifest keys."""
     names: List[str] = []
-    temp = metadata.get("temperature_module")
+    temp = metadata.get("climate_module")
     if temp and str(temp).upper() != "NONE":
         names.append(str(temp))
     for m in metadata.get("sealevel_modules") or []:
@@ -314,7 +314,6 @@ def _make_experiment_plan(
 
     # Get the list of modules included in experiment from manifest in exp config
     _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
-
     # Use list of modules to load schema for each module
     list_of_schemas = list(schemas.values())
     # Get keys for top level params and fingerprint params from each module in experiment
