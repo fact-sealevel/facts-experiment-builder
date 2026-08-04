@@ -212,11 +212,12 @@ class FactsExperiment:
 
         # Then, build a manifest of the modules included in the experiment
         manifest = {
-            "temperature_module": metadata.get("temperature_module"),
+            "temperature_module": metadata.get("climate_module"),
             "sealevel_modules": metadata.get("sealevel_modules", []),
             "framework_modules": metadata.get("framework_modules", []),
             "esl_modules": metadata.get("esl_modules", []),
         }
+
         if isinstance(manifest["sealevel_modules"], str):
             manifest["sealevel_modules"] = [manifest["sealevel_modules"]]
         if isinstance(manifest["esl_modules"], str):
