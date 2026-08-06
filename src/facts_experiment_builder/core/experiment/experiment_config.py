@@ -9,6 +9,9 @@ from typing import Iterable
 
 @dataclass(frozen=True)
 class ExperimentConfig:
+    """
+    Data class to hold all information needed for an experiment config file. This maps between FactsExperiment and the jinja2 template for experiment-config.yaml.
+    """
     experiment_name: str
     date_created: str
     projection_scale: str
