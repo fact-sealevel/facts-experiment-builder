@@ -19,7 +19,7 @@ from facts_experiment_builder.core.experiment.paths import (
 from facts_experiment_builder.io.write_config import (
     write_config_jinja2,
 )
-from facts_experiment_builder.application.experiment_helpers import (
+from facts_experiment_builder.core.experiment.experiment_skeleton import (
     experiment_skeleton_to_facts_experiment,
 )
 from facts_experiment_builder.io.experiment_storage import (
