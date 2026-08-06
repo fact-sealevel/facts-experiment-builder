@@ -4,15 +4,8 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.application.generate_compose import (
     generate_compose,
 )
-from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
-# from facts_experiment_builder.io.experiment_storage import (
-# FileSystemExperimentStorage,
 
-from facts_experiment_builder.io.experiment_loader import load_experiment_metadata
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
-from facts_experiment_builder.core.experiment.paths import (
-    ExperimentName,
-)
 from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
@@ -86,10 +79,10 @@ def _configure_feb_logging() -> None:
     help="Path to the facts-module-registry directory to use in generate-compose. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
 )
 def main(
-    experiment_name,
-    custom_compose_path,
-    workspace_dir,
-    module_registry,
+    experiment_name: str,
+    custom_compose_path: Path,
+    workspace_dir: Path,
+    module_registry: Path,
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
@@ -106,58 +99,34 @@ def main(
     )
 
     # Step 1: Find experiment metadata file
+
     console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
 
-    exp = ExperimentName.parse(experiment_name)
-    # storage = FileSystemExperimentStorage(workspace_dir)
-    experiment_paths = ExperimentPathContainer(
-        workspace_dir=workspace_dir, experiment_name=exp
-    )
-    # experiment_path = storage.experiment_dir(exp)
-    experiment_path = experiment_paths.experiment_dir
-    # output_path = (
-    #     custom_output_path.resolve()
-    #     if custom_output_path is not None
-    #     else storage.compose_path(exp)
+    # console.print(
+    #    f"[success]✓ Found experiment metadata file:[/success] [secondary]{experiment_metadata_path}[/secondary]"
     # )
-    # TODO come back and fix this. add custom otuput to experiment paths as option
-    compose_path = experiment_paths.compose_path
-
-    assert experiment_path.is_dir(), f"Expected '{experiment_path}' to be a directory."
-    # experiment_directory_exists(experiment_directory=experiment_path)
-    # then, get path to config file
-    # experiment_metadata_path = storage.config_path(exp=exp)
-    experiment_metadata_path = experiment_paths.config_path
-
-    # Ensure the file exists
-    assert experiment_metadata_path.exists(), (
-        f"Expected '{experiment_metadata_path}' exists."
-    )
-
-    console.print(
-        f"[success]✓ Found experiment metadata file:[/success] [secondary]{experiment_metadata_path}[/secondary]"
-    )
     # TODO in future, check it conforms to schema?
 
     # # Step 2: Build compose dictionary from metadata
-    console.print(
-        "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
-    )
+    # console.print(
+    #    "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
+    # )
     # check that file exists at metadata path
-    if not experiment_metadata_path.exists():
-        raise FileNotFoundError(
-            f"When trying to read experiment-metadata file to generate corresponding "
-            f"compose file, metadata file not found: {experiment_metadata_path}"
-        )
-    # Load experiment metadata file in as dict
-    metadata_dict = load_experiment_metadata(experiment_metadata_path)
+    # if not experiment_metadata_path.exists():
+    #    raise FileNotFoundError(
+    #        f"When trying to read experiment-metadata file to generate corresponding "
+    #        f"compose file, metadata file not found: {experiment_metadata_path}"
+    #    )
 
     try:
-        compose_dict = generate_compose(
-            metadata=metadata_dict,
-            experiment_dir=experiment_metadata_path.parent,
+        output = generate_compose(
+            experiment_name=experiment_name,
+            workspace_dir=workspace_dir,
             definition=registry,
+            custom_compose_path=custom_compose_path,
         )
+        compose_dict = output.compose_dict
+        compose_path = output.compose_path
     except (FileNotFoundError, ValueError) as e:  # need to incldue more errors ehre?
         console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
         raise SystemExit(1)
@@ -166,14 +135,6 @@ def main(
     console.print(
         "[primary]Step 3:[/primary] Resolving output path for compose file..."
     )
-    # Check if received custom output path to use
-    # if custom_output_path is not None:
-    #     # add fn here
-    #     output_path = resolve_custom_experiment_compose_path(custom_output_path)
-    # else:
-    #     output_path = resolve_default_experiment_compose_path(
-    #         experiment_path=experiment_path
-    #     )
 
     # # Step 4: Make compose YAML content from dict
     console.print("[primary]Step 4:[/primary] Making compose YAML content from dict...")

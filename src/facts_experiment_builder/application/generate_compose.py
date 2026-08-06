@@ -9,9 +9,14 @@ from facts_experiment_builder.core.module.module_service_spec import (
     get_experiment_paths,
     build_module_service_spec,
 )
+from facts_experiment_builder.core.experiment.name import ExperimentName
+from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
 from facts_experiment_builder.core.experiment import FactsExperiment
-from facts_experiment_builder.application.experiment_helpers import (
+from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
+)
+from facts_experiment_builder.io.experiment_loader import (
+    load_experiment_config,
 )
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
 
@@ -45,6 +50,12 @@ _REQUIRED_FIELDS = [
     "shared-input-data",
     "output-data-location",
 ]
+
+
+@dataclass(frozen=True)
+class PrepareComposeOutput:
+    compose_dict: dict
+    compose_path: Path
 
 
 @dataclass(frozen=True)
@@ -278,16 +289,6 @@ def check_metadata_has_required_fields(metadata_obj, required_fields):
             )
 
     return None
-
-
-def extract_experiment_dir_from_metadata_path(metadata_path):
-    """This function extracts the experiment directory from the metadata path obj."""
-    experiment_dir = metadata_path.parent
-    if experiment_dir == metadata_path:
-        raise ValueError(
-            f"No experiment dir found in the parent path of provided metadata path, {metadata_path}"
-        )
-    return experiment_dir
 
 
 def _make_experiment_plan(
@@ -625,7 +626,10 @@ def _build_compose_services(
 
 
 def generate_compose(
-    metadata: Dict[str, Any], experiment_dir: Path, definition
+    experiment_name: str,
+    workspace_dir: Path,
+    definition,
+    custom_compose_path: Path | None = None,
 ) -> Dict[str, Any]:
     """Generate Docker Compose dict from already-loaded experiment metadata.
 
@@ -639,16 +643,45 @@ def generate_compose(
     # TODO: in future, should probably make a dataclass or similar for experiment metadata dict so that
     # can just access an attr instead of needing fns to get names from manifest etc?
 
+    experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
+
+    experiment_paths = ExperimentPathContainer(
+        workspace_dir=workspace_dir, experiment_name=experiment_name_obj
+    )
+    experiment_paths.custom_compose_path = custom_compose_path
+
+    # handle custom compose, if passed
+    compose_path = (
+        experiment_paths.custom_compose_path.resolve()
+        if experiment_paths.custom_compose_path is not None
+        else experiment_paths.compose_path
+    )
+    experiment_dir = experiment_paths.config_path.parent
+
+    # Check that paths are valid
+    assert experiment_dir.is_dir(), (
+        f"Expected 'experiment_dir.is_dir() is True', received: {experiment_dir.is_dir()}."
+    )
+    config_path = experiment_paths.config_path
+    assert config_path.exists(), (
+        f"Did not find `experiment-config.yaml` at '{config_path}'. Please ensure correct path/experiment name."
+    )
+    # log message to send to CLI
+    logger.info(
+        "Found experiment config file at provided path", extra={"detail": config_path}
+    )
+
+    metadata_dict = load_experiment_config(experiment_paths.config_path)
     #  setup - only references to definition are here
-    module_names = _extract_all_module_names_from_manifest(metadata)
+    module_names = _extract_all_module_names_from_manifest(metadata_dict)
     schemas = {m_name: definition.get_schema(m_name) for m_name in set(module_names)}
     known_module_names = definition.module_names()
 
     # Make experiment plan
-    plan = _make_experiment_plan(metadata, schemas)
+    plan = _make_experiment_plan(metadata_dict, schemas)
     specs = _build_module_specs(
         plan=plan,
-        metadata=metadata,
+        metadata=metadata_dict,
         schemas=schemas,
         known_module_names=known_module_names,
     )
@@ -664,8 +697,11 @@ def generate_compose(
     services = _build_compose_services(
         specs,
         plan,
-        metadata,
+        metadata_dict,
         experiment_dir,
         schemas=schemas,
     )
-    return {"services": services}
+    output_obj = PrepareComposeOutput(
+        compose_dict={"services": services}, compose_path=compose_path
+    )
+    return output_obj
