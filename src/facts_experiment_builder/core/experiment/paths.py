@@ -57,7 +57,7 @@ class ExperimentName:
         return str(self.relative_path)
 
 
-@dataclass(frozen=True)
+@dataclass
 class ExperimentPathContainer:
     """
     This is a class to hold all paths related to an experiment including:
