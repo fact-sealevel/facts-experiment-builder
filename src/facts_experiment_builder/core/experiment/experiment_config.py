@@ -9,8 +9,13 @@ from typing import Iterable
 
 @dataclass(frozen=True)
 class ExperimentConfig:
-    experiment: FactsExperiment
+    experiment_name: str
+    date_created: str
+    projection_scale: str
     manifest: dict
+    workflows: dict
+    paths: dict
+    top_level_params: dict
     module_sections: dict  # Need to define what this is more clearly. This is the dict of all of the module-specific sections (built from ModuleExeprimentSpec) in 2nd half of config
     included_modules: list  # this is list of modules that apperas in top of config
     inputs: list  # inputs section at top of config
@@ -167,11 +172,16 @@ def facts_experiment_to_config(
     )
     return ExperimentConfig(
         manifest=manifest,
-        experiment=experiment_obj,
+        workflows=experiment_obj.workflows,
+        experiment_name=experiment_obj.experiment_name,
+        date_created=experiment_obj.date_created,
+        projection_scale=experiment_obj.projection_scale,
+        top_level_params=experiment_obj.top_level_params,
         module_sections=module_sections,
         included_modules=included_modules,
         inputs=inputs,
         outputs=outputs,
+        paths=experiment_obj.paths,
         module_keys=module_keys,
         module_registry_version=module_registry_version,
     )

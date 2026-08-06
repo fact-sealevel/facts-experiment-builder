@@ -16,16 +16,16 @@
 # Then, run `docker compose -f <compose_file> up` to run the experiment.
 
 # About this experiment:
-# Date created: {{ experiment.date_created}}
+# Date created: {{ date_created}}
 # Module registry version: {{ module_registry_version or "unknown" }}
 experiment_name:
-{{ format_value(experiment.experiment_name) }}
+{{ format_value(experiment_name) }}
 
 projection_scale:
-{{ format_value(experiment.projection_scale) }}
+{{ format_value(projection_scale) }}
 
 ##----- Top-level params -----##
-{% for key, value in experiment.top_level_params.items() %}
+{% for key, value in top_level_params.items() %}
 {{ key }}:
 {{ format_value(value) }}
 {% endfor %}
@@ -39,26 +39,26 @@ projection_scale:
 {% endfor %}
 
 ##----- Workflows (facts-total) -----##
-{% if experiment.workflows %}
+{% if workflows %}
 workflows:
-{% for wf_name, wf_modules in experiment.workflows.items() %}
+{% for wf_name, wf_modules in workflows.items() %}
   {{ wf_name }}: "{{ wf_modules }}"
 {% endfor %}
 {% endif %}
 
 ##----- Inputs -----##
 {% for key in inputs %}
-{% if key in experiment.paths %}
+{% if key in paths %}
 {{ key }}:
-{{ format_value(experiment.paths[key]) }}
+{{ format_value(paths[key]) }}
 {% endif %}
 {% endfor %}
 
 ##----- Outputs -----##
 {% for key in outputs %}
-{% if key in experiment.paths %}
+{% if key in paths %}
 {{ key }}:
-{{ format_value(experiment.paths[key]) }}
+{{ format_value(paths[key]) }}
 {% endif %}
 {% endfor %}
 
