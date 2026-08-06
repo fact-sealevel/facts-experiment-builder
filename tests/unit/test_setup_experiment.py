@@ -5,10 +5,13 @@ from facts_experiment_builder.application.setup_experiment import (
     prepare_experiment_setup,
     finalize_experiment_setup,
 )
-from facts_experiment_builder.application.experiment_helpers import (
-    hydrate_experiment,
+from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
 )
+from facts_experiment_builder.core.experiment.experiment_skeleton import (
+    hydrate_experiment,
+)
+
 from facts_experiment_builder.io.write_config import format_module_value
 from facts_experiment_builder.core.experiment.experiment_skeleton import (
     ExperimentSkeleton,
