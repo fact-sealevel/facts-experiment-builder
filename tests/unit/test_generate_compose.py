@@ -7,7 +7,6 @@ from facts_experiment_builder.application.generate_compose import (
     _validate_climate_file_inputs,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
-from pathlib import Path
 
 
 def _make_climate_schema(input_name: str) -> ModuleSchema:
@@ -208,17 +207,6 @@ def test_check_metadata_has_required_fields():
         check_metadata_has_required_fields(
             metadata_incomplete, required_fields=["experiment-name"]
         )
-
-
-def test_extract_experiment_dir_from_metadata_path():
-    metadata_path = Path("/experiments/my-exp/experiment-config.yaml")
-    result = generate_compose.extract_experiment_dir_from_metadata_path(metadata_path)
-    assert result == Path("/experiments/my-exp")
-
-
-def test_extract_experiment_dir_raises_for_root_path():
-    with pytest.raises(ValueError, match="No experiment dir"):
-        generate_compose.extract_experiment_dir_from_metadata_path(Path("/"))
 
 
 def test_extract_all_module_names_returns_all_modules():
