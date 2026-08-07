@@ -2,11 +2,22 @@ from pathlib import Path
 import subprocess
 from pydantic import ValidationError
 import yaml
-from typing import Protocol
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.io.exceptions import ModuleYamlNotFoundError
+
+
+# This is the port
+class ModuleRegistry(Protocol):
+    """Port where module definitions come from.
+
+    application code depends on this class.
+    """
+
+    def get_schema(self, module_name: str) -> ModuleSchema: ...
+    def module_names(self) -> frozenset[str]: ...
+    def version(self) -> str: ...
 
 
 class ModuleRegistryNotFound(Exception):
@@ -15,6 +26,7 @@ class ModuleRegistryNotFound(Exception):
         super().__init__(f"Registry path '{path} not found.")
 
 
+# Adapter
 class FileSystemModuleRegistry:
     def __init__(self, registry_path: Path):
         if not registry_path.is_absolute():
