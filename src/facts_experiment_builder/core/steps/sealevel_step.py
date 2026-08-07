@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_experiment_spec import (
     ModuleExperimentSpec,
 )

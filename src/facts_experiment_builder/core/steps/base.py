@@ -1,6 +1,7 @@
 from typing import Dict, List
 from typing import Protocol
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_experiment_spec import (
     ModuleExperimentSpec,
 )
