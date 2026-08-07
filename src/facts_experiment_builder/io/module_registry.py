@@ -2,6 +2,7 @@ from pathlib import Path
 import subprocess
 from pydantic import ValidationError
 import yaml
+from typing import Protocol
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
