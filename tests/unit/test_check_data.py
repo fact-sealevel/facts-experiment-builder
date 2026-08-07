@@ -246,7 +246,7 @@ def test_check_data_unrecognized_dir(tmp_path):
     result = check_data(
         module_specific_input_dir=module_specific,
         shared_input_dir=tmp_path / "shared",
-        definitions=registry_fs,
+        registry=registry_fs,
     )
 
     assert result.unrecognized_dirs == ["unknown-module"]
@@ -268,7 +268,7 @@ def test_check_data_empty_dir(tmp_path):
     result = check_data(
         module_specific_input_dir=module_specific_input_dir,
         shared_input_dir=shared_input_dir,
-        definitions=fake_registry_fs,
+        registry=fake_registry_fs,
     )
 
     assert result.module_results == []
@@ -283,7 +283,7 @@ def test_check_data_missing_dir(tmp_path, fake_registry):
     result = check_data(
         module_specific_input_dir=tmp_path / "does_not_exist",
         shared_input_dir=tmp_path / "shared",
-        definitions=registry,
+        registry=registry,
     )
 
     assert result.module_results == []

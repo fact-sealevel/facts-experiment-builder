@@ -93,7 +93,7 @@ def _make_module_schema(mod: str, file_outputs: list) -> ModuleSchema:
 
 def test_collect_workflow_output_paths_global_only():
     """Only global outputs are collected when output_type='global'."""
-    from facts_experiment_builder.core.workflow.workflow import Workflow
+    from facts_experiment_builder.core.workflow import Workflow
 
     wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
     metadata = _make_workflow_metadata()
@@ -106,7 +106,7 @@ def test_collect_workflow_output_paths_global_only():
 
 def test_collect_workflow_output_paths_local_only():
     """Only local outputs are collected when output_type='local'."""
-    from facts_experiment_builder.core.workflow.workflow import Workflow
+    from facts_experiment_builder.core.workflow import Workflow
 
     wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
     metadata = _make_workflow_metadata()
@@ -119,7 +119,7 @@ def test_collect_workflow_output_paths_local_only():
 
 def test_collect_workflow_output_paths_excludes_pass_to_total_false():
     """Outputs with pass_to_total=False in the schema are excluded."""
-    from facts_experiment_builder.core.workflow.workflow import Workflow
+    from facts_experiment_builder.core.workflow import Workflow
 
     mod = "emulandice-ais"
     wf = Workflow(name="wf1", module_names=[mod])
@@ -166,7 +166,7 @@ def test_collect_workflow_output_paths_excludes_pass_to_total_false():
 
 def test_collect_workflow_output_paths_no_schema_includes_all():
     """When a module has no entry in schemas, all its outputs pass through."""
-    from facts_experiment_builder.core.workflow.workflow import Workflow
+    from facts_experiment_builder.core.workflow import Workflow
 
     mod = "unknown-module"
     wf = Workflow(name="wf1", module_names=[mod])
