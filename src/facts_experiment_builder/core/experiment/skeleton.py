@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 from pathlib import Path
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list_str,
@@ -21,7 +22,7 @@ from facts_experiment_builder.core.steps.climate_resolver import resolve_climate
 from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
 )
-from facts_experiment_builder.core.experiment.facts_experiment import (
+from facts_experiment_builder.core.experiment.experiment import (
     FactsExperiment,
     TopLevelParams,
 )
