@@ -25,7 +25,7 @@ from facts_experiment_builder.core.workflow import (
 )
 
 # ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.layout import ExperimentPaths
+from facts_experiment_builder.io.paths import ExperimentPaths
 
 from facts_experiment_builder.io.experiment_loader import (
     load_experiment_config,

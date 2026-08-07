@@ -38,7 +38,7 @@ from facts_experiment_builder.application.setup_experiment import (
 
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
-from facts_experiment_builder.io.layout import ExperimentPaths
+from facts_experiment_builder.io.paths import ExperimentPaths
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)

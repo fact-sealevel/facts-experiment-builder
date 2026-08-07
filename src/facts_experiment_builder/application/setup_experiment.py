@@ -29,12 +29,10 @@ from facts_experiment_builder.core.experiment.name import (
 )
 from facts_experiment_builder.io.write_config import write_config_jinja2
 
-from facts_experiment_builder.io.experiment_storage import (
-    # FileSystemExperimentStorage,
-    make_output_dir,
+from facts_experiment_builder.io.paths import (
+    ExperimentPaths,
+    make_output_dir
 )
-from facts_experiment_builder.io.layout import ExperimentPaths
-
 logger = logging.getLogger(__name__)
 
 
@@ -55,7 +53,6 @@ def prepare_experiment_setup(
     supplied_totaled_sealevel_step_data: Path,
     extremesealevel_step: str,
     workspace_dir: Path,
-    # storage: FileSystemExperimentStorage,
 ) -> PrepareExperimentOutput:
     """Performs first stage of experiment setup and creates ExperimentSkeleton.
 
