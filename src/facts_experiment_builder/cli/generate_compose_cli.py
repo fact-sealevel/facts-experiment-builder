@@ -19,9 +19,6 @@ from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
 )
-from facts_experiment_builder.io.experiment_repository import (
-    StorageExperimentRepository,
-)
 
 logger = logging.getLogger(__name__)
 

@@ -32,19 +32,13 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 
 # ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.setup_experiment import (
-    make_experiment_paths,
-    make_skeleton,
+    prepare_experiment_setup,
     finalize_experiment_setup,
 )
 
 # ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.layout import (
-    ExperimentPaths,
-)
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
-from facts_experiment_builder.io.experiment_repository import (
-    StorageExperimentRepository,
-)
+from facts_experiment_builder.io.layout import ExperimentPaths
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)
@@ -247,8 +241,8 @@ def main(
     )
     skeleton = prepared_experiment.experiment_skeleton
     path_obj = prepared_experiment.experiment_paths
-    assert isinstance(path_obj, ExperimentPathContainer), (
-        f"Expected type = 'ExperimentPathContainer'. Received '{type(path_obj)}'"
+    assert isinstance(path_obj, ExperimentPaths), (
+        f"Expected type = 'ExperimentPahths'. Received '{type(path_obj)}'"
     )
     testing_schemas = {}
     for m in skeleton.all_module_names:

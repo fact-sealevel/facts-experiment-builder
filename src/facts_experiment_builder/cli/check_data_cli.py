@@ -94,7 +94,7 @@ def main(
     result = check_data(
         module_specific_input_dir=module_dir,
         shared_input_dir=shared_dir,
-        definitions=registry,
+        registry=registry,
     )
 
     # If there are no module results in the results object, print msg to user + return
