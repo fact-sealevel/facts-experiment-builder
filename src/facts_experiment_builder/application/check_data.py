@@ -9,13 +9,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Dict
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
-from facts_experiment_builder.core.module.module_definition_source import (
-    ModuleDefinitionSource,
-)
 from facts_experiment_builder.core.typed_path import (
     _SHARED_CONTAINER_PATH,
     _MODULE_SPECIFIC_CONTAINER_PATH,
+)
+
+# ---------------------- IO imports ----------------------------
+from facts_experiment_builder.io.module_registry import (
+    ModuleRegistry,
 )
 
 
@@ -340,7 +343,7 @@ def check_shared_data(
 def check_data(
     module_specific_input_dir: Path,
     shared_input_dir: Path,
-    definitions: ModuleDefinitionSource,
+    registry: ModuleRegistry,
 ) -> CheckDataResult:
     """Check data directories against expected module inputs from the registry.
 
@@ -354,8 +357,8 @@ def check_data(
         return CheckDataResult()
 
     # make list, dict ofschemas for known modules from registry (received from cli)
-    known_modules = definitions.module_names()
-    schemas = {m: definitions.get_schema(m) for m in known_modules}
+    known_modules = registry.module_names()
+    schemas = {m: registry.get_schema(m) for m in known_modules}
 
     # init empty result
     full_result = CheckDataResult()
