@@ -1,9 +1,10 @@
 import click
-from facts_experiment_builder.cli.theme import console
-
-# from facts_experiment_builder.cli.utils import check_registry_accessible
 from pathlib import Path
 
+# ---------------------- CLI imports ----------------------------
+from facts_experiment_builder.cli.theme import console
+
+# ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.list_modules import (
     list_modules,
 )

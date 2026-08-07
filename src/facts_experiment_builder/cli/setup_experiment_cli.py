@@ -5,35 +5,46 @@ This script uses Jinja2-based YAML generation from setup_experiment.py.
 
 from pathlib import Path
 import click
-from facts_experiment_builder.cli.theme import console
-from facts_experiment_builder.core.experiment.experiment_skeleton import (
-    is_totaling_needed,
-)
 from pydantic import ValidationError
-from facts_experiment_builder.application.setup_experiment import (
-    prepare_experiment_setup,
-    finalize_experiment_setup,
-)
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from facts_experiment_builder.core.experiment.experiment_skeleton import (
-        ExperimentSkeleton,
-    )
-from facts_experiment_builder.core.experiment.module_name_validation import (
-    validate_module_names,
-)
+# from typing import TYPE_CHECKING
+import logging
+
+# if TYPE_CHECKING:
+#     from facts_experiment_builder.core.experiment.experiment_skeleton import (
+#         ExperimentSkeleton,
+#     )
+# ---------------------- CLI imports ----------------------------
+from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
-from facts_experiment_builder.core.experiment.paths import (
-    ExperimentPathContainer,
-)
 from facts_experiment_builder.cli.utils import configure_logging
 
-from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
+# ---------------------- Core imports ----------------------------
+from facts_experiment_builder.core.experiment.skeleton import (
+    is_totaling_needed,
+    ExperimentSkeleton,
+)
+from facts_experiment_builder.core.experiment.module_name_validation import (
+    validate_module_names,
+)
 
-import logging
+# ---------------------- Application imports ----------------------------
+from facts_experiment_builder.application.setup_experiment import (
+    make_experiment_paths,
+    make_skeleton,
+    finalize_experiment_setup,
+)
+
+# ---------------------- IO imports ----------------------------
+from facts_experiment_builder.io.layout import (
+    ExperimentPaths,
+)
+from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)

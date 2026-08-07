@@ -3,34 +3,36 @@ from typing import Dict
 from dataclasses import dataclass
 import dataclasses
 from pathlib import Path
-from facts_experiment_builder.core.module.module_definition_source import (
-    ModuleDefinitionSource,
+import logging
+
+# ---------------- Core imports ---------------
+from facts_experiment_builder.io.module_registry import (
+    ModuleRegistry,
 )
-from facts_experiment_builder.core.experiment.facts_experiment import (
+from facts_experiment_builder.core.experiment.experiment import (
     TopLevelParams,
 )
-from facts_experiment_builder.core.experiment.experiment_skeleton import (
+from facts_experiment_builder.core.experiment.skeleton import (
     ExperimentSkeleton,
     parse_module_regions,
 )
-from facts_experiment_builder.core.experiment.paths import (
-    ExperimentName,
-)
-from facts_experiment_builder.io.write_config import (
-    write_config_jinja2,
-)
-from facts_experiment_builder.core.experiment.experiment_skeleton import (
+from facts_experiment_builder.core.experiment.skeleton import (
     experiment_skeleton_to_facts_experiment,
 )
+
+# --------------- IO imports --------------
+from facts_experiment_builder.io.experiment_repository import (
+    ExperimentRepository,
+)
+from facts_experiment_builder.io.layout import (
+    ExperimentName,
+)
+
 from facts_experiment_builder.io.experiment_storage import (
     # FileSystemExperimentStorage,
     make_output_dir,
 )
-from facts_experiment_builder.core.experiment.experiment_config import (
-    facts_experiment_to_config,
-)
-from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
-import logging
+from facts_experiment_builder.io.layout import ExperimentPaths
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +41,7 @@ logger = logging.getLogger(__name__)
 class PrepareExperimentOutput:
     """Object to hold output of prepare_experiment_setup()."""
 
-    experiment_paths: ExperimentPathContainer
+    experiment_paths: ExperimentPaths
     experiment_skeleton: ExperimentSkeleton
 
 

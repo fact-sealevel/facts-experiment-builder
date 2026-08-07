@@ -6,10 +6,12 @@ content and, with experiment data, to build ModuleServiceSpec.
 
 from dataclasses import dataclass, field
 from typing import Dict, Any, List, Optional
+
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 
 # TODO this would need to change if the module schema yaml structure changes.
-# is that fine or do we want it to be more flexibly defined?
+# should add an abstraction to separate these domain objects from the module schema
 
 
 @dataclass(frozen=True)

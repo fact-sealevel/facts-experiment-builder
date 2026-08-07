@@ -1,9 +1,11 @@
+from typing import Set, Any, Dict, Optional, List
+import os
+
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
     _SHARED_CONTAINER_PATH,
 )
-from typing import Set, Any, Dict, Optional, List
-import os
 
 
 def _multiple_file_input_keys(module_definition: Any) -> Set[str]:

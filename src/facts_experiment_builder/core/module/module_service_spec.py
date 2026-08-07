@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 import os
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.typed_path import (
     TypedPath,
     PathValue,
@@ -30,9 +31,6 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
     build_module_input_paths,
     build_module_output_paths,
 )
-from facts_experiment_builder.io.compose_service_writer import (
-    build_compose_service_dict,
-)
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
     ModuleContainerImage,
@@ -41,6 +39,11 @@ from facts_experiment_builder.core.source_resolver import (
     resolve_value as resolve_source_value,
 )
 from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
+
+# ---------------------- IO imports ----------------------------
+from facts_experiment_builder.io.compose_service_writer import (
+    build_compose_service_dict,
+)
 
 
 @dataclass(frozen=True)

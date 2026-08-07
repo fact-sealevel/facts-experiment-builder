@@ -1,6 +1,9 @@
 import click
+
+# ---------------------- CLI imports ----------------------------
 from facts_experiment_builder.cli.theme import console
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list_str,
     unparse_module_list,

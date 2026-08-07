@@ -3,34 +3,33 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional
+import logging
 
 from facts_experiment_builder.core.module.module_service_spec import (
     get_experiment_paths,
     build_module_service_spec,
 )
 from facts_experiment_builder.core.experiment.name import ExperimentName
-from facts_experiment_builder.core.experiment.paths import ExperimentPathContainer
-from facts_experiment_builder.core.experiment import FactsExperiment
-from facts_experiment_builder.core.module.module_schema import (
-    collect_metadata_param_keys,
-)
-from facts_experiment_builder.io.experiment_loader import (
-    load_experiment_config,
-)
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
-
-from facts_experiment_builder.core.workflow.workflow import (
-    Workflow,
-    workflows_from_metadata,
-)
-
 from facts_experiment_builder.core.module.service_spec_utils import expand_path
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
 )
+from facts_experiment_builder.core.experiment.experiment_plan import (
+    _ExperimentPlan,
+    _make_experiment_plan,
+)
+from facts_experiment_builder.core.workflow import (
+    Workflow,
+)
+# ---------------------- IO imports ----------------------------
 
-import logging
+from facts_experiment_builder.io.layout import ExperimentPaths
+from facts_experiment_builder.io.experiment_loader import (
+    load_experiment_config,
+)
+from facts_experiment_builder.io.experiment_repository import ExperimentRepository
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

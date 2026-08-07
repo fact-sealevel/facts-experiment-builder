@@ -3,6 +3,8 @@
 from pathlib import Path
 import logging
 import click
+
+# ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import (
     ModuleRegistryNotFound,
     FileSystemModuleRegistry,

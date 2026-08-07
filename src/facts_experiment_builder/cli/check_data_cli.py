@@ -3,13 +3,16 @@
 import click
 from pathlib import Path
 
+# ---------------- CLI imports ---------------
 from facts_experiment_builder.cli.theme import console
 
+# ---------------- Application imports ---------------
 from facts_experiment_builder.application.check_data import (
     check_data,
     resolve_input_paths,
 )
 
+# ---------------- IO imports ---------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 
 

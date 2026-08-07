@@ -2,9 +2,11 @@
 yaml."""
 
 from dataclasses import dataclass
-from facts_experiment_builder.core.experiment.facts_experiment import FactsExperiment
-from facts_experiment_builder.core.steps.base import ExperimentStep
 from typing import Iterable
+
+# ---------------------- Core imports ----------------------------
+from facts_experiment_builder.core.experiment.experiment import FactsExperiment
+from facts_experiment_builder.core.steps.base import ExperimentStep
 
 
 @dataclass(frozen=True)

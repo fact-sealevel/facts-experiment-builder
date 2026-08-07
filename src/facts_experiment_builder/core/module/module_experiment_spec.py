@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
+import logging
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
 )
-
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
-import logging
 
 logger = logging.getLogger(__name__)
 

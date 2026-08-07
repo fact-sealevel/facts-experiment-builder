@@ -1,4 +1,3 @@
-from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from pathlib import Path
 
 
