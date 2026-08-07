@@ -1,4 +1,4 @@
-from facts_experiment_builder.core.experiment.experiment_skeleton import (
+from facts_experiment_builder.core.experiment.skeleton import (
     parse_module_regions,
     ExperimentSkeleton,
     is_totaling_needed,
