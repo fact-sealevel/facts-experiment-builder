@@ -130,7 +130,7 @@ def main(
         output = generate_compose(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
-            definition=registry,
+            registry=registry,
             custom_compose_path=custom_compose_path,
         )
         compose_dict = output.compose_dict

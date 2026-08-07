@@ -123,7 +123,7 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         module_specific_input_data="path/to/data",
         shared_input_data="path/to/shared/data",
         projection_scale="local",
-        definition=definitions,
+        registry=definitions,
     )
     config_path = experiment_path.config_path
     assert config_path.exists()

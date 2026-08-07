@@ -16,9 +16,6 @@ from facts_experiment_builder.core.experiment.skeleton import (
 from facts_experiment_builder.core.experiment.skeleton import (
     experiment_skeleton_to_facts_experiment,
 )
-from facts_experiment_builder.core.module.module_definition_source import (
-    ModuleDefinitionSource,
-)
 from facts_experiment_builder.core.experiment.experiment_config import (
     facts_experiment_to_config,
 )
@@ -27,9 +24,17 @@ from facts_experiment_builder.core.experiment.experiment_config import (
 from facts_experiment_builder.core.experiment.name import (
     ExperimentName,
 )
-from facts_experiment_builder.io.write_config import write_config_jinja2
+from facts_experiment_builder.io.write_config import (
+    write_config_jinja2,
+)
 
-from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
+from facts_experiment_builder.io.paths import (
+    ExperimentPaths,
+    make_output_dir,
+)
+from facts_experiment_builder.io.module_registry import (
+    ModuleRegistry,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -124,11 +129,11 @@ def finalize_experiment_setup(
     module_specific_input_data: str,
     shared_input_data: str,
     projection_scale: str,
-    definition: ModuleDefinitionSource,
+    registry: ModuleRegistry,
 ) -> Path:
     """Complete an experiment setup and writes its configuration metadata to disk.
 
-    This is the final stage of the experiment setup flow. It pulls module version and schema information from ``definition``, assembles the top-level runtime parameters, attaches the resolved workflows to an existing :class:`ExperimentSkeleton`, converts the result into a concrete ``FactsExperiment``, and renders the experiment configuration YAML.
+    This is the final stage of the experiment setup flow. It pulls module version and schema information from ``registry``, assembles the top-level runtime parameters, attaches the resolved workflows to an existing :class:`ExperimentSkeleton`, converts the result into a concrete ``FactsExperiment``, and renders the experiment configuration YAML.
 
     Parameters
     ----------
@@ -162,7 +167,7 @@ def finalize_experiment_setup(
         Path to input data shared across modules
     projection_scale : str
         Indicates whether this experiment generates global (GMSL) or local (RSL) projections of sea level change.
-    definition : ModuleDefinitionSource
+    registry : ModuleRegistry
         Source of module metadata. Queried for the module registry version and schema of each module named in ``experiment_skeleton``.
 
     Returns
@@ -182,10 +187,8 @@ def finalize_experiment_setup(
     ``None`` entries dropped, so an experiment supplying neither yields an empty list.
     """
     # Gather info from port
-    version = definition.version()
-    schemas = {
-        m: definition.get_schema(m) for m in experiment_skeleton.all_module_names
-    }
+    version = registry.version()
+    schemas = {m: registry.get_schema(m) for m in experiment_skeleton.all_module_names}
     # make TopLevelParams dataclass
     top_level_params = TopLevelParams(
         scenario=scenario,

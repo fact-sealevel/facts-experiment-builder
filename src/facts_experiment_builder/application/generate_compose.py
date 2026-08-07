@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 import logging
 
+# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_service_spec import (
     get_experiment_paths,
     build_module_service_spec,
@@ -26,10 +27,10 @@ from facts_experiment_builder.core.workflow import (
 
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.paths import ExperimentPaths
-
 from facts_experiment_builder.io.experiment_loader import (
     load_experiment_config,
 )
+from facts_experiment_builder.io.module_registry import ModuleRegistry
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -554,7 +555,7 @@ def _build_compose_services(
 def generate_compose(
     experiment_name: str,
     workspace_dir: Path,
-    definition,
+    registry: ModuleRegistry,
     custom_compose_path: Path | None = None,
 ) -> Dict[str, Any]:
     """Generate Docker Compose dict from already-loaded experiment metadata.
@@ -600,8 +601,8 @@ def generate_compose(
     metadata_dict = load_experiment_config(experiment_paths.config_path)
     #  setup - only references to definition are here
     module_names = _extract_all_module_names_from_manifest(metadata_dict)
-    schemas = {m_name: definition.get_schema(m_name) for m_name in set(module_names)}
-    known_module_names = definition.module_names()
+    schemas = {m_name: registry.get_schema(m_name) for m_name in set(module_names)}
+    known_module_names = registry.module_names()
 
     # Make experiment plan
     plan = _make_experiment_plan(metadata_dict, schemas)
