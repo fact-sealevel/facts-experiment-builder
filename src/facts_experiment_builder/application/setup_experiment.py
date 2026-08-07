@@ -29,10 +29,8 @@ from facts_experiment_builder.core.experiment.name import (
 )
 from facts_experiment_builder.io.write_config import write_config_jinja2
 
-from facts_experiment_builder.io.paths import (
-    ExperimentPaths,
-    make_output_dir
-)
+from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
+
 logger = logging.getLogger(__name__)
 
 

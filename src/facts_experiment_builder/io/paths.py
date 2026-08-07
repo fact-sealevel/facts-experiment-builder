@@ -46,6 +46,7 @@ class ExperimentPaths:
     def compose_path(self) -> Path:
         return self.experiment_dir / _COMPOSE_FILENAME
 
+
 def make_output_dir(experiment_paths: ExperimentPaths) -> None:
     output_dir = experiment_paths.output_dir
     output_dir.mkdir(parents=True)
