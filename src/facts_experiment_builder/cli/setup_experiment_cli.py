@@ -32,13 +32,17 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 
 # ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.setup_experiment import (
-    prepare_experiment_setup,
+    make_experiment_paths,
+    make_skeleton,
     finalize_experiment_setup,
 )
 
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.io.paths import ExperimentPaths
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)
@@ -203,7 +207,6 @@ def main(
     module_registry_path = module_registry.absolute()
     registry = FileSystemModuleRegistry(registry_path=module_registry_path)
     valid_module_names = registry.module_names()
-    # storage = FileSystemExperimentStorage(workspace_dir)
 
     console.rule(
         characters="- - ",
@@ -229,9 +232,12 @@ def main(
         console.print(
             "[muted]Note: Totaling step is being skipped because --supplied-totaled-sealevel-step-data was provided.[/muted]"
         )
-    prepared_experiment = prepare_experiment_setup(
-        workspace_dir=workspace_dir,
-        experiment_name=experiment_name,
+    # Create experiment path obj
+    path_obj = make_experiment_paths(
+        experiment_name=experiment_name, workspace_dir=workspace_dir
+    )
+    # Create experiment skeleton
+    skeleton = make_skeleton(
         module_regions=module_regions,
         climate_step=climate_step,
         supplied_climate_step_data=supplied_climate_step_data,
@@ -239,10 +245,9 @@ def main(
         supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
         extremesealevel_step=extremesealevel_step,
     )
-    skeleton = prepared_experiment.experiment_skeleton
-    path_obj = prepared_experiment.experiment_paths
+
     assert isinstance(path_obj, ExperimentPaths), (
-        f"Expected type = 'ExperimentPahths'. Received '{type(path_obj)}'"
+        f"Expected type = 'ExperimentPaths'. Received '{type(path_obj)}'"
     )
     testing_schemas = {}
     for m in skeleton.all_module_names:
@@ -271,6 +276,8 @@ def main(
             f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
         ) from e
 
+    experiment_storage = StorageExperimentRepository()
+
     metadata_path = finalize_experiment_setup(
         experiment_name=experiment_name,
         experiment_paths=path_obj,
@@ -288,6 +295,7 @@ def main(
         shared_input_data=shared_input_data,
         projection_scale=projection_scale,
         registry=registry,  # registry passed as protocol
+        experiment_storage=experiment_storage,
     )
 
     print_experiment_directory_created(experiment_name, path_obj)

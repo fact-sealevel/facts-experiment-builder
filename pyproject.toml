@@ -39,6 +39,7 @@ dev = [
     "ruff>=0.14.5",
     "diff-cover>=10.3.0",
     "docformatter>=1.7.8",
+    "hypothesis>=6.165.2",
 ]
 
 [tool.pytest.ini_options]

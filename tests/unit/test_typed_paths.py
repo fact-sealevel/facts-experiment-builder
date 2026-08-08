@@ -86,7 +86,7 @@ def test_container_path_list_pass_through():
         },
         volumes={},
     )
-    spec = ModuleServiceSpec(components=components, module_definition=module_def)
+    spec = ModuleServiceSpec(components=components, module_schema=module_def)
     command = spec._build_command_args()
     assert "--item=/mnt/total_out/a.nc" in command
     assert "--item=/mnt/total_out/b.nc" in command
@@ -142,7 +142,7 @@ def test_host_path_list_transformed_to_container():
         },
         volumes={},
     )
-    spec = ModuleServiceSpec(components=components, module_definition=module_def)
+    spec = ModuleServiceSpec(components=components, module_schema=module_def)
     command = spec._build_command_args()
     assert any("/mnt/module_specific_in/f1.csv" in arg for arg in command)
     assert any("/mnt/module_specific_in/f2.csv" in arg for arg in command)
@@ -193,7 +193,7 @@ def _make_spec_with_envvar_arg(envvar_name, input_value):
         },
         volumes={},
     )
-    return ModuleServiceSpec(components=components, module_definition=module_def)
+    return ModuleServiceSpec(components=components, module_schema=module_def)
 
 
 def test_envvar_arg_excluded_from_command():
@@ -318,7 +318,7 @@ def test_host_dir_path_gets_trailing_slash_in_command():
         },
         volumes={},
     )
-    spec = ModuleServiceSpec(components=components, module_definition=module_def)
+    spec = ModuleServiceSpec(components=components, module_schema=module_def)
     command = spec._build_command_args()
     zosdir_arg = next((a for a in command if a.startswith("--zosdir=")), None)
     assert zosdir_arg is not None
@@ -373,7 +373,7 @@ def test_host_path_does_not_get_trailing_slash_in_command():
         },
         volumes={},
     )
-    spec = ModuleServiceSpec(components=components, module_definition=module_def)
+    spec = ModuleServiceSpec(components=components, module_schema=module_def)
     command = spec._build_command_args()
     file_arg = next(
         (a for a in command if a.startswith("--expansion-coefficients-file=")), None

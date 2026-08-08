@@ -1,5 +1,4 @@
 from typing import Dict
-
 from dataclasses import dataclass
 import dataclasses
 from pathlib import Path
@@ -16,16 +15,10 @@ from facts_experiment_builder.core.experiment.skeleton import (
 from facts_experiment_builder.core.experiment.skeleton import (
     experiment_skeleton_to_facts_experiment,
 )
-from facts_experiment_builder.core.experiment.experiment_config import (
-    facts_experiment_to_config,
-)
 
 # --------------- IO imports --------------
 from facts_experiment_builder.core.experiment.name import (
     ExperimentName,
-)
-from facts_experiment_builder.io.write_config import (
-    write_config_jinja2,
 )
 
 from facts_experiment_builder.io.paths import (
@@ -35,6 +28,7 @@ from facts_experiment_builder.io.paths import (
 from facts_experiment_builder.io.module_registry import (
     ModuleRegistry,
 )
+from facts_experiment_builder.io.experiment_repository import ExperimentRepository
 
 logger = logging.getLogger(__name__)
 
@@ -47,15 +41,29 @@ class PrepareExperimentOutput:
     experiment_skeleton: ExperimentSkeleton
 
 
-def prepare_experiment_setup(
+def make_experiment_paths(
     experiment_name: str,
+    workspace_dir: Path,
+) -> ExperimentPaths:
+    # Create an experiment name object
+    experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
+
+    # Create experiment path from resolved root (handled in cli layer)
+    experiment_path_obj = ExperimentPaths(
+        workspace_dir=workspace_dir, experiment_name=experiment_name_obj
+    )
+    # Make direcotries related to this experiment
+    make_output_dir(experiment_paths=experiment_path_obj)
+    return experiment_path_obj
+
+
+def make_skeleton(
     module_regions: str,
     climate_step: str,
     supplied_climate_step_data: Path,
     sealevel_step: str,
     supplied_totaled_sealevel_step_data: Path,
     extremesealevel_step: str,
-    workspace_dir: Path,
 ) -> PrepareExperimentOutput:
     """Performs first stage of experiment setup and creates ExperimentSkeleton.
 
@@ -63,9 +71,6 @@ def prepare_experiment_setup(
 
     Parameters
     ----------
-    experiment_name: str
-        Raw experiment name as supplied by caller, including its parent directory component, if present. Parsed into an :class:`ExperimentName`.
-
     module_regions: str
         Unparsed module-to-region specification, expanded by :fun:`parse_module_regions`.
     climate_step: str
@@ -78,24 +83,12 @@ def prepare_experiment_setup(
         Path to data to use in place of running modules at sea-level step of experiment.
     extremesealevel_step: str
         Name of module to run at extreme sealevel-module step of experiment.
-    workspace_dir: Path
-        Workspace directory, already resolved by CLI layer, under which the experiment directory is created.
 
     Returns
     -------
     PrepareExperimentOutput
         Bundle containing the :class:`ExperimentPaths` for the experiment and the :class:`ExperimentSkeleton` built from the step configuration.
     """
-    # Create an experiment name object
-    experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
-
-    # Create experiment path from resolved root (handled in cli layer)
-    experiment_path_obj = ExperimentPaths(
-        workspace_dir=workspace_dir, experiment_name=experiment_name_obj
-    )
-    # Make direcotries related to this experiment
-    make_output_dir(experiment_paths=experiment_path_obj)
-
     parsed_module_regions = parse_module_regions(module_regions)
     # Create experiment skeleton
     skeleton = ExperimentSkeleton.from_inputs(
@@ -107,10 +100,7 @@ def prepare_experiment_setup(
         module_regions=parsed_module_regions,
     )
 
-    output = PrepareExperimentOutput(
-        experiment_paths=experiment_path_obj, experiment_skeleton=skeleton
-    )
-    return output
+    return skeleton
 
 
 def finalize_experiment_setup(
@@ -130,6 +120,7 @@ def finalize_experiment_setup(
     shared_input_data: str,
     projection_scale: str,
     registry: ModuleRegistry,
+    experiment_storage: ExperimentRepository,
 ) -> Path:
     """Complete an experiment setup and writes its configuration metadata to disk.
 
@@ -224,12 +215,14 @@ def finalize_experiment_setup(
         projection_scale=projection_scale,
         schemas=schemas,
     )
-    # Write config file using templtae
+
     config_path = experiment_paths.config_path
-    experiment_config = facts_experiment_to_config(
-        experiment_obj=experiment_obj,
+
+    experiment_storage.add(
+        experiment=experiment_obj,
+        config_path=config_path,
         module_registry_version=version,
     )
-
-    write_config_jinja2(experiment_config=experiment_config, config_path=config_path)
     return config_path
+    # write_config_jinja2(experiment_config=experiment_config, config_path=config_path)
+    # return config_path

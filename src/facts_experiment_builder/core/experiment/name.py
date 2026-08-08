@@ -15,19 +15,38 @@ class InvalidExperimentNameError(Exception):
         super().__init__(f"Received invalid experiment name '{self.raw_name}'.")
 
 
+def _valid_segment(s: str) -> bool:
+    return _VALID.fullmatch(s) is not None and s not in (".", "..")
+
+
 @dataclass(frozen=True)
 class ExperimentName:
+    """A user-supplied experiment name, optionally includes a parent directory name.
+
+    Invariant: `relative_path` is always a non-empty, relative, traversal-free path whose every segment matches `_VALID`.
+
+    A valid `ExperimentName` doesn't imply existence of corresponding directory.
+    """
+
     parent: Path | None
     name: str
+
+    def __post_init__(self) -> None:
+        if not _valid_segment(self.name):
+            raise InvalidExperimentNameError(self.name)
+
+        if not _VALID.fullmatch(self.name):
+            raise InvalidExperimentNameError(self.name)
+        if self.parent is not None:
+            parts = self.parent.parts
+            if self.parent.is_absolute() or not parts or ".." in parts:
+                raise InvalidExperimentNameError(str(self.parent))
+            if not all(_valid_segment(part) for part in parts):
+                raise InvalidExperimentNameError(str(self.parent))
 
     @classmethod
     def parse(cls, raw_name: str) -> "ExperimentName":
         p = Path(raw_name.strip())
-
-        if not all(_VALID.match(part) and part not in (".", "..") for part in p.parts):
-            raise InvalidExperimentNameError(raw_name)
-        if not p.name or p.is_absolute() or ".." in p.parts:
-            raise InvalidExperimentNameError(raw_name)
         parent = p.parent if p.parent != Path(".") else None
         name = p.name
         return cls(parent, name)

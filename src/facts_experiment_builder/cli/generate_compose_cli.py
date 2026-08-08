@@ -19,6 +19,9 @@ from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
 )
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -126,12 +129,14 @@ def main(
     #        f"compose file, metadata file not found: {experiment_metadata_path}"
     #    )
 
+    experiment_storage = StorageExperimentRepository()
     try:
         output = generate_compose(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
-            registry=registry,
+            module_registry=registry,
             custom_compose_path=custom_compose_path,
+            experiment_repository_port=experiment_storage,
         )
         compose_dict = output.compose_dict
         compose_path = output.compose_path

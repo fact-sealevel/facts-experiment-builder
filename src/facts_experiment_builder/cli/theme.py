@@ -6,6 +6,8 @@ near-black (#190B35) and near-white (#F9F3C5) extremes.
 
 from rich.console import Console
 from rich.theme import Theme
+from rich.markup import escape
+import logging
 
 lapaz_theme = Theme(
     {
@@ -21,3 +23,28 @@ lapaz_theme = Theme(
 )
 
 console = Console(theme=lapaz_theme)
+
+GLYPHS = {
+    logging.DEBUG: ("·", "secondary"),
+    logging.INFO: ("\u2713success"),
+    logging.WARNING: ("\u0021", "warning"),
+    logging.ERROR: ("\u2717", "error"),
+    logging.CRITICAL: ("u/2717", "error"),
+}
+
+
+class RichConsoleHandler(logging.Handler):
+    def __init__(self, console: Console):
+        super().__init__()
+        self.console = console
+
+    def emit(self, record):
+        try:
+            glyph, style = GLYPHS.get(record.levelno, ("·", "secondary"))
+            out = f"[{style}]{glyph} {escape(self.format(record))}[/{style}]"
+            detail = getattr(record, "detail", None)
+            if detail is not None:
+                out += f" [secondary]{escape(str(detail))}[/secondary]"
+            self.console.print(out)
+        except Exception:
+            self.handleError(record)

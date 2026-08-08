@@ -2,8 +2,10 @@
 
 import pytest
 from facts_experiment_builder.application import generate_compose
-from facts_experiment_builder.application.generate_compose import (
+from facts_experiment_builder.core.experiment.experiment_plan import (
     check_metadata_has_required_fields,
+)
+from facts_experiment_builder.application.generate_compose import (
     _validate_climate_file_inputs,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema

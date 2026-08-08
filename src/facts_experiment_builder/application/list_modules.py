@@ -1,6 +1,9 @@
 from pathlib import Path
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 
+# ---------------------- IO imports ----------------------------
+from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
+
 
 def list_modules(registry_path: Path) -> tuple[list[str], Path]:
     # get absolute path

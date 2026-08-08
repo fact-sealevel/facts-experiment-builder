@@ -73,16 +73,16 @@ class ModuleServiceSpec:
     def __init__(
         self,
         components: ModuleServiceSpecComponents,
-        module_definition: ModuleSchema,
+        module_schema: ModuleSchema,
     ):
         """Initialize ModuleServiceSpec.
 
         Args:
             components: Experiment-specific inputs (paths, values, image, metadata)
-            module_definition: Module definition from the module YAML file (ModuleSchema)
+            module_schema: Module definition from the module YAML file (ModuleSchema)
         """
         self.components = components
-        self.module_definition = module_definition
+        self.module_schema = module_schema
 
     # old classmethod from_yaml (was cls)
     @property
@@ -124,11 +124,11 @@ class ModuleServiceSpec:
         command_args = []
 
         # Check if a specific command is specified (e.g., "glaciers" or "icesheets")
-        command = self.module_definition.command or ""
+        command = self.module_schema.command or ""
         if command:
             command_args.append(command)  # Add command name first
 
-        arguments_config = self.module_definition.arguments
+        arguments_config = self.module_schema.arguments
 
         # Process top-level arguments
         for arg_spec in arguments_config.get("top_level", []):
@@ -136,7 +136,7 @@ class ModuleServiceSpec:
             if value is not None:
                 command_args.append(f"--{arg_spec['name']}={value}")
 
-        if not self.module_definition.extra.get("skip_fingerprint_params"):
+        if not self.module_schema.extra.get("skip_fingerprint_params"):
             # Process fingerprint params
             for arg_spec in arguments_config.get("fingerprint_params", []):
                 value = self._process_argument(arg_spec)
@@ -170,7 +170,7 @@ class ModuleServiceSpec:
                     command_args.append(f"--{arg_spec['name']}={value}")
 
         # Process outputs
-        for arg_spec in self.module_definition.get_outputs_list(
+        for arg_spec in self.module_schema.get_outputs_list(
             suppress_output_types=suppress_output_types
         ):
             value = self._process_output_argument(arg_spec)
@@ -245,7 +245,7 @@ class ModuleServiceSpec:
             elif isinstance(value, dict):
                 value = value.get("scenario_name", value.get("scenario", value))
         elif transform == "scenario_name_ssp_landwaterstorage":
-            mapping = self.module_definition.extra.get("scenario_name_mapping", {})
+            mapping = self.module_schema.extra.get("scenario_name_mapping", {})
             value = scenario_name_ssp_landwaterstorage(value, mapping=mapping)
         elif transform == "filename":
             # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
@@ -362,7 +362,7 @@ class ModuleServiceSpec:
             List of volume mount strings in format "host_path:container_path"
         """
         volumes = []
-        volumes_config = self.module_definition.volumes
+        volumes_config = self.module_schema.volumes
 
         for volume_name, volume_spec in volumes_config.items():
             if not isinstance(volume_spec, dict):
@@ -417,14 +417,14 @@ class ModuleServiceSpec:
         depends_on = {}
 
         # Check if this module uses climate files - if so, add dependency on temperature service
-        uses_climate_file = self.module_definition.uses_climate_file
+        uses_climate_file = self.module_schema.uses_climate_file
         if uses_climate_file and temperature_service_name:
             depends_on[temperature_service_name] = {
                 "condition": "service_completed_successfully"
             }
 
         # Also process explicit depends_on entries from YAML (for backward compatibility)
-        depends_on_config = self.module_definition.depends_on or []
+        depends_on_config = self.module_schema.depends_on or []
 
         if depends_on_config:
             for dep_spec in depends_on_config:
@@ -459,7 +459,7 @@ class ModuleServiceSpec:
         environment handle them.
         """
         environment: Dict[str, str] = {}
-        for arg_spec in self.module_definition.arguments.get("inputs", []):
+        for arg_spec in self.module_schema.arguments.get("inputs", []):
             envvar = arg_spec.get("envvar")
             if not envvar:
                 continue
@@ -520,7 +520,7 @@ def build_module_service_spec(
     # experiment_dir: Path,
     module_name: str,
     known_module_names: List,
-    module_definition: ModuleSchema,
+    module_schema: ModuleSchema,
 ) -> ModuleServiceSpec:
     """Build a ModuleServiceSpec for the given module from experiment metadata and
     module YAML.
@@ -572,10 +572,10 @@ def build_module_service_spec(
     ):  # registry.module_names():
         module_specific_input_base = str(Path(module_specific_input_base).parent)
     # Module-specific input dir: driven by input_dir_name in module YAML (e.g. "ipccar5" for both
-    # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that
+    # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_schema.module_name so that
     # per-workflow service names (e.g. extremesealevel-pointsoverthreshold-wf1) resolve to the base
     # module's dir automatically.
-    module_specific_input_path_suffix = module_definition.input_dir_name  # ()
+    module_specific_input_path_suffix = module_schema.input_dir_name  # ()
     module_specific_input_data = (
         module_specific_input_base + "/" + module_specific_input_path_suffix
     )
@@ -614,10 +614,10 @@ def build_module_service_spec(
     # Inputs that mount from the shared output volume produced by another serivce (such as fair-temperature)
     # They're stored as relative paths (ie. fair-temperature/climate.nc -> /mnt/out/fair-temperature/climate.nc)
     # Prev. this was a hard-coded list of the names used for climate-data-file across different module yamls...
-    output_root_relative_inputs = module_definition.get_output_volume_input_keys()
-    input_spec = _input_spec_by_key(module_definition)
-    multiple_file_input_keys = _multiple_file_input_keys(module_definition)
-    dir_input_keys = _dir_input_keys(module_definition)
+    output_root_relative_inputs = module_schema.get_output_volume_input_keys()
+    input_spec = _input_spec_by_key(module_schema)
+    multiple_file_input_keys = _multiple_file_input_keys(module_schema)
+    dir_input_keys = _dir_input_keys(module_schema)
 
     inputs_dict = {}
     for key, value in module_inputs_section.items():
@@ -728,20 +728,20 @@ def build_module_service_spec(
         else:
             inputs_dict[key] = value
 
-    for opt_spec in module_definition.arguments.get("options", []):
+    for opt_spec in module_schema.arguments.get("options", []):
         source = opt_spec.get("source", "")
         if "module_inputs.inputs." in source and "." in source:
             field = source.split(".")[-1]
             if field not in inputs_dict and field in options_dict:
                 inputs_dict[field] = options_dict[field]
-    for opt_spec in module_definition.arguments.get("options", []):
+    for opt_spec in module_schema.arguments.get("options", []):
         name = opt_spec.get("name", "")
         if name and name not in options_dict and name in inputs_dict:
             options_dict[name] = inputs_dict[name]
 
     module_outputs = get_required_field(module_metadata, "outputs", module_context)
     outputs_dict = {}
-    outputs_config = module_definition.get_outputs_list()
+    outputs_config = module_schema.get_outputs_list()
 
     if isinstance(module_outputs, dict):
         for output_spec in outputs_config:
@@ -838,7 +838,7 @@ def build_module_service_spec(
                 fingerprint_params[k.replace("-", "_")] = actual
     # Fallback: for module-specific fingerprint params whose value ended up in inputs_dict
     # (e.g. from defaults files that use inputs: instead of fingerprint_params:), check there too.
-    for fp_arg in module_definition.arguments.get("fingerprint_params", []):
+    for fp_arg in module_schema.arguments.get("fingerprint_params", []):
         source = fp_arg.get("source", "")
         if not source.startswith("module_inputs.fingerprint_params."):
             continue
@@ -862,5 +862,5 @@ def build_module_service_spec(
 
     return ModuleServiceSpec(
         components=impl_inputs,
-        module_definition=module_definition,
+        module_schema=module_schema,
     )

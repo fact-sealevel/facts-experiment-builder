@@ -21,9 +21,7 @@ from facts_experiment_builder.core.experiment.experiment_plan import (
     _ExperimentPlan,
     _make_experiment_plan,
 )
-from facts_experiment_builder.core.workflow import (
-    Workflow,
-)
+from facts_experiment_builder.core.workflow import Workflow
 
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.paths import ExperimentPaths
@@ -31,6 +29,7 @@ from facts_experiment_builder.io.experiment_loader import (
     load_experiment_config,
 )
 from facts_experiment_builder.io.module_registry import ModuleRegistry
+from facts_experiment_builder.io.experiment_repository import ExperimentRepository
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -69,10 +68,6 @@ class _ModuleSpecs:
     # TODO do not want these categories to be so rigid in the future
 
 
-def _log_success(msg: str, *args: object) -> None:
-    logger.log(_SUCCESS, msg, *args)
-
-
 def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[str]:
     """Extract a flat list of all module names from the experiment manifest keys."""
     names: List[str] = []
@@ -89,6 +84,10 @@ def _extract_all_module_names_from_manifest(metadata: Dict[str, Any]) -> List[st
         if isinstance(m, str):
             names.append(m)
     return names
+
+
+def _log_success(msg: str, *args: object) -> None:
+    logger.log(_SUCCESS, msg, *args)
 
 
 def _validate_climate_file_inputs(
@@ -251,7 +250,7 @@ def _create_facts_total_compose_service(
         metadata=metadata_copy,
         module_name=service_name,
         known_module_names=known_module_names,
-        module_definition=schema,
+        module_schema=schema,
     )
     compose_service = wf_module.generate_compose_service()
     compose_service["depends_on"] = {
@@ -293,14 +292,13 @@ def _build_module_specs(
     framework_modules: Dict[str, ModuleServiceSpec] = {}
     esl_modules: Dict[str, ModuleServiceSpec] = {}
 
-    temp_module_definition = schemas[plan.climate_module_name]
+    climate_module_schema = schemas[plan.climate_module_name]
     if plan.climate_module_name.upper() != "NONE":
-        temp_module_name = plan.climate_module_name
         temperature_module = build_module_service_spec(
             metadata=metadata,
-            module_name=temp_module_name,
+            module_name=plan.climate_module_name,
             known_module_names=known_module_names,
-            module_definition=temp_module_definition,
+            module_schema=climate_module_schema,
         )
         _log_success("Created %s module", plan.climate_module_name)
     else:
@@ -317,7 +315,7 @@ def _build_module_specs(
             metadata=metadata,
             module_name=module_name,
             known_module_names=known_module_names,
-            module_definition=module_schema,
+            module_schema=module_schema,
         )
         _log_success("Created %s module", module_name)
 
@@ -329,7 +327,7 @@ def _build_module_specs(
             metadata=metadata,
             module_name=module_name,
             known_module_names=known_module_names,
-            module_definition=schema,
+            module_schema=schema,
         )
 
         _log_success("Created %s module", module_name)
@@ -340,7 +338,7 @@ def _build_module_specs(
             metadata=metadata,
             module_name=module_name,
             known_module_names=known_module_names,
-            module_definition=schema,
+            module_schema=schema,
         )
 
         _log_success("Created %s module", module_name)
@@ -435,7 +433,7 @@ def _create_esl_workflow_services(
                 metadata=metadata_copy,
                 module_name=service_name,
                 known_module_names=known_module_names,
-                module_definition=schema,
+                module_schema=schema,
             )
             compose_svc = esl_module.generate_compose_service()
             compose_svc["depends_on"] = {
@@ -555,7 +553,8 @@ def _build_compose_services(
 def generate_compose(
     experiment_name: str,
     workspace_dir: Path,
-    registry: ModuleRegistry,
+    module_registry: ModuleRegistry,
+    experiment_storage: ExperimentRepository,
     custom_compose_path: Path | None = None,
 ) -> Dict[str, Any]:
     """Generate Docker Compose dict from already-loaded experiment metadata.
@@ -589,20 +588,23 @@ def generate_compose(
     assert experiment_dir.is_dir(), (
         f"Expected 'experiment_dir.is_dir() is True', received: {experiment_dir.is_dir()}."
     )
-    config_path = experiment_paths.config_path
-    assert config_path.exists(), (
-        f"Did not find `experiment-config.yaml` at '{config_path}'. Please ensure correct path/experiment name."
+    assert experiment_paths.config_path.exists(), (
+        f"Did not find `experiment-config.yaml` at '{experiment_paths.config_path}'. Please ensure correct path/experiment name."
     )
     # log message to send to CLI
     logger.info(
-        "Found experiment config file at provided path", extra={"detail": config_path}
+        "Found experiment config file at provided path",
+        extra={"detail": experiment_paths.config_path},
     )
 
+    metadata_dict = experiment_storage.get(config_path=experiment_paths.config_path)
     metadata_dict = load_experiment_config(experiment_paths.config_path)
-    #  setup - only references to definition are here
+    #  setup - only references to module_registry are here
     module_names = _extract_all_module_names_from_manifest(metadata_dict)
-    schemas = {m_name: registry.get_schema(m_name) for m_name in set(module_names)}
-    known_module_names = registry.module_names()
+    schemas = {
+        m_name: module_registry.get_schema(m_name) for m_name in set(module_names)
+    }
+    known_module_names = module_registry.module_names()
 
     # Make experiment plan
     plan = _make_experiment_plan(metadata_dict, schemas)
