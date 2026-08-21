@@ -24,10 +24,13 @@ from facts_experiment_builder.core.workflow import (
     Workflow,
 )
 
+from facts_experiment_builder.application.storage import (
+    ExperimentRepository,
+    ModuleRegistry,
+)
+
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.paths import ExperimentPaths
-from facts_experiment_builder.io.module_registry import ModuleRegistry
-from facts_experiment_builder.io.experiment_repository import ExperimentRepository
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

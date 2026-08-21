@@ -16,10 +16,7 @@ from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
 )
 
-# ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.module_registry import (
-    ModuleRegistry,
-)
+from facts_experiment_builder.application.storage import ModuleRegistry
 
 
 @dataclass

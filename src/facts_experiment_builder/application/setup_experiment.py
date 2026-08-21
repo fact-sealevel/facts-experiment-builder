@@ -23,10 +23,13 @@ from facts_experiment_builder.core.experiment.name import (
 )
 
 from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
-from facts_experiment_builder.io.experiment_repository import (
+
+
+from facts_experiment_builder.application.storage import (
     ExperimentRepository,
+    ModuleRegistry,
 )
-from facts_experiment_builder.io.module_registry import ModuleRegistry
+
 
 logger = logging.getLogger(__name__)
 
