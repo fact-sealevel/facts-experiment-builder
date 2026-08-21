@@ -245,7 +245,7 @@ def _create_facts_total_compose_service(
     section."""
     metadata_copy = dict(metadata)
     metadata_copy[service_name] = section
-
+    print("gen compose 248 service name: ", service_name)
     wf_module = build_module_service_spec(
         metadata=metadata_copy,
         module_name=service_name,
