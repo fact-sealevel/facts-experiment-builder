@@ -19,6 +19,9 @@ from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
 )
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -95,9 +98,11 @@ def main(
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
     _configure_feb_logging()
-    module_registry_path = module_registry.absolute()
-    registry = FileSystemModuleRegistry(registry_path=module_registry_path)
 
+    module_registry_path = module_registry.absolute()
+    # Instantiate adapters
+    registry = FileSystemModuleRegistry(registry_path=module_registry_path)
+    experiment_repo = StorageExperimentRepository()
     if debug:
         logger.setLevel(logging.INFO)
 
@@ -130,7 +135,8 @@ def main(
         output = generate_compose(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
-            definition=registry,
+            module_registry=registry,
+            experiment_repo=experiment_repo,
             custom_compose_path=custom_compose_path,
         )
         compose_dict = output.compose_dict

@@ -16,20 +16,20 @@ from facts_experiment_builder.core.experiment.skeleton import (
 from facts_experiment_builder.core.experiment.skeleton import (
     experiment_skeleton_to_facts_experiment,
 )
-from facts_experiment_builder.core.module.module_definition_source import (
-    ModuleDefinitionSource,
-)
-from facts_experiment_builder.core.experiment.experiment_config import (
-    facts_experiment_to_config,
-)
 
 # --------------- IO imports --------------
 from facts_experiment_builder.core.experiment.name import (
     ExperimentName,
 )
-from facts_experiment_builder.io.write_config import write_config_jinja2
 
 from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
+
+
+from facts_experiment_builder.application.storage import (
+    ExperimentRepository,
+    ModuleRegistry,
+)
+
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,8 @@ def finalize_experiment_setup(
     module_specific_input_data: str,
     shared_input_data: str,
     projection_scale: str,
-    definition: ModuleDefinitionSource,
+    module_registry: ModuleRegistry,
+    experiment_repo: ExperimentRepository,
 ) -> Path:
     """Complete an experiment setup and writes its configuration metadata to disk.
 
@@ -162,9 +163,9 @@ def finalize_experiment_setup(
         Path to input data shared across modules
     projection_scale : str
         Indicates whether this experiment generates global (GMSL) or local (RSL) projections of sea level change.
-    definition : ModuleDefinitionSource
+    module_registry : ModuleRegistry
         Source of module metadata. Queried for the module registry version and schema of each module named in ``experiment_skeleton``.
-
+    experiment_repo: ExperimentRepository
     Returns
     -------
     Path
@@ -182,9 +183,9 @@ def finalize_experiment_setup(
     ``None`` entries dropped, so an experiment supplying neither yields an empty list.
     """
     # Gather info from port
-    version = definition.version()
+    version = module_registry.version()
     schemas = {
-        m: definition.get_schema(m) for m in experiment_skeleton.all_module_names
+        m: module_registry.get_schema(m) for m in experiment_skeleton.all_module_names
     }
     # make TopLevelParams dataclass
     top_level_params = TopLevelParams(
@@ -221,12 +222,13 @@ def finalize_experiment_setup(
         projection_scale=projection_scale,
         schemas=schemas,
     )
-    # Write config file using templtae
+    # make config path
     config_path = experiment_paths.config_path
-    experiment_config = facts_experiment_to_config(
-        experiment_obj=experiment_obj,
+
+    experiment_repo.add(
+        experiment=experiment_obj,
+        config_path=config_path,
         module_registry_version=version,
     )
 
-    write_config_jinja2(experiment_config=experiment_config, config_path=config_path)
     return config_path
