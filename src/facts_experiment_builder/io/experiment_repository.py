@@ -1,4 +1,3 @@
-from typing import Protocol
 from pathlib import Path
 
 # ---------------------- Core imports ----------------------------
@@ -13,17 +12,6 @@ from facts_experiment_builder.io.experiment_loader import (
     load_experiment_config,
 )
 from facts_experiment_builder.io.write_config import write_config_jinja2
-
-
-# port
-class ExperimentRepository(Protocol):
-    """Port where experiment config metadata dicts returned from.
-
-    Application code should depend on this instead of load_experiment_config() directly?
-    """
-
-    def add(self, experiment: FactsExperiment) -> None: ...
-    def get(self, name) -> FactsExperiment: ...
 
 
 # adapter

@@ -24,12 +24,13 @@ from facts_experiment_builder.core.workflow import (
     Workflow,
 )
 
+from facts_experiment_builder.application.storage import (
+    ExperimentRepository,
+    ModuleRegistry,
+)
+
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.paths import ExperimentPaths
-
-from facts_experiment_builder.io.experiment_loader import (
-    load_experiment_config,
-)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -554,7 +555,8 @@ def _build_compose_services(
 def generate_compose(
     experiment_name: str,
     workspace_dir: Path,
-    definition,
+    module_registry: ModuleRegistry,
+    experiment_repo: ExperimentRepository,
     custom_compose_path: Path | None = None,
 ) -> Dict[str, Any]:
     """Generate Docker Compose dict from already-loaded experiment metadata.
@@ -576,7 +578,7 @@ def generate_compose(
     )
     experiment_paths.custom_compose_path = custom_compose_path
 
-    # handle custom compose, if passed
+    # handle custom compose, if passed -- is this still necessary?
     compose_path = (
         experiment_paths.custom_compose_path.resolve()
         if experiment_paths.custom_compose_path is not None
@@ -597,11 +599,14 @@ def generate_compose(
         "Found experiment config file at provided path", extra={"detail": config_path}
     )
 
-    metadata_dict = load_experiment_config(experiment_paths.config_path)
+    metadata_dict = experiment_repo.get(config_path=config_path)
+    # metadata_dict = load_experiment_config(experiment_paths.config_path)
     #  setup - only references to definition are here
     module_names = _extract_all_module_names_from_manifest(metadata_dict)
-    schemas = {m_name: definition.get_schema(m_name) for m_name in set(module_names)}
-    known_module_names = definition.module_names()
+    schemas = {
+        m_name: module_registry.get_schema(m_name) for m_name in set(module_names)
+    }
+    known_module_names = module_registry.module_names()
 
     # Make experiment plan
     plan = _make_experiment_plan(metadata_dict, schemas)

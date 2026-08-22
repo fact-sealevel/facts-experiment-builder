@@ -39,6 +39,9 @@ from facts_experiment_builder.application.setup_experiment import (
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.io.paths import ExperimentPaths
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
+)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)
@@ -203,8 +206,7 @@ def main(
     module_registry_path = module_registry.absolute()
     registry = FileSystemModuleRegistry(registry_path=module_registry_path)
     valid_module_names = registry.module_names()
-    # storage = FileSystemExperimentStorage(workspace_dir)
-
+    experiment_repository = StorageExperimentRepository()
     console.rule(
         characters="- - ",
         style="rule",
@@ -287,7 +289,8 @@ def main(
         module_specific_input_data=module_specific_input_data,
         shared_input_data=shared_input_data,
         projection_scale=projection_scale,
-        definition=registry,  # registry passed as protocol
+        module_registry=registry,  # registry passed as protocol
+        experiment_repo=experiment_repository,
     )
 
     print_experiment_directory_created(experiment_name, path_obj)

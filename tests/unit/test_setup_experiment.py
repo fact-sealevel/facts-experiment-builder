@@ -11,13 +11,15 @@ from facts_experiment_builder.core.module.module_schema import (
 from facts_experiment_builder.core.experiment.skeleton import (
     hydrate_experiment,
 )
-
-from facts_experiment_builder.io.write_config import format_module_value
 from facts_experiment_builder.core.experiment.skeleton import (
     ExperimentSkeleton,
 )
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
+)
+from facts_experiment_builder.io.write_config import format_module_value
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
 )
 from tests.unit.helpers import InMemoryModuleDefinitions
 
@@ -83,6 +85,7 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
     workspace_dir = Path(tmp_path / "fake_experiment_location")
     workspace_dir.mkdir()
 
+    repo = StorageExperimentRepository()
     definitions = InMemoryModuleDefinitions(
         {
             "fair-temperature": make_schema("fair-temperature"),
@@ -123,7 +126,8 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         module_specific_input_data="path/to/data",
         shared_input_data="path/to/shared/data",
         projection_scale="local",
-        definition=definitions,
+        module_registry=definitions,
+        experiment_repo=repo,
     )
     config_path = experiment_path.config_path
     assert config_path.exists()
