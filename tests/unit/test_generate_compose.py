@@ -246,3 +246,109 @@ def test_extract_all_module_names_excludes_lowercase_none_temperature():
 def test_extract_all_module_names_empty_metadata():
     result = generate_compose._extract_all_module_names_from_manifest({})
     assert result == []
+
+
+# ---------------------------------------------------------------------------
+# _create_esl_workflow_services — gesla_dir injection gated on schema declaration
+# ---------------------------------------------------------------------------
+
+
+def _make_esl_schema(module_name: str, declares_gesla_dir: bool) -> ModuleSchema:
+    inputs = [
+        {
+            "name": "total-localsl-file",
+            "source": "module_inputs.inputs.total_localsl_file",
+            "mount": {"volume": "output", "container_path": "/mnt/out"},
+        }
+    ]
+    if declares_gesla_dir:
+        inputs.append(
+            {
+                "name": "gesla-dir",
+                "source": "module_inputs.inputs.gesla_dir",
+                "mount": {
+                    "volume": "module_specific_in",
+                    "container_path": "/mnt/module_specific_in",
+                },
+            }
+        )
+    return ModuleSchema(
+        module_name=module_name,
+        container_image="img:tag",
+        arguments={"inputs": inputs},
+        volumes={},
+    )
+
+
+def _patch_build_module_service_spec(monkeypatch, captured):
+    """Stub out build_module_service_spec so these tests exercise only the
+    gesla_dir-injection logic in _create_esl_workflow_services, not the full
+    (filesystem-touching) service-spec build pipeline."""
+
+    def fake_build(metadata, module_name, known_module_names, module_definition):
+        captured["inputs"] = dict(metadata[module_name]["inputs"])
+
+        class _Stub:
+            def generate_compose_service(self):
+                return {}
+
+        return _Stub()
+
+    monkeypatch.setattr(generate_compose, "build_module_service_spec", fake_build)
+
+
+def test_create_esl_workflow_services_skips_gesla_dir_when_not_declared(monkeypatch):
+    """extremesealevel2-afs-style module: schema has no gesla_dir input, so none is
+    injected (previously this caused an AttributeError downstream)."""
+    from facts_experiment_builder.core.workflow import Workflow
+
+    captured = {}
+    _patch_build_module_service_spec(monkeypatch, captured)
+
+    schema = _make_esl_schema("extremesealevel2-afs", declares_gesla_dir=False)
+    wf = Workflow(name="wf1", module_names=["extremesealevel2-afs"])
+    metadata = {"extremesealevel2-afs": {"inputs": {}, "outputs": {}}}
+
+    generate_compose._create_esl_workflow_services(
+        esl_module_names=["extremesealevel2-afs"],
+        workflows={"wf1": wf},
+        metadata=metadata,
+        experiment_dir=None,
+        projection_scale=None,
+        schemas={"extremesealevel2-afs": schema},
+    )
+
+    assert "gesla_dir" not in captured["inputs"]
+
+
+def test_create_esl_workflow_services_injects_gesla_dir_when_declared(monkeypatch):
+    """extremesealevel-pointsoverthreshold-style module: schema declares gesla_dir, so
+    a default path is still injected when metadata omits a value (no regression)."""
+    from facts_experiment_builder.core.workflow import Workflow
+
+    captured = {}
+    _patch_build_module_service_spec(monkeypatch, captured)
+
+    module_name = "extremesealevel-pointsoverthreshold"
+    schema = _make_esl_schema(module_name, declares_gesla_dir=True)
+    wf = Workflow(name="wf1", module_names=[module_name])
+    metadata = {
+        "shared-input-data": "/data/shared_input_data",
+        "module-specific-input-data": "/data/module_specific_input_data",
+        "output-data-location": "/data/output",
+        module_name: {"inputs": {}, "outputs": {}},
+    }
+
+    generate_compose._create_esl_workflow_services(
+        esl_module_names=[module_name],
+        workflows={"wf1": wf},
+        metadata=metadata,
+        experiment_dir=None,
+        projection_scale=None,
+        schemas={module_name: schema},
+    )
+
+    assert (
+        captured["inputs"]["gesla_dir"]
+        == f"/data/module_specific_input_data/{module_name}/gesla_data"
+    )

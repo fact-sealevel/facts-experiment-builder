@@ -1,7 +1,6 @@
 from typing import Set, Any, Dict, Optional, List
 import os
 
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
     _SHARED_CONTAINER_PATH,
@@ -31,6 +30,12 @@ def _input_spec_by_key(module_definition: Any) -> Dict[str, dict]:
         if "." in source:
             result[source.split(".")[-1]] = arg_spec
     return result
+
+
+def declares_input(module_definition: Any, field_name: str) -> bool:
+    """Return True if the module's schema declares an input sourced from
+    module_inputs.inputs.<field_name>."""
+    return field_name in _input_spec_by_key(module_definition)
 
 
 def _dir_input_keys(module_definition: Any) -> Set[str]:
@@ -151,6 +156,14 @@ def resolve_input_path(
         context_msg = f" in {context}" if context else ""
         raise ValueError(
             f"Empty or missing value for input field '{field_name}'{context_msg}"
+        )
+
+    if mount is None:
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Input field '{field_name}' has no 'mount' declared in the module schema"
+            f"{context_msg}. This field is present in metadata but not declared as an "
+            f"input in the module YAML."
         )
 
     is_general = is_shared_input(mount)
