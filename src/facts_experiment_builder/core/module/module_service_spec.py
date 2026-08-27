@@ -535,7 +535,7 @@ def _resolve_experiment_paths(
     known_module_names: list,
     module_name: str,
     module_definition: ModuleSchema,
-) -> _ResolvedPaths: #tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
+) -> _ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
     # module_name = module_definition.module_name
     experiment_paths = get_experiment_paths(metadata, module_context)
     module_metadata = get_required_field(metadata, module_name, module_context)
@@ -842,9 +842,9 @@ def build_module_service_spec(
     )
     output_type = module_metadata.get("output_type", "")
     output_paths = build_module_output_paths(
-        output_dir=resolved_paths.output_data_location, 
-        module_name=module_name, 
-        output_type=output_type
+        output_dir=resolved_paths.output_data_location,
+        module_name=module_name,
+        output_type=output_type,
     )
 
     module_inputs_section = get_required_field(
