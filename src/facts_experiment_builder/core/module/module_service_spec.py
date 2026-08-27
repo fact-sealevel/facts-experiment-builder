@@ -515,35 +515,30 @@ class ModuleServiceSpec:
         # }
 
 
-def build_module_service_spec(
+@dataclass
+class _ResolvedPaths:
+    shared_input_data: str
+    module_specific_input_data: str
+    experiment_specific_input_data: Optional[str]
+    output_data_location: str
+    output_container_base: Optional[str] = None
+
+
+@dataclass
+class ExperimentOutputPath:
+    path: str
+
+
+def _resolve_experiment_paths(
     metadata: Dict[str, Any],
-    # experiment_dir: Path,
+    module_context: str,
+    known_module_names: list,
     module_name: str,
-    known_module_names: List,
     module_definition: ModuleSchema,
-) -> ModuleServiceSpec:
-    """Build a ModuleServiceSpec for the given module from experiment metadata and
-    module YAML.
-
-    Args:
-        metadata: Experiment metadata dictionary
-        experiment_dir: Path to experiment directory
-        module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
-
-    Returns:
-        ModuleServiceSpec instance
-    """
-    module_context = f"{module_name} module"
-
-    module_metadata = get_required_field(metadata, module_name, module_context)
-
-    scenario_name = get_required_field(metadata, "scenario", module_context)
-    if isinstance(scenario_name, dict):
-        scenario_name = scenario_name.get(
-            "scenario_name", scenario_name.get("scenario")
-        )
-
+) -> _ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
+    # module_name = module_definition.module_name
     experiment_paths = get_experiment_paths(metadata, module_context)
+    module_metadata = get_required_field(metadata, module_name, module_context)
 
     raw_exp_specific = metadata.get("experiment-specific-input-data")
     if isinstance(raw_exp_specific, dict):
@@ -591,6 +586,7 @@ def build_module_service_spec(
         output_data_location = output_data_partial + "/facts-total"
         if not Path(output_data_location).exists():
             os.makedirs(output_data_location, exist_ok=True)
+
         output_container_base = (
             module_metadata.get("_output_container_base")
             or "/mnt/total_out/facts-total"
@@ -601,16 +597,25 @@ def build_module_service_spec(
             os.makedirs(output_data_location, exist_ok=True)
         output_container_base = None
 
-    module_inputs_section = get_required_field(
-        module_metadata, "inputs", module_context
+    resolved_paths = _ResolvedPaths(
+        shared_input_data=shared_input_data,
+        module_specific_input_data=module_specific_input_data,
+        output_data_location=output_data_location,
+        experiment_specific_input_data=experiment_specific_input,
+        output_container_base=output_container_base,
     )
-    options_dict = {}
-    options_section = module_metadata.get("options", {})
-    if isinstance(options_section, dict):
-        for key, value in options_section.items():
-            if not key.startswith("#"):
-                options_dict[key] = value
+    return resolved_paths
 
+
+def _resolve_module_inputs_dict(
+    module_definition: ModuleSchema,
+    module_context: str,
+    module_inputs_section: dict,
+    shared_input_data: str,
+    module_specific_input_data: str,
+    experiment_specific_input_data: Optional[str],
+    module_name: str,
+):
     # Inputs that mount from the shared output volume produced by another serivce (such as fair-temperature)
     # They're stored as relative paths (ie. fair-temperature/climate.nc -> /mnt/out/fair-temperature/climate.nc)
     # Prev. this was a hard-coded list of the names used for climate-data-file across different module yamls...
@@ -618,6 +623,7 @@ def build_module_service_spec(
     input_spec = _input_spec_by_key(module_definition)
     multiple_file_input_keys = _multiple_file_input_keys(module_definition)
     dir_input_keys = _dir_input_keys(module_definition)
+    # module_name = module_definition.module_name
 
     inputs_dict = {}
     for key, value in module_inputs_section.items():
@@ -694,7 +700,7 @@ def build_module_service_spec(
                 key in output_root_relative_inputs
                 and isinstance(actual, str)
                 and actual.strip().startswith("/")
-                and experiment_specific_input
+                and experiment_specific_input_data
             ):
                 inputs_dict[key] = ExperimentSpecificInputPath(actual.strip())
                 continue
@@ -728,18 +734,16 @@ def build_module_service_spec(
         else:
             inputs_dict[key] = value
 
-    for opt_spec in module_definition.arguments.get("options", []):
-        source = opt_spec.get("source", "")
-        if "module_inputs.inputs." in source and "." in source:
-            field = source.split(".")[-1]
-            if field not in inputs_dict and field in options_dict:
-                inputs_dict[field] = options_dict[field]
-    for opt_spec in module_definition.arguments.get("options", []):
-        name = opt_spec.get("name", "")
-        if name and name not in options_dict and name in inputs_dict:
-            options_dict[name] = inputs_dict[name]
+    return inputs_dict
 
-    module_outputs = get_required_field(module_metadata, "outputs", module_context)
+
+def _resolve_module_outputs_dict(
+    module_definition: ModuleSchema,
+    module_outputs: Union[dict, list],
+    module_context: str,
+    module_name: str,
+    output_data_location,
+) -> dict:
     outputs_dict = {}
     outputs_config = module_definition.get_outputs_list()
 
@@ -762,91 +766,138 @@ def build_module_service_spec(
             except ValueError:
                 outputs_dict[key] = output_value
     elif isinstance(module_outputs, list):
-        if outputs_config:
-            for i, output_spec in enumerate(outputs_config):
-                source = output_spec.get("source", "")
-                if "." in source:
-                    field_name = source.split(".")[-1]
-                    if i < len(module_outputs):
-                        output_value = module_outputs[i]
-                        try:
-                            resolved_path = resolve_output_path(
-                                output_value, output_data_location, module_context
-                            )
-                            outputs_dict[field_name] = resolved_path
-                        except ValueError:
-                            outputs_dict[field_name] = output_value
-                else:
-                    if i < len(module_outputs):
-                        output_value = module_outputs[i]
-                        try:
-                            resolved_path = resolve_output_path(
-                                output_value, output_data_location, module_context
-                            )
-                            outputs_dict[f"output_{i}"] = resolved_path
-                        except ValueError:
-                            outputs_dict[f"output_{i}"] = output_value
-        else:
-            for i, output in enumerate(module_outputs):
-                try:
-                    resolved_path = resolve_output_path(
-                        output, output_data_location, module_context
-                    )
-                    outputs_dict[f"output_{i}"] = resolved_path
-                except ValueError:
-                    outputs_dict[f"output_{i}"] = output
+        raise ValueError("Expected module_outputs to be dict, instead received list.")
+
     else:
         raise ValueError(
             f"{module_name}.outputs must be a list or dictionary in {module_context}"
         )
-    image_data = get_required_field(module_metadata, "image", module_context)
+    return outputs_dict
+
+
+def _parse_image(image_data, module_context) -> ModuleContainerImage:
     if isinstance(image_data, str):
         if ":" in image_data:
             image_url, image_tag = image_data.rsplit(":", 1)
         else:
-            image_url = image_data
-            image_tag = "latest"
-    elif isinstance(image_data, dict):
-        image_url = image_data.get("image_url", image_data.get("url", ""))
-        image_tag = image_data.get("image_tag", image_data.get("tag", "latest"))
+            raise ValueError(
+                f"Expected ':' in image url to reference version tag. Received '{image_data}"
+            )
+
     else:
         raise ValueError(
-            f"Invalid image format in {module_context}, received: {image_data}"
+            f"invalid image format in {module_context}, received: {image_data}."
+            f"Expected image_data to be a string, received: {type(image_data)}"
         )
-
     image = ModuleContainerImage(image_url=image_url, image_tag=image_tag)
+    return image
 
-    input_paths = build_module_input_paths(
-        module_specific_input_dir=module_specific_input_data,
-        shared_input_dir=shared_input_data,
-        module_name=module_name,
-    )
-    output_type = module_metadata.get("output_type", "")
-    output_paths = build_module_output_paths(
-        output_data_location, module_name=module_name, output_type=output_type
-    )
 
-    fingerprint_params = {
-        "location_file": metadata.get("location-file"),
-    }
-    # Merge module-specific fingerprint params (e.g. fprint_gis_file for emulandice-gris)
-    module_fp_section = module_metadata.get("fingerprint_params") or {}
+def _assemble_fingerprint_params(module_fp_section, location_file):
+    fingerprint_params = {"location_file": location_file}
+
     if isinstance(module_fp_section, dict):
         for k, v in module_fp_section.items():
             actual = v.get("value", v) if isinstance(v, dict) else v
             if actual is not None:
                 fingerprint_params[k.replace("-", "_")] = actual
-    # Fallback: for module-specific fingerprint params whose value ended up in inputs_dict
-    # (e.g. from defaults files that use inputs: instead of fingerprint_params:), check there too.
-    for fp_arg in module_definition.arguments.get("fingerprint_params", []):
-        source = fp_arg.get("source", "")
-        if not source.startswith("module_inputs.fingerprint_params."):
-            continue
-        fp_key = source.split(".")[-1]
-        if fp_key in fingerprint_params:
-            continue
-        if fp_key in inputs_dict:
-            fingerprint_params[fp_key] = inputs_dict[fp_key]
+    return fingerprint_params
+
+
+def build_module_service_spec(
+    metadata: Dict[str, Any],
+    # experiment_dir: Path,
+    module_name: str,
+    known_module_names: List,
+    module_definition: ModuleSchema,
+) -> ModuleServiceSpec:
+    """Build a ModuleServiceSpec for the given module from experiment metadata and
+    module YAML.
+
+    Args:
+        metadata: Experiment metadata dictionary
+        experiment_dir: Path to experiment directory
+        module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
+
+    Returns:
+        ModuleServiceSpec instance
+    """
+    module_context = f"{module_name} module"
+
+    module_metadata = get_required_field(metadata, module_name, module_context)
+
+    # scenario_name = get_required_field(metadata, "scenario", module_context)
+
+    resolved_paths = _resolve_experiment_paths(
+        metadata=metadata,
+        module_context=module_context,
+        known_module_names=known_module_names,
+        module_name=module_name,
+        module_definition=module_definition,
+    )
+    input_paths = build_module_input_paths(
+        module_specific_input_dir=resolved_paths.module_specific_input_data,
+        shared_input_dir=resolved_paths.shared_input_data,
+        module_name=module_name,
+    )
+    output_type = module_metadata.get("output_type", "")
+    output_paths = build_module_output_paths(
+        output_dir=resolved_paths.output_data_location,
+        module_name=module_name,
+        output_type=output_type,
+    )
+
+    module_inputs_section = get_required_field(
+        module_metadata, "inputs", module_context
+    )
+
+    options_dict = {}
+    options_section = module_metadata.get("options", {})
+    if isinstance(options_section, dict):
+        for key, value in options_section.items():
+            if not key.startswith("#"):
+                options_dict[key] = value
+
+    inputs_dict = _resolve_module_inputs_dict(
+        module_definition=module_definition,
+        module_context=module_context,
+        module_name=module_name,
+        module_inputs_section=module_inputs_section,
+        shared_input_data=resolved_paths.shared_input_data,
+        module_specific_input_data=resolved_paths.module_specific_input_data,
+        experiment_specific_input_data=resolved_paths.experiment_specific_input_data,
+    )
+    for opt_spec in module_definition.arguments.get("options", []):
+        source = opt_spec.get("source", "")
+        if "module_inputs.inputs." in source and "." in source:
+            field = source.split(".")[-1]
+            if field not in inputs_dict and field in options_dict:
+                inputs_dict[field] = options_dict[field]
+    for opt_spec in module_definition.arguments.get("options", []):
+        name = opt_spec.get("name", "")
+        if name and name not in options_dict and name in inputs_dict:
+            options_dict[name] = inputs_dict[name]
+
+    module_outputs = get_required_field(module_metadata, "outputs", module_context)
+
+    outputs_dict = _resolve_module_outputs_dict(
+        module_definition=module_definition,
+        module_outputs=module_outputs,
+        module_context=module_context,
+        module_name=module_name,
+        output_data_location=resolved_paths.output_data_location,
+    )
+
+    image_data = get_required_field(module_metadata, "image", module_context)
+    image = _parse_image(image_data, module_context)
+
+    location_file = metadata.get("location-file")
+    # Merge module-specific fingerprint params (e.g. fprint_gis_file for emulandice-gris)
+    module_fp_section = module_metadata.get("fingerprint_params") or {}
+    fingerprint_params = _assemble_fingerprint_params(
+        module_fp_section=module_fp_section, location_file=location_file
+    )
+
     impl_inputs = ModuleServiceSpecComponents(
         module_name=module_name,
         options=options_dict,
@@ -857,7 +908,7 @@ def build_module_service_spec(
         outputs=outputs_dict,
         image=image,
         metadata=metadata,
-        output_container_base=output_container_base,
+        output_container_base=resolved_paths.output_container_base,
     )
 
     return ModuleServiceSpec(

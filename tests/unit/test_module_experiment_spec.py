@@ -4,6 +4,7 @@ from facts_experiment_builder.core.module.module_experiment_spec import (
     _options_defaults_from_schema,
     _build_options_context,
     _build_outputs,
+    _build_section_from_fields,
     ModuleExperimentSpec,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
@@ -208,6 +209,47 @@ def test_options_defaults_emits_both_case_forms():
 def test_options_defaults_ignores_specs_without_default():
     specs = [{"name": "region", "source": "..."}]
     assert _options_defaults_from_schema(specs) == {}
+
+
+# ---------------------------------------------------------------------------
+# _build_section_from_fields — default_value propagation into bundle["value"]
+# ---------------------------------------------------------------------------
+
+
+def test_build_section_from_fields_propagates_default_value_to_value():
+    """A field's default_value should populate bundle['value'] when nothing more
+    specific is supplied, so it reaches the experiment-config as a real value."""
+    fields = [
+        {
+            "name": "gesla-dir",
+            "source": "module_inputs.inputs.gesla_dir",
+            "default_value": "gesla_data_full",
+        }
+    ]
+    result = _build_section_from_fields(fields)
+    assert result["gesla_dir"]["value"] == "gesla_data_full"
+    assert result["gesla_dir"]["default_value"] == "gesla_data_full"
+
+
+def test_build_section_from_fields_prefilled_value_wins_over_default():
+    fields = [
+        {
+            "name": "gesla-dir",
+            "source": "module_inputs.inputs.gesla_dir",
+            "default_value": "gesla_data_full",
+        }
+    ]
+    result = _build_section_from_fields(
+        fields, prefilled_values={"gesla_dir": "/custom/path"}
+    )
+    assert result["gesla_dir"]["value"] == "/custom/path"
+
+
+def test_build_section_from_fields_no_default_leaves_value_none():
+    fields = [{"name": "esl-data-path", "source": "module_inputs.inputs.esl_data_path"}]
+    result = _build_section_from_fields(fields)
+    assert result["esl_data_path"]["value"] is None
+    assert "default_value" not in result["esl_data_path"]
 
 
 # ---------------------------------------------------------------------------

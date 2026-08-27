@@ -1,3 +1,5 @@
+import pytest
+
 from facts_experiment_builder.core.module.module_service_spec import (
     resolve_input_path,
 )
@@ -41,3 +43,17 @@ def test_resolve_input_path_base_dir_name_unrelated_to_module_name():
         module_name="fair-temperature",
     )
     assert result == "/data/module_specific_input_data/other-module/data.nc"
+
+
+def test_resolve_input_path_none_mount_raises_clear_error():
+    """A field present in metadata but not declared (with a mount) in the module
+    schema must raise a clear ValueError, not an AttributeError."""
+    with pytest.raises(ValueError, match="gesla_dir"):
+        resolve_input_path(
+            field_name="gesla_dir",
+            field_value="gesla_data_full",
+            mount=None,
+            shared_input_data="/data/shared_input_data",
+            module_specific_input_data="/data/module_specific_input_data",
+            module_name="extremesealevel2-afs",
+        )
