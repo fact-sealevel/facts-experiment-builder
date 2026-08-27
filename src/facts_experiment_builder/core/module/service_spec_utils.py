@@ -1,13 +1,14 @@
 from typing import Set, Any, Dict, Optional, List
 import os
 
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
     _SHARED_CONTAINER_PATH,
 )
 
 
-def _multiple_file_input_keys(module_definition: Any) -> Set[str]:
+def _multiple_file_input_keys(module_definition: ModuleSchema) -> Set[str]:
     """Return set of input field names that are multiple file inputs (from module
     YAML)."""
     keys: Set[str] = set()
@@ -100,21 +101,27 @@ def is_shared_input(mount: Optional[dict]) -> bool:
     Returns:
         True if field is a shared input, False if module-specific
     """
-    if mount.get("container_path") == _SHARED_CONTAINER_PATH:
+    if not isinstance(mount, dict):
+        raise ValueError(
+            f"Expected mount to be a dict with 'container_path', got {type(mount)}"
+        )
+
+    container_path = mount.get("container_path")
+    if container_path == _SHARED_CONTAINER_PATH:
         return True
-    elif mount.get("container_path") == _MODULE_SPECIFIC_CONTAINER_PATH:
+    elif container_path == _MODULE_SPECIFIC_CONTAINER_PATH:
         return False
     else:
         raise ValueError(
             f"Expected one of '{_SHARED_CONTAINER_PATH}' or '{_MODULE_SPECIFIC_CONTAINER_PATH}'."
-            f"Received '{mount.get('container_path')}'."
+            f"Received '{container_path}'."
         )
 
 
 def resolve_input_path(
     field_name: str,
     field_value: Any,
-    mount: Dict,
+    mount: Optional[Dict],
     shared_input_data: str,
     module_specific_input_data: str,
     module_name: str = "",

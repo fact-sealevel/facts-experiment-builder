@@ -521,7 +521,7 @@ class _ResolvedPaths:
     module_specific_input_data: str
     experiment_specific_input_data: Optional[str]
     output_data_location: str
-    output_container_base: str
+    output_container_base: Optional[str] = None
 
 
 @dataclass
