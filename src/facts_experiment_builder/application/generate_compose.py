@@ -12,7 +12,10 @@ from facts_experiment_builder.core.module.module_service_spec import (
 )
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
-from facts_experiment_builder.core.module.service_spec_utils import expand_path
+from facts_experiment_builder.core.module.service_spec_utils import (
+    declares_input,
+    expand_path,
+)
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
 )
@@ -29,7 +32,6 @@ from facts_experiment_builder.application.storage import (
     ModuleRegistry,
 )
 
-# ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.paths import ExperimentPaths
 
 logger = logging.getLogger(__name__)
@@ -398,6 +400,7 @@ def _create_esl_workflow_services(
 
     for module_name in esl_module_names:
         schema = schemas[module_name]
+        module_has_gesla_dir = declares_input(schema, "gesla_dir")
 
         base_section = metadata.get(module_name) or {}
         if not isinstance(base_section, dict):
@@ -415,8 +418,11 @@ def _create_esl_workflow_services(
             base_inputs = dict(base_section.get("inputs") or {})
             base_inputs["total_localsl_file"] = wf.total_localsl_path_under_output
             gesla_val = base_inputs.get("gesla_dir")
-            if not gesla_val or (
-                isinstance(gesla_val, dict) and gesla_val.get("value") in (None, "")
+            if module_has_gesla_dir and (
+                not gesla_val
+                or (
+                    isinstance(gesla_val, dict) and gesla_val.get("value") in (None, "")
+                )
             ):
                 if module_specific_base:
                     base_inputs["gesla_dir"] = (

@@ -222,6 +222,8 @@ def _build_section_from_fields(
         default_value = field_spec.get("default_value")
         if default_value:
             bundle["default_value"] = default_value
+            if bundle.get("value") is None:
+                bundle["value"] = default_value
             logger.info("default: %s", default_value)
 
         if include_filename:
