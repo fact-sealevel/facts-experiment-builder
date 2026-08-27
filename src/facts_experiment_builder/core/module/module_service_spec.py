@@ -535,7 +535,7 @@ def _resolve_experiment_paths(
     known_module_names: list,
     module_name: str,
     module_definition: ModuleSchema,
-) -> tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
+) -> _ResolvedPaths: #tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
     # module_name = module_definition.module_name
     experiment_paths = get_experiment_paths(metadata, module_context)
     module_metadata = get_required_field(metadata, module_name, module_context)
@@ -613,7 +613,7 @@ def _resolve_module_inputs_dict(
     module_inputs_section: dict,
     shared_input_data: str,
     module_specific_input_data: str,
-    experiment_specific_input_data: str,
+    experiment_specific_input_data: Optional[str],
     module_name: str,
 ):
     # Inputs that mount from the shared output volume produced by another serivce (such as fair-temperature)
@@ -842,7 +842,9 @@ def build_module_service_spec(
     )
     output_type = module_metadata.get("output_type", "")
     output_paths = build_module_output_paths(
-        resolved_paths.output_data_location, module_name, output_type
+        output_dir=resolved_paths.output_data_location, 
+        module_name=module_name, 
+        output_type=output_type
     )
 
     module_inputs_section = get_required_field(
