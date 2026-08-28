@@ -16,9 +16,6 @@ from facts_experiment_builder.core.typed_path import (
     ExperimentSpecificInputPath,
 )
 from facts_experiment_builder.core.module.service_spec_utils import (
-    _dir_input_keys,
-    _input_spec_by_key,
-    _multiple_file_input_keys,
     expand_path,
     resolve_input_path,
     resolve_output_path,
@@ -538,7 +535,8 @@ def _resolve_experiment_paths(
 ) -> _ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
     # module_name = module_definition.module_name
     experiment_paths = get_experiment_paths(metadata, module_context)
-    module_metadata = get_required_field(metadata, module_name, module_context)
+    module_wrapper = get_required_field(metadata, module_name, module_context)
+    module_metadata = get_required_field(module_wrapper, "values", module_context)
 
     raw_exp_specific = metadata.get("experiment-specific-input-data")
     if isinstance(raw_exp_specific, dict):
@@ -616,20 +614,33 @@ def _resolve_module_inputs_dict(
     experiment_specific_input_data: Optional[str],
     module_name: str,
 ):
-    # Inputs that mount from the shared output volume produced by another serivce (such as fair-temperature)
-    # They're stored as relative paths (ie. fair-temperature/climate.nc -> /mnt/out/fair-temperature/climate.nc)
-    # Prev. this was a hard-coded list of the names used for climate-data-file across different module yamls...
+    # Inputs that mount from the shared output volume produced by another service (such as
+    # fair-temperature). They're stored as relative paths (e.g. fair-temperature/climate.nc
+    # -> /mnt/out/fair-temperature/climate.nc). Keyed by `name`, matching how the persisted
+    # experiment-config.yaml `inputs` section (module_inputs_section) is keyed.
     output_root_relative_inputs = module_definition.get_output_volume_input_keys()
-    input_spec = _input_spec_by_key(module_definition)
-    multiple_file_input_keys = _multiple_file_input_keys(module_definition)
-    dir_input_keys = _dir_input_keys(module_definition)
-    # module_name = module_definition.module_name
 
     inputs_dict = {}
-    for key, value in module_inputs_section.items():
-        if key == "input_dir":
+    for arg_spec in module_definition.arguments.get("inputs", []):
+        name = arg_spec.get("name", "")
+        if not name or name not in module_inputs_section:
             continue
-        if key in multiple_file_input_keys:
+        value = module_inputs_section[name]
+
+        # `key` is the internal resolution key: the arg-spec's own `source` suffix (e.g.
+        # "module_inputs.inputs.climate_data_file" -> "climate_data_file"), which is what
+        # `resolve_value()`/other arg-specs' `source` fields address this value by. It is
+        # NOT necessarily the same string as `name`.
+        source = arg_spec.get("source", "")
+        key = source.split(".")[-1] if "." in source else name
+
+        mount = arg_spec.get("mount")
+        is_multiple = arg_spec.get("multiple", False) and (
+            mount or arg_spec.get("type") == "file"
+        )
+        is_dir = arg_spec.get("type") == "dir"
+
+        if is_multiple:
             # List of already container paths (e.g. facts-total item from generate_compose): do not resolve.
             if (
                 isinstance(value, list)
@@ -655,9 +666,9 @@ def _resolve_module_inputs_dict(
                 try:
                     resolved.append(
                         resolve_input_path(
-                            field_name=key,
+                            field_name=name,
                             field_value=item_value,
-                            mount=input_spec.get(key, {}).get("mount"),
+                            mount=mount,
                             shared_input_data=shared_input_data,
                             module_specific_input_data=module_specific_input_data,
                             module_name=module_name,
@@ -668,9 +679,9 @@ def _resolve_module_inputs_dict(
                     error_msg = str(e)
                     if "None" in error_msg or "NoneType" in error_msg:
                         raise ValueError(
-                            f"Input field '{key}' in {module_context} has None value or None in path resolution. "
+                            f"Input field '{name}' in {module_context} has None value or None in path resolution. "
                             f"Original error: {error_msg}. "
-                            f"Check that '{key}' has a valid value in metadata.{module_name}.inputs"
+                            f"Check that '{name}' has a valid value in metadata.{module_name}.inputs"
                         ) from e
                     resolved.append(
                         item_value.get("value", item_value)
@@ -688,7 +699,7 @@ def _resolve_module_inputs_dict(
                 value.get("value", value) if isinstance(value, dict) else value
             ) or ""
             if (
-                key in output_root_relative_inputs
+                name in output_root_relative_inputs
                 and isinstance(actual, str)
                 and actual.strip()
                 and not actual.strip().startswith("/")
@@ -697,7 +708,7 @@ def _resolve_module_inputs_dict(
                 inputs_dict[key] = actual.strip()  # e.g. "fair-temperature/climate.nc"
                 continue
             if (
-                key in output_root_relative_inputs
+                name in output_root_relative_inputs
                 and isinstance(actual, str)
                 and actual.strip().startswith("/")
                 and experiment_specific_input_data
@@ -706,26 +717,24 @@ def _resolve_module_inputs_dict(
                 continue
             try:
                 resolved_path = resolve_input_path(
-                    field_name=key,
+                    field_name=name,
                     field_value=value,
-                    mount=input_spec.get(key, {}).get("mount"),
+                    mount=mount,
                     shared_input_data=shared_input_data,
                     module_specific_input_data=module_specific_input_data,
                     module_name=module_name,
                     context=module_context,
                 )
                 inputs_dict[key] = (
-                    HostDirPath(resolved_path)
-                    if key in dir_input_keys
-                    else HostPath(resolved_path)
+                    HostDirPath(resolved_path) if is_dir else HostPath(resolved_path)
                 )
             except (ValueError, KeyError, TypeError) as e:
                 error_msg = str(e)
                 if "None" in error_msg or "NoneType" in error_msg:
                     raise ValueError(
-                        f"Input field '{key}' in {module_context} has None value or None in path resolution. "
+                        f"Input field '{name}' in {module_context} has None value or None in path resolution. "
                         f"Original error: {error_msg}. "
-                        f"Check that '{key}' has a valid value in metadata.{module_name}.inputs"
+                        f"Check that '{name}' has a valid value in metadata.{module_name}.inputs"
                     ) from e
                 if isinstance(value, dict):
                     inputs_dict[key] = value.get("value", value)
@@ -793,14 +802,24 @@ def _parse_image(image_data, module_context) -> ModuleContainerImage:
     return image
 
 
-def _assemble_fingerprint_params(module_fp_section, location_file):
+def _assemble_fingerprint_params(module_definition, module_fp_section, location_file):
+    """Translate the persisted (name-keyed) fingerprint_params section into the internal
+    resolution dict, keyed by each arg-spec's own `source` suffix (see
+    `_resolve_module_outputs_dict` for the same pattern)."""
     fingerprint_params = {"location_file": location_file}
 
     if isinstance(module_fp_section, dict):
-        for k, v in module_fp_section.items():
+        for fp_spec in module_definition.arguments.get("fingerprint_params", []):
+            name = fp_spec.get("name", "")
+            if not name or name not in module_fp_section:
+                continue
+            v = module_fp_section[name]
             actual = v.get("value", v) if isinstance(v, dict) else v
-            if actual is not None:
-                fingerprint_params[k.replace("-", "_")] = actual
+            if actual is None:
+                continue
+            source = fp_spec.get("source", "")
+            key = source.split(".")[-1] if "." in source else name
+            fingerprint_params[key] = actual
     return fingerprint_params
 
 
@@ -824,7 +843,8 @@ def build_module_service_spec(
     """
     module_context = f"{module_name} module"
 
-    module_metadata = get_required_field(metadata, module_name, module_context)
+    module_wrapper = get_required_field(metadata, module_name, module_context)
+    module_metadata = get_required_field(module_wrapper, "values", module_context)
 
     # scenario_name = get_required_field(metadata, "scenario", module_context)
 
@@ -851,12 +871,20 @@ def build_module_service_spec(
         module_metadata, "inputs", module_context
     )
 
+    # `options_dict` is the internal resolution dict: keyed by each option arg-spec's own
+    # `source` suffix (matching `module_inputs.options.<suffix>` addressing used elsewhere
+    # in `_process_argument`), looked up by `name` from the persisted `options_section`
+    # (name-keyed in experiment-config.yaml). Mirrors `_resolve_module_outputs_dict`.
     options_dict = {}
     options_section = module_metadata.get("options", {})
     if isinstance(options_section, dict):
-        for key, value in options_section.items():
-            if not key.startswith("#"):
-                options_dict[key] = value
+        for opt_spec in module_definition.arguments.get("options", []):
+            name = opt_spec.get("name", "")
+            if not name or name not in options_section:
+                continue
+            source = opt_spec.get("source", "")
+            key = source.split(".")[-1] if "." in source else name
+            options_dict[key] = options_section[name]
 
     inputs_dict = _resolve_module_inputs_dict(
         module_definition=module_definition,
@@ -867,16 +895,23 @@ def build_module_service_spec(
         module_specific_input_data=resolved_paths.module_specific_input_data,
         experiment_specific_input_data=resolved_paths.experiment_specific_input_data,
     )
+    # Some options are actually sourced from the inputs component (source:
+    # module_inputs.inputs.<suffix>); if such a value wasn't already resolved as an
+    # input, pull it in from options_dict, and vice versa. Both dicts are keyed by the
+    # same internal (source-suffix) key space, so `key` is consistent both directions.
     for opt_spec in module_definition.arguments.get("options", []):
         source = opt_spec.get("source", "")
-        if "module_inputs.inputs." in source and "." in source:
-            field = source.split(".")[-1]
-            if field not in inputs_dict and field in options_dict:
-                inputs_dict[field] = options_dict[field]
-    for opt_spec in module_definition.arguments.get("options", []):
-        name = opt_spec.get("name", "")
-        if name and name not in options_dict and name in inputs_dict:
-            options_dict[name] = inputs_dict[name]
+        key = source.split(".")[-1] if "." in source else opt_spec.get("name", "")
+        if not key:
+            continue
+        if (
+            "module_inputs.inputs." in source
+            and key not in inputs_dict
+            and key in options_dict
+        ):
+            inputs_dict[key] = options_dict[key]
+        elif key not in options_dict and key in inputs_dict:
+            options_dict[key] = inputs_dict[key]
 
     module_outputs = get_required_field(module_metadata, "outputs", module_context)
 
@@ -895,7 +930,9 @@ def build_module_service_spec(
     # Merge module-specific fingerprint params (e.g. fprint_gis_file for emulandice-gris)
     module_fp_section = module_metadata.get("fingerprint_params") or {}
     fingerprint_params = _assemble_fingerprint_params(
-        module_fp_section=module_fp_section, location_file=location_file
+        module_definition=module_definition,
+        module_fp_section=module_fp_section,
+        location_file=location_file,
     )
 
     impl_inputs = ModuleServiceSpecComponents(
