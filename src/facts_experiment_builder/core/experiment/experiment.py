@@ -62,7 +62,13 @@ _STRUCTURAL_KEYS: Set[str] = (
     set(MANIFEST_KEYS)
     | set(PATH_KEYS_PRIMARY)
     | {k for alts in PATH_KEYS_ALTERNATIVES.values() for k in alts}
-    | {"experiment_name", "workflows", "projection_scale"}
+    | {
+        "experiment_name",
+        "workflows",
+        "projection_scale",
+        "config_schema_version",
+        "module_registry_version",
+    }
 )
 
 

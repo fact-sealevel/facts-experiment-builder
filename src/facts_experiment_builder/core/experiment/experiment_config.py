@@ -8,6 +8,8 @@ from typing import Iterable
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
 from facts_experiment_builder.core.steps.base import ExperimentStep
 
+_CONFIG_SCHEMA_VERSION = 2  # bump when experiment-config.yaml's shape changes
+
 
 @dataclass(frozen=True)
 class ExperimentConfig:
@@ -30,6 +32,7 @@ class ExperimentConfig:
     outputs: list  # outputs section at top of config
     module_keys: list  # this is a list of all the modules that have sections in second part of config--need to cleanup how its made
     module_registry_version: str
+    config_schema_version: int = _CONFIG_SCHEMA_VERSION
 
 
 @dataclass(frozen=True)
@@ -47,6 +50,13 @@ class ExperimentManifest:
 
 
 def build_module_sections(steps: Iterable[ExperimentStep]) -> dict[str, dict]:
+    """Build the per-module sections of experiment-config.yaml.
+
+    Each spec's to_dict() nests two parts: `values` (the resolved, human-editable
+    inputs/options/outputs/fingerprint_params/image) and `schema` (the frozen module
+    definition consulted from the registry at setup-experiment time) — see
+    ModuleExperimentSpec.to_dict().
+    """
     return {
         spec.module_name: spec.to_dict()
         for step in steps
