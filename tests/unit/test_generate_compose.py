@@ -365,7 +365,6 @@ def test_create_esl_workflow_services_passes_through_provided_inputs(monkeypatch
     )
 
     assert (
-        captured["inputs"]["gesla-dir"]
-        == "/data/module_specific_input_data/gesla_data"
+        captured["inputs"]["gesla-dir"] == "/data/module_specific_input_data/gesla_data"
     )
     assert "total_localsl_file" in captured["inputs"]

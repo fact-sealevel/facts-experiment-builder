@@ -19,7 +19,6 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
-from facts_experiment_builder.cli.utils import configure_logging
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.skeleton import (
@@ -45,6 +44,13 @@ from facts_experiment_builder.io.experiment_repository import (
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)
+
+
+def configure_logging(debug_target):
+    if not debug_target:
+        return
+    name = None if debug_target == "all" else debug_target
+    logging.getLogger(name).setLevel(logging.INFO)
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
