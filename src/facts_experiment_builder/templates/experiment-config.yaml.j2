@@ -17,7 +17,10 @@
 
 # About this experiment:
 # Date created: {{ date_created}}
-# Module registry version: {{ module_registry_version or "unknown" }}
+config_schema_version: {{ config_schema_version }}
+module_registry_version:
+{{ format_value(module_registry_version) }}
+
 experiment_name:
 {{ format_value(experiment_name) }}
 
