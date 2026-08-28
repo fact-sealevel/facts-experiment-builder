@@ -484,7 +484,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value")
+        inputs.get("climate-data-file", {}).get("value")
         == "fair-temperature/climate.nc"
     )
 
@@ -541,7 +541,7 @@ def test_hydrate_experiment_doesnt_return_wrong_climate_file():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") != "fair-temperature/gsat.nc"
+        inputs.get("climate-data-file", {}).get("value") != "fair-temperature/gsat.nc"
     )
 
 
@@ -597,7 +597,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module_2():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair2-climate/climate.nc"
     )
 
 
@@ -665,7 +665,7 @@ def test_hydrate_experiment_prefills_correct_file_for_different_climate_module()
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair2-climate/climate.nc"
     )
 
 
@@ -732,7 +732,7 @@ def test_hydrate_experiment_prefills_gsat_file_for_sealevel_module_expecting_gsa
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair-temperature/gsat.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair-temperature/gsat.nc"
     )
 
 
@@ -811,9 +811,9 @@ def test_hydrate_experiment_prefills_per_module_independently():
 
     _, sealevel, _, _ = hydrate_experiment(skeleton, schemas)
 
-    gsat_input = sealevel.module_specs_list[0].inputs["climate_data_file"]["value"]
+    gsat_input = sealevel.module_specs_list[0].inputs["climate-data-file"]["value"]
     print("should be gsat: ", gsat_input)
     assert gsat_input == "fair-temperature/gsat.nc"
 
-    climate_input = sealevel.module_specs_list[1].inputs["climate_data_file"]["value"]
+    climate_input = sealevel.module_specs_list[1].inputs["climate-data-file"]["value"]
     assert climate_input == "fair-temperature/climate.nc"

@@ -177,8 +177,8 @@ def test_output_volume_key_returns_none_for_empty_volumes():
     assert schema._output_volume_key() is None
 
 
-def test_get_output_volume_input_keys_returns_name_and_source_key():
-    """Both the YAML arg name and the source-derived snake_case key are returned."""
+def test_get_output_volume_input_keys_returns_name():
+    """Keyed by `name`, matching how `inputs` is keyed in experiment-config.yaml."""
     inputs = [
         {
             "name": "input-data-file",
@@ -188,8 +188,7 @@ def test_get_output_volume_input_keys_returns_name_and_source_key():
     ]
     schema = _schema_with_inputs(inputs)
     keys = schema.get_output_volume_input_keys()
-    assert "input-data-file" in keys
-    assert "input_data_file" in keys
+    assert keys == {"input-data-file"}
 
 
 def test_get_output_volume_input_keys_excludes_non_output_volume_inputs():
@@ -224,9 +223,7 @@ def test_get_output_volume_input_keys_handles_multiple_inputs():
     schema = _schema_with_inputs(inputs)
     keys = schema.get_output_volume_input_keys()
     assert "climate-data-file" in keys
-    assert "climate_data_file" in keys
     assert "location-file" not in keys
-    assert "location_file" not in keys
 
 
 def test_get_output_volume_input_keys_empty_when_no_output_volume():
@@ -324,8 +321,8 @@ def test_from_module_schema_includes_module_specific_fingerprint_params():
     """Module-specific fingerprint params (source: module_inputs.fingerprint_params.*) appear in the spec."""
     schema = _schema_with_fp([FP_SPEC_MODULE_SPECIFIC])
     spec = ModuleExperimentSpec.from_module_schema(schema)
-    assert "fprint_gis_file" in spec.fingerprint_params
-    entry = spec.fingerprint_params["fprint_gis_file"]
+    assert "fprint-gis-file" in spec.fingerprint_params
+    entry = spec.fingerprint_params["fprint-gis-file"]
     assert entry.get("clue") == "File containing GIS fingerprint data"
 
 
@@ -334,27 +331,29 @@ def test_from_module_schema_fingerprint_params_present_in_to_dict_when_populated
     schema = _schema_with_fp([FP_SPEC_MODULE_SPECIFIC])
     spec = ModuleExperimentSpec.from_module_schema(schema)
     d = spec.to_dict()
-    assert "fingerprint_params" in d
-    assert "fprint_gis_file" in d["fingerprint_params"]
+    assert "fingerprint_params" in d["values"]
+    assert "fprint-gis-file" in d["values"]["fingerprint_params"]
 
 
 def test_from_dict_round_trips_fingerprint_params():
     """from_dict() parses fingerprint_params so they survive a round-trip."""
     raw = {
-        "inputs": {},
-        "options": {},
-        "outputs": {},
-        "fingerprint_params": {
-            "fprint_gis_file": {"clue": "GIS fp", "value": "fprint_gis.nc"}
-        },
-        "image": "img:tag",
+        "values": {
+            "inputs": {},
+            "options": {},
+            "outputs": {},
+            "fingerprint_params": {
+                "fprint-gis-file": {"clue": "GIS fp", "value": "fprint_gis.nc"}
+            },
+            "image": "img:tag",
+        }
     }
     spec = ModuleExperimentSpec.from_dict("test-module", raw)
-    assert spec.fingerprint_params.get("fprint_gis_file") == {
+    assert spec.fingerprint_params.get("fprint-gis-file") == {
         "clue": "GIS fp",
         "value": "fprint_gis.nc",
     }
     assert (
-        spec.to_dict()["fingerprint_params"]["fprint_gis_file"]["value"]
+        spec.to_dict()["values"]["fingerprint_params"]["fprint-gis-file"]["value"]
         == "fprint_gis.nc"
     )
