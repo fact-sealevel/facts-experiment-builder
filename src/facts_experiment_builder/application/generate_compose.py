@@ -7,15 +7,10 @@ from typing import Dict, Any, List, Optional
 import logging
 
 from facts_experiment_builder.core.module.module_service_spec import (
-    get_experiment_paths,
     build_module_service_spec,
 )
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
-from facts_experiment_builder.core.module.service_spec_utils import (
-    declares_input,
-    expand_path,
-)
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
 )
@@ -29,7 +24,6 @@ from facts_experiment_builder.core.workflow import (
 
 from facts_experiment_builder.application.storage import (
     ExperimentRepository,
-    ModuleRegistry,
 )
 
 from facts_experiment_builder.io.paths import ExperimentPaths
@@ -38,6 +32,8 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
 _SUCCESS = 25  # custom level between INFO (20) and WARNING (30); must match CLI handler
+
+_CONFIG_SCHEMA_VERSION = 2  # bump when experiment-config.yaml's shape changes
 
 _REQUIRED_FIELDS = [
     "experiment_name",
@@ -112,7 +108,9 @@ def _validate_climate_file_inputs(
         if not module_schema.uses_climate_file:
             continue
 
-        module_inputs = metadata.get(module_name, {}).get("inputs", {})
+        module_inputs = (
+            metadata.get(module_name, {}).get("values", {}).get("inputs", {})
+        )
         climate_input_keys = module_schema.get_output_volume_input_keys()
 
         climate_file = next(
@@ -156,7 +154,7 @@ def _collect_workflow_output_paths_by_type(
     prefix = container_prefix.rstrip("/")
 
     for mod in wf.module_names:
-        out_section = metadata.get(mod, {}) or {}
+        out_section = (metadata.get(mod, {}) or {}).get("values") or {}
         if not isinstance(out_section, dict):
             continue
         outputs = out_section.get("outputs") or {}
@@ -247,7 +245,7 @@ def _create_facts_total_compose_service(
     """Build the compose service dict for a facts-total workflow from its synthetic
     section."""
     metadata_copy = dict(metadata)
-    metadata_copy[service_name] = section
+    metadata_copy[service_name] = {"values": section}
     wf_module = build_module_service_spec(
         metadata=metadata_copy,
         module_name=service_name,
@@ -399,34 +397,14 @@ def _create_esl_workflow_services(
 
     for module_name in esl_module_names:
         schema = schemas[module_name]
-        module_has_gesla_dir = declares_input(schema, "gesla_dir")
 
-        base_section = metadata.get(module_name) or {}
+        base_section = (metadata.get(module_name) or {}).get("values") or {}
         if not isinstance(base_section, dict):
             base_section = {}
-        try:
-            exp_paths = get_experiment_paths(metadata, f"{module_name} module")
-            module_specific_base = expand_path(
-                exp_paths.get("module_specific_input_data"),
-                "module-specific-input-data",
-            )
-        except (KeyError, TypeError):
-            module_specific_base = ""
         for _wf_name, wf in workflows.items():
             service_name = f"{module_name}-{wf.name}"
             base_inputs = dict(base_section.get("inputs") or {})
             base_inputs["total_localsl_file"] = wf.total_localsl_path_under_output
-            gesla_val = base_inputs.get("gesla_dir")
-            if module_has_gesla_dir and (
-                not gesla_val
-                or (
-                    isinstance(gesla_val, dict) and gesla_val.get("value") in (None, "")
-                )
-            ):
-                if module_specific_base:
-                    base_inputs["gesla_dir"] = (
-                        f"{module_specific_base}/{module_name}/gesla_data"
-                    )
             base_outputs = base_section.get("outputs") or {}
             synthetic_section = {
                 **base_section,
@@ -434,7 +412,7 @@ def _create_esl_workflow_services(
                 "outputs": {**base_outputs, "output-dir": "."},
             }
             metadata_copy = dict(metadata)
-            metadata_copy[service_name] = synthetic_section
+            metadata_copy[service_name] = {"values": synthetic_section}
 
             esl_module = build_module_service_spec(
                 metadata=metadata_copy,
@@ -514,7 +492,7 @@ def _build_per_workflow_services(plan, metadata, experiment_dir, schemas):
                 metadata=metadata,
                 schema=facts_total_schema,
                 experiment_dir=experiment_dir,
-                known_module_names=frozenset(schemas.keys()),
+                known_module_names=list(schemas.keys()),
             )
             services[service_name] = compose_svc
             _log_success("Created %s workflow service", service_name)
@@ -560,7 +538,6 @@ def _build_compose_services(
 def generate_compose(
     experiment_name: str,
     workspace_dir: Path,
-    module_registry: ModuleRegistry,
     experiment_repo: ExperimentRepository,
     custom_compose_path: Path | None = None,
 ) -> Dict[str, Any]:
@@ -579,14 +556,15 @@ def generate_compose(
     experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
 
     experiment_paths = ExperimentPaths(
-        workspace_dir=workspace_dir, experiment_name=experiment_name_obj
+        workspace_dir=workspace_dir,
+        experiment_name=experiment_name_obj,
     )
-    experiment_paths.custom_compose_path = custom_compose_path
+    # experiment_paths.custom_compose_path = custom_compose_path
 
     # handle custom compose, if passed -- is this still necessary?
     compose_path = (
-        experiment_paths.custom_compose_path.resolve()
-        if experiment_paths.custom_compose_path is not None
+        custom_compose_path.resolve()
+        if custom_compose_path is not None
         else experiment_paths.compose_path
     )
     experiment_dir = experiment_paths.config_path.parent
@@ -605,13 +583,21 @@ def generate_compose(
     )
 
     metadata_dict = experiment_repo.get(config_path=config_path)
-    # metadata_dict = load_experiment_config(experiment_paths.config_path)
-    #  setup - only references to definition are here
+
+    schema_version = metadata_dict.get("config_schema_version")
+    if not isinstance(schema_version, int) or schema_version < _CONFIG_SCHEMA_VERSION:
+        raise ValueError(
+            f"experiment-config.yaml at '{config_path}' uses an outdated format "
+            f"(config_schema_version={schema_version!r}, expected >= {_CONFIG_SCHEMA_VERSION}). "
+            "Please re-run setup-experiment to regenerate this file."
+        )
+
     module_names = _extract_all_module_names_from_manifest(metadata_dict)
     schemas = {
-        m_name: module_registry.get_schema(m_name) for m_name in set(module_names)
+        m_name: ModuleSchema.from_dict(metadata_dict[m_name]["schema"])
+        for m_name in set(module_names)
     }
-    known_module_names = module_registry.module_names()
+    known_module_names = list(schemas.keys())
 
     # Make experiment plan
     plan = _make_experiment_plan(metadata_dict, schemas)
