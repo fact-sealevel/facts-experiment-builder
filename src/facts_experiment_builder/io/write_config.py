@@ -5,6 +5,7 @@ from facts_experiment_builder.core.experiment.experiment_config import (
 )
 from typing import Any, List, Dict
 from jinja2 import Environment, PackageLoader, StrictUndefined
+import yaml
 
 from markupsafe import Markup
 
@@ -110,11 +111,38 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
     return lines
 
 
+def format_nested_yaml_block(
+    key: str, value: Dict[str, Any], indent: int = 2
+) -> List[str]:
+    """Format a plain nested dict (a module's `schema` section) as standard YAML via
+    yaml.safe_dump.
+
+    `format_module_value` is built around clue/value bundles (a flat dict of name ->
+    {clue, value, ...}) and does simple Python-repr formatting for list items, which
+    mishandles nested dicts (e.g. renders `None` as the literal text `None`, which reads
+    back as the string "None" rather than YAML null). The `schema` section holds
+    arbitrarily-nested module-definition data (arg-specs, volumes, etc.), so it's dumped
+    directly instead.
+    """
+    indent_str = " " * indent
+    if not value:
+        return [f"{indent_str}{key}: {{}}"]
+    dumped = yaml.safe_dump(value, default_flow_style=False, sort_keys=False).rstrip(
+        "\n"
+    )
+    body_lines = [
+        f"{indent_str}  {line}" if line else line for line in dumped.split("\n")
+    ]
+    return [f"{indent_str}{key}:", *body_lines]
+
+
 def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
     """Format a module section with comment handling and clue/value support.
 
     Uses 2-space indentation to match the actual YAML file format.
-    Handles clue/value dicts by rendering clues as comments.
+    Handles clue/value dicts by rendering clues as comments. The `schema` key
+    is rendered via format_nested_yaml_block instead, since it isn't shaped
+    like a clue/value bundle.
 
     Args:
         module_key: Module name/key
@@ -129,6 +157,8 @@ def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
         if key.startswith("#"):
             # Comment key
             lines.append(f"  {key}")
+        elif key == "schema":
+            lines.extend(format_nested_yaml_block(key, value, indent=2))
         else:
             formatted_lines = format_module_value(key, value, indent=2)
             lines.extend(formatted_lines)
