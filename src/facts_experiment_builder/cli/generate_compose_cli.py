@@ -14,7 +14,6 @@ from facts_experiment_builder.application.generate_compose import (
 )
 
 # ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
@@ -81,27 +80,15 @@ def _configure_feb_logging() -> None:
     is_flag=True,
     help="Enable debug mode",
 )
-@click.option(
-    "--module-registry",
-    type=click.Path(exists=True, file_okay=False, path_type=Path),
-    show_default=True,
-    envvar="FEB_MODULE_REGISTRY_DIR",
-    default=Path("./facts-module-registry"),
-    help="Path to the facts-module-registry directory to use in generate-compose. MUst be same as that used in setup-experiment. Default value points to the registry that is created if running from facts2-workspace after running `feb init`.",
-)
 def main(
     experiment_name: str,
     custom_compose_path: Path,
     workspace_dir: Path,
-    module_registry: Path,
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
     _configure_feb_logging()
 
-    module_registry_path = module_registry.absolute()
-    # Instantiate adapters
-    registry = FileSystemModuleRegistry(registry_path=module_registry_path)
     experiment_repo = StorageExperimentRepository()
     if debug:
         logger.setLevel(logging.INFO)
@@ -120,22 +107,10 @@ def main(
     # )
     # TODO in future, check it conforms to schema?
 
-    # # Step 2: Build compose dictionary from metadata
-    # console.print(
-    #    "[primary]Step 2:[/primary] Building compose dictionary from metadata..."
-    # )
-    # check that file exists at metadata path
-    # if not experiment_metadata_path.exists():
-    #    raise FileNotFoundError(
-    #        f"When trying to read experiment-metadata file to generate corresponding "
-    #        f"compose file, metadata file not found: {experiment_metadata_path}"
-    #    )
-
     try:
         output = generate_compose(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
-            module_registry=registry,
             experiment_repo=experiment_repo,
             custom_compose_path=custom_compose_path,
         )
