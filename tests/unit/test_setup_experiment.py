@@ -130,7 +130,14 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         experiment_repo=repo,
     )
     config_path = experiment_path.config_path
+    module_schemas_path = experiment_path.module_schemas_path
     assert config_path.exists()
+    assert module_schemas_path.exists()
+
+    config_content = yaml.safe_load(config_path.read_text())
+    schemas_content = yaml.safe_load(module_schemas_path.read_text())
+    assert "schema" not in config_content["fair-temperature"]
+    assert schemas_content["fair-temperature"]["module_name"] == "fair-temperature"
 
 
 # --- Testing setup experiment utility fns ---

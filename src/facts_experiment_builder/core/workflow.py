@@ -2,7 +2,7 @@
 helpers."""
 
 from dataclasses import dataclass
-from typing import Dict, List, Union
+from typing import List, Union
 
 
 @dataclass(frozen=True)
@@ -63,8 +63,8 @@ class Workflow:
         return f"facts-total/{self.total_output_filename_for_type('local')}"
 
 
-def workflows_from_metadata(metadata: Dict) -> Dict[str, Workflow]:
-    """Build Dict[name, Workflow] from metadata['workflows'] (Dict[str, str] or
+def workflows_from_metadata(metadata: dict) -> dict[str, Workflow]:
+    """Build dict[name, Workflow] from metadata['workflows'] (dict[str, str] or
     similar).
 
     Returns empty dict if workflows key is missing or not a dict.
@@ -80,7 +80,7 @@ def workflows_from_metadata(metadata: Dict) -> Dict[str, Workflow]:
     return result
 
 
-def workflows_to_metadata(workflows: Dict[str, Workflow]) -> Dict[str, str]:
+def workflows_to_metadata(workflows: dict[str, Workflow]) -> dict[str, str]:
     """Serialize Dict[name, Workflow] to Dict[str, str] for YAML (name -> comma-
     separated modules)."""
     return {name: wf.to_dict_value() for name, wf in workflows.items()}

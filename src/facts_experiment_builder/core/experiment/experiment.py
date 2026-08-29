@@ -66,7 +66,6 @@ _STRUCTURAL_KEYS: Set[str] = (
         "experiment_name",
         "workflows",
         "projection_scale",
-        "config_schema_version",
         "module_registry_version",
     }
 )

@@ -289,7 +289,9 @@ def _make_esl_schema(module_name: str) -> ModuleSchema:
                 },
             ]
         },
-        volumes={},
+        volumes={
+            "output": {"host_path": "module_inputs.output_paths.output_dir"},
+        },
     )
 
 
@@ -337,7 +339,7 @@ def test_create_esl_workflow_services_does_not_synthesize_missing_inputs(monkeyp
 
 def test_create_esl_workflow_services_passes_through_provided_inputs(monkeypatch):
     """Inputs already present in metadata are carried through unmodified, alongside
-    the injected total_localsl_file."""
+    the injected total-localsl-file."""
     from facts_experiment_builder.core.workflow import Workflow
 
     captured = {}
@@ -367,4 +369,4 @@ def test_create_esl_workflow_services_passes_through_provided_inputs(monkeypatch
     assert (
         captured["inputs"]["gesla-dir"] == "/data/module_specific_input_data/gesla_data"
     )
-    assert "total_localsl_file" in captured["inputs"]
+    assert "total-localsl-file" in captured["inputs"]
