@@ -2,7 +2,7 @@
 storage."""
 
 from typing import Protocol
-
+from pathlib import Path
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
 
@@ -18,5 +18,11 @@ class ModuleRegistry(Protocol):
 class ExperimentRepository(Protocol):
     """Protocol to add/get facts experiments from storage."""
 
-    def add(self, experiment: FactsExperiment) -> None: ...
-    def get(self, name) -> FactsExperiment: ...
+    def add(
+        self,
+        experiment: FactsExperiment,
+        config_path: Path,
+        module_schemas_path: Path,
+        module_registry_version=None,
+    ) -> None: ...
+    def get(self, config_path, module_schemas_path) -> dict: ...

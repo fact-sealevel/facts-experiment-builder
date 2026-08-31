@@ -96,12 +96,11 @@ class ModuleSchema:
         return None
 
     def get_output_volume_input_keys(self) -> set:
-        """Set of input names/source-keys that mount from the output volume (that is not
-        module-specific, is for mult.
+        """Set of input `name`s that mount from the output volume (that is not module-
+        specific, is for multi-modules).
 
-        modules)         This function returns both the YAML arg name ('climate-data-
-        file') and the source-derived metadata key ('climate_data_file') so the adapter
-        can match either form.
+        Keyed by `name`, matching how `inputs` is keyed in the persisted experiment-
+        config.yaml.
         """
         output_vol = self._output_volume_key()
         if not output_vol:
@@ -113,9 +112,6 @@ class ModuleSchema:
                 name = input_spec.get("name", "")
                 if name:
                     keys.add(name)
-                source = input_spec.get("source", "")
-                if "." in source:
-                    keys.add(source.split(".")[-1])
         return keys
 
     def get_climate_output_type(self) -> Optional[str]:
@@ -161,10 +157,28 @@ class ModuleSchema:
             depends_on=data.get("depends_on"),
             command=data.get("command", ""),
             uses_climate_file=data.get("uses_climate_file", False),
-            per_workflow=data.get("per_workflow"),
-            output_types=data.get("output_types"),
+            per_workflow=data.get("per_workflow") or False,
+            output_types=data.get("output_types") or ["global", "local"],
             extra=extra,
         )
+
+    def to_dict(self) -> dict:
+        """Serialize back to the raw dict shape consumed by from_dict(), for freezing
+        into experiment-config.yaml at setup-experiment time."""
+        data: Dict[str, Any] = {
+            "module_name": self.module_name,
+            "container_image": self.container_image,
+            "arguments": dict(self.arguments),
+            "volumes": dict(self.volumes),
+            "command": self.command,
+            "uses_climate_file": self.uses_climate_file,
+            "per_workflow": self.per_workflow,
+            "output_types": list(self.output_types),
+        }
+        if self.depends_on is not None:
+            data["depends_on"] = self.depends_on
+        data.update(self.extra)
+        return data
 
 
 @dataclass(frozen=True)

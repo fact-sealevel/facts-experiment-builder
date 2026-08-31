@@ -3,11 +3,23 @@
 from click.testing import CliRunner
 from facts_experiment_builder.cli.setup_experiment_cli import (
     main,
+    configure_logging,
 )
 from pathlib import Path
-
+import logging
 
 runner = CliRunner()
+
+
+def test_configure_logging_returns_none_correctly():
+    debug_target = None
+    assert configure_logging(debug_target) is None
+
+
+def test_configure_logging_sets_name_when_debug_target_all():
+    debug_target = "all"
+    configure_logging(debug_target)
+    assert logging.getLogger().level == logging.INFO
 
 
 def test_cli_help_exits_zero():

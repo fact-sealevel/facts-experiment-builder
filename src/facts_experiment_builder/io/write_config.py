@@ -5,6 +5,7 @@ from facts_experiment_builder.core.experiment.experiment_config import (
 )
 from typing import Any, List, Dict
 from jinja2 import Environment, PackageLoader, StrictUndefined
+import yaml
 
 from markupsafe import Markup
 
@@ -118,7 +119,7 @@ def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
 
     Args:
         module_key: Module name/key
-        module_data: Module data dictionary
+        module_data: Module data dictionary (the module's `values` section)
 
     Returns:
         Formatted YAML string for the module (without the module key line, as template adds it)
@@ -229,12 +230,37 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Create template
     template = env.get_template("experiment-config.yaml.j2")
 
+    # Module schemas live in their own file (module-schemas.yaml); the main config
+    # template only ever sees each module's `values` section.
+    values_only_module_sections = {
+        module_name: {"values": sections.get("values", {})}
+        for module_name, sections in experiment_config.module_sections.items()
+    }
+    template_vars = {
+        **vars(experiment_config),
+        "module_sections": values_only_module_sections,
+    }
+
     # Render template
     try:
-        rendered = template.render(**vars(experiment_config))
+        rendered = template.render(**template_vars)
     except Exception as e:
         raise ValueError(f"Error rendering Jinja2 template: {e}") from e
 
     # Write to file
     with open(config_path, "w") as f:
         f.write(rendered)
+
+
+def write_module_schemas_yaml(
+    experiment_config: ExperimentConfig, module_schemas_path: Path
+) -> None:
+    """Write each module's frozen schema (module_sections[name]["schema"]) to its own
+    YAML file, so experiment-config.yaml only needs to hold user-editable `values`."""
+    schemas = {
+        module_name: sections["schema"]
+        for module_name, sections in experiment_config.module_sections.items()
+        if "schema" in sections
+    }
+    with open(module_schemas_path, "w") as f:
+        yaml.safe_dump(schemas, f, default_flow_style=False, sort_keys=False)

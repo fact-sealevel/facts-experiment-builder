@@ -212,13 +212,11 @@ def _build_section_from_fields(
     result = {}
 
     for field_spec in fields:
-        source = field_spec.get("source", "")
-        if "." not in source:
+        name = field_spec.get("name", "")
+        if not name:
             continue
-        # Pull out the last part of this obj
-        underscore_name = source.split(".")[-1]
-        clue = field_spec.get("help", f"Add your {underscore_name} here.")
-        bundle = create_metadata_bundle(clue, prefilled_values.get(underscore_name))
+        clue = field_spec.get("help", f"Add your {name} here.")
+        bundle = create_metadata_bundle(clue, prefilled_values.get(name))
         default_value = field_spec.get("default_value")
         if default_value:
             bundle["default_value"] = default_value
@@ -237,7 +235,7 @@ def _build_section_from_fields(
                 ):
                     bundle["value"] = filename
             logger.info("filename: %s", filename)
-        result[underscore_name] = bundle
+        result[name] = bundle
 
     return result
 
@@ -246,12 +244,15 @@ def _build_section_from_fields(
 class ModuleExperimentSpec:
     """In-memory representation of one module's section in experiment-config.yaml.
 
-    Fields mirror the dict shape used in the YAML:
-        inputs:  {field_name: clue/value-bundle-or-plain-value}
-        options: {field_name: clue/value-bundle-or-plain-value}
-        fingerprint-params: ...
-        outputs: {output_name: {"value": path, "output_type": ...}}
-        image:   str (container image URL)
+    Serializes to a nested {"values": ..., "schema": ...} dict:
+        values.inputs:  {field_name: clue/value-bundle-or-plain-value}
+        values.options: {field_name: clue/value-bundle-or-plain-value}
+        values.fingerprint_params: ...
+        values.outputs: {output_name: {"value": path, "output_type": ...}}
+        values.image:   str (container image URL)
+        schema: the frozen ModuleSchema consulted from the registry at
+            setup-experiment time (see ModuleSchema.to_dict()) — carried here
+            so generate-compose never needs a live registry.
     """
 
     module_name: str
@@ -260,6 +261,7 @@ class ModuleExperimentSpec:
     outputs: Dict[str, Any] = field(default_factory=dict)
     fingerprint_params: Dict[str, Any] = field(default_factory=dict)
     image: str = ""
+    schema: Optional[ModuleSchema] = None
 
     # Constructors
     @classmethod
@@ -336,27 +338,35 @@ class ModuleExperimentSpec:
             outputs=module_outputs,
             fingerprint_params=fingerprint_params,
             image=module_schema.container_image,
+            schema=module_schema,
         )
 
     @classmethod
     def from_dict(cls, module_name: str, d: Dict[str, Any]) -> "ModuleExperimentSpec":
+        values = d.get("values") or {}
+        schema_dict = d.get("schema")
         return cls(
             module_name=module_name,
-            inputs=dict(d.get("inputs") or {}),
-            options=dict(d.get("options") or {}),
-            outputs=dict(d.get("outputs") or {}),
-            fingerprint_params=dict(d.get("fingerprint_params") or {}),
-            image=d.get("image", ""),
+            inputs=dict(values.get("inputs") or {}),
+            options=dict(values.get("options") or {}),
+            outputs=dict(values.get("outputs") or {}),
+            fingerprint_params=dict(values.get("fingerprint_params") or {}),
+            image=values.get("image", ""),
+            schema=ModuleSchema.from_dict(schema_dict) if schema_dict else None,
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize back to raw dict used in experiment-config.yaml."""
-        d: Dict[str, Any] = {
+        """Serialize to the nested {"values": ..., "schema": ...} shape used in
+        experiment-config.yaml."""
+        values: Dict[str, Any] = {
             "inputs": dict(self.inputs),
             "options": dict(self.options),
             "image": self.image,
             "outputs": dict(self.outputs),
         }
         if self.fingerprint_params:
-            d["fingerprint_params"] = dict(self.fingerprint_params)
+            values["fingerprint_params"] = dict(self.fingerprint_params)
+        d: Dict[str, Any] = {"values": values}
+        if self.schema is not None:
+            d["schema"] = self.schema.to_dict()
         return d

@@ -130,7 +130,14 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
         experiment_repo=repo,
     )
     config_path = experiment_path.config_path
+    module_schemas_path = experiment_path.module_schemas_path
     assert config_path.exists()
+    assert module_schemas_path.exists()
+
+    config_content = yaml.safe_load(config_path.read_text())
+    schemas_content = yaml.safe_load(module_schemas_path.read_text())
+    assert "schema" not in config_content["fair-temperature"]
+    assert schemas_content["fair-temperature"]["module_name"] == "fair-temperature"
 
 
 # --- Testing setup experiment utility fns ---
@@ -484,7 +491,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value")
+        inputs.get("climate-data-file", {}).get("value")
         == "fair-temperature/climate.nc"
     )
 
@@ -541,7 +548,7 @@ def test_hydrate_experiment_doesnt_return_wrong_climate_file():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") != "fair-temperature/gsat.nc"
+        inputs.get("climate-data-file", {}).get("value") != "fair-temperature/gsat.nc"
     )
 
 
@@ -597,7 +604,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module_2():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair2-climate/climate.nc"
     )
 
 
@@ -665,7 +672,7 @@ def test_hydrate_experiment_prefills_correct_file_for_different_climate_module()
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair2-climate/climate.nc"
     )
 
 
@@ -732,7 +739,7 @@ def test_hydrate_experiment_prefills_gsat_file_for_sealevel_module_expecting_gsa
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair-temperature/gsat.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair-temperature/gsat.nc"
     )
 
 
@@ -811,9 +818,9 @@ def test_hydrate_experiment_prefills_per_module_independently():
 
     _, sealevel, _, _ = hydrate_experiment(skeleton, schemas)
 
-    gsat_input = sealevel.module_specs_list[0].inputs["climate_data_file"]["value"]
+    gsat_input = sealevel.module_specs_list[0].inputs["climate-data-file"]["value"]
     print("should be gsat: ", gsat_input)
     assert gsat_input == "fair-temperature/gsat.nc"
 
-    climate_input = sealevel.module_specs_list[1].inputs["climate_data_file"]["value"]
+    climate_input = sealevel.module_specs_list[1].inputs["climate-data-file"]["value"]
     assert climate_input == "fair-temperature/climate.nc"

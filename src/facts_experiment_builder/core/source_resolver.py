@@ -1,10 +1,10 @@
 """Resolve values from dot-separated source paths into a context (metadata,
 module_inputs)."""
 
-from typing import Dict, Any
+from typing import Any
 
 
-def resolve_value(source: str, context: Dict[str, Any]) -> Any:
+def resolve_value(source: str, context: dict[str, Any]) -> Any:
     """Resolve a value from a source path like 'metadata.pipeline-id' or
     'module_inputs.inputs.rcmip_fname'.
 
@@ -14,7 +14,7 @@ def resolve_value(source: str, context: Dict[str, Any]) -> Any:
 
     Args:
         source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location-file")
-        context: Dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
+        context: dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
 
     Returns:
         Resolved value, or None if any segment is missing

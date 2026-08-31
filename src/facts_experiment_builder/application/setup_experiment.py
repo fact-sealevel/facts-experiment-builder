@@ -1,5 +1,3 @@
-from typing import Dict
-
 from dataclasses import dataclass
 import dataclasses
 from pathlib import Path
@@ -112,7 +110,7 @@ def finalize_experiment_setup(
     experiment_name: str,
     experiment_paths: ExperimentPaths,
     experiment_skeleton: ExperimentSkeleton,
-    workflows_dict: Dict,
+    workflows_dict: dict,
     pipeline_id: str,
     scenario: str,
     baseyear: int,
@@ -139,7 +137,7 @@ def finalize_experiment_setup(
         Container holding the resolved filesystem locations for hte experiment, including the experiment directory and the configuration file path.
     experiment_skeleton : ExperimentSkeleton
         Paritally populated experiment descriptino produced in prepare_exerpiment_setup(). Supplies module names, and any climate or supplied totaled sea-level step data.
-    workflows_dict : Dict
+    workflows_dict : dict
         Mapping of workflow names to their definitions, attached to a copy of ``experiment_skeleton``.
     pipeline_id : str
         Identifier of the pipeline this experiment belongs to.
@@ -228,6 +226,7 @@ def finalize_experiment_setup(
     experiment_repo.add(
         experiment=experiment_obj,
         config_path=config_path,
+        module_schemas_path=experiment_paths.module_schemas_path,
         module_registry_version=version,
     )
 

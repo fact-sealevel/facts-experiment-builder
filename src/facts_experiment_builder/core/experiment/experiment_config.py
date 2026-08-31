@@ -47,6 +47,13 @@ class ExperimentManifest:
 
 
 def build_module_sections(steps: Iterable[ExperimentStep]) -> dict[str, dict]:
+    """Build the per-module sections of experiment-config.yaml.
+
+    Each spec's to_dict() nests two parts: `values` (the resolved, human-editable
+    inputs/options/outputs/fingerprint_params/image) and `schema` (the frozen module
+    definition consulted from the registry at setup-experiment time) — see
+    ModuleExperimentSpec.to_dict().
+    """
     return {
         spec.module_name: spec.to_dict()
         for step in steps
