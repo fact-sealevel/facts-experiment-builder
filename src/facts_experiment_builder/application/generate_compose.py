@@ -616,7 +616,6 @@ def generate_compose(
     metadata_dict = experiment_repo.get(
         config_path=config_path,
     )
-    print("metadata dict keys: ", metadata_dict.keys())
 
     module_names = _extract_all_module_names_from_manifest(metadata_dict)
 

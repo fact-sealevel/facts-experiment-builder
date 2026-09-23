@@ -229,8 +229,6 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Create template
     template = env.get_template("experiment-config.yaml.j2")
 
-    # Module schemas live in their own file (module-schemas.yaml); the main config
-    # template only ever sees each module's `values` section.
     values_only_module_sections = {
         module_name: {"values": sections.values}
         for module_name, sections in experiment_config.module_sections.items()
