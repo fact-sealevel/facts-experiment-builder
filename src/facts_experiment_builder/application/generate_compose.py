@@ -3,7 +3,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Iterable
 import logging
 
 from facts_experiment_builder.core.module.module_service_spec import (
@@ -273,6 +273,30 @@ def check_metadata_has_required_fields(metadata_obj, required_fields):
             )
 
     return None
+
+
+def check_module_schemas_present(
+    metadata: dict[str, Any],
+    required_module_names: Iterable[str],
+) -> None:
+    """Raise an informative error if the experiment-config.yaml file associated with
+    provided experiment_name does not contain module schemas section, or is missing
+    schema data for a module."""
+    module_schemas = metadata.get("module_schemas")
+    if not isinstance(module_schemas, dict) or not module_schemas:
+        raise ValueError(
+            "This experiment's experiment-config.yaml file does not contain a 'module_schemas' section. "
+            "It may be that the file was created with an older version of FEB that included a different `setup-experiment` command."
+            "`generate-compose` now reads module schema information directly from experiment-config.yaml instead of the local module registry."
+            "Please ensure you are using the latest version of FEB and re-run `setup-experiment`."
+        )
+    missing = sorted(set(required_module_names) - set(module_schemas))
+    if missing:
+        raise ValueError(
+            f"This experiment's experiment-config.yaml is missing module schema "
+            f"information for: {', '.join(missing)}. Please re-run `setup-experiment` "
+            f"to regenerate a compatible experiment-config.yaml."
+        )
 
 
 def _build_module_specs(
@@ -583,24 +607,24 @@ def generate_compose(
     assert config_path.exists(), (
         f"Did not find `experiment-config.yaml` at '{config_path}'. Please ensure correct path/experiment name."
     )
-    module_schemas_path = experiment_paths.module_schemas_path
-    assert module_schemas_path.exists(), (
-        f"Did not find `module-schemas.yaml` at '{module_schemas_path}'. "
-        "Please re-run setup-experiment to regenerate this experiment."
-    )
+
     # log message to send to CLI
     logger.info(
         "Found experiment config file at provided path", extra={"detail": config_path}
     )
 
     metadata_dict = experiment_repo.get(
-        config_path=config_path, module_schemas_path=module_schemas_path
+        config_path=config_path,
     )
     print("metadata dict keys: ", metadata_dict.keys())
 
     module_names = _extract_all_module_names_from_manifest(metadata_dict)
+
+    # Check that module_schemas section present
+    check_module_schemas_present(metadata_dict, module_names)
+
     schemas = {
-        m_name: ModuleSchema.from_dict(metadata_dict[m_name]["schema"])
+        m_name: ModuleSchema.from_dict(metadata_dict["module_schemas"][m_name])
         for m_name in set(module_names)
     }
     known_module_names = list(schemas.keys())
