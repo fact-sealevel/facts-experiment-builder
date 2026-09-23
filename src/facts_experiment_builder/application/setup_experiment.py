@@ -226,7 +226,6 @@ def finalize_experiment_setup(
     experiment_repo.add(
         experiment=experiment_obj,
         config_path=config_path,
-        module_schemas_path=experiment_paths.module_schemas_path,
         module_registry_version=version,
     )
 
