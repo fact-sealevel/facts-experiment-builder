@@ -18,27 +18,6 @@ from pathlib import Path
 import pytest
 
 
-def make_schema(
-    name="test-module", uses_climate_file=False, arguments=None
-) -> ModuleSchema:
-    if arguments is None:
-        arguments = {
-            "inputs": [],
-            "options": [],
-            "outputs": {"files": [], "other": []},
-            "top_level": [],
-        }
-    return ModuleSchema.from_dict(
-        {
-            "module_name": name,
-            "container_image": "test/image:latest",
-            "arguments": arguments,
-            "volumes": {},
-            "uses_climate_file": uses_climate_file,
-        }
-    )
-
-
 # factories to build fixtures (same as test_setup_experiment)
 def test_plan_fp_uses_default_value_if_type_dir():
     plans = plan_fp_checks(
