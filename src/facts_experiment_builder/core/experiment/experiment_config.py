@@ -30,6 +30,9 @@ class ExperimentConfig:
     outputs: list  # outputs section at top of config
     module_keys: list  # this is a list of all the modules that have sections in second part of config--need to cleanup how its made
     module_registry_version: str
+    module_schemas: dict | None = (
+        None  # this is the dict of all of the module schemas in 3rd part of config
+    )
 
 
 @dataclass(frozen=True)
@@ -46,7 +49,22 @@ class ExperimentManifest:
     esl_modules: tuple
 
 
-def build_module_sections(steps: Iterable[ExperimentStep]) -> dict[str, dict]:
+@dataclass(frozen=True)
+class ConfigModuleSection:
+    """Data class to hold module section.
+
+    This is the dict of all of the module-specific sections (built from
+    ModuleExeprimentSpec) in 2nd half of config
+    """
+
+    module_name: str
+    values: dict
+    schema: dict | None = None
+
+
+def build_module_sections(
+    steps: Iterable[ExperimentStep],
+) -> dict[str, ConfigModuleSection]:
     """Build the per-module sections of experiment-config.yaml.
 
     Each spec's to_dict() nests two parts: `values` (the resolved, human-editable
@@ -55,7 +73,11 @@ def build_module_sections(steps: Iterable[ExperimentStep]) -> dict[str, dict]:
     ModuleExperimentSpec.to_dict().
     """
     return {
-        spec.module_name: spec.to_dict()
+        spec.module_name: ConfigModuleSection(
+            module_name=spec.module_name,
+            values=spec.to_dict().get("values", {}),
+            schema=spec.to_dict().get("schema", None),
+        )
         for step in steps
         for spec in step.module_specs()
     }
@@ -106,7 +128,7 @@ def make_module_keys(
     included_modules: list,
     inputs: list,
     outputs: list,
-    module_sections: list,
+    module_sections: dict[str, ConfigModuleSection],
 ) -> list:
     # Module-specific sections (all keys that are module names)
     # Exclude top-level params, included_modules, inputs, outputs, and experiment_name
@@ -121,7 +143,8 @@ def make_module_keys(
     module_keys = [
         key
         for key in module_sections.keys()
-        if key not in excluded_keys and isinstance(module_sections[key], dict)
+        if key not in excluded_keys
+        and isinstance(module_sections[key], ConfigModuleSection)
     ]
 
     # Sort module_keys so climate_module appears first if it exists
@@ -172,6 +195,12 @@ def facts_experiment_to_config(
     # This is the dict of all of the module-specific sections (built from ModuleExeprimentSpec) in 2nd half of config
     module_sections = build_module_sections(experiment_obj.list_all_steps())
 
+    module_schemas = {
+        section.module_name: section.schema
+        for section in module_sections.values()
+        if section.schema is not None
+    }
+
     inputs = make_inputs_section(experiment_obj)
 
     outputs = make_outputs_section(experiment_obj)
@@ -199,4 +228,5 @@ def facts_experiment_to_config(
         paths=experiment_obj.paths,
         module_keys=module_keys,
         module_registry_version=module_registry_version,
+        module_schemas=module_schemas,
     )
