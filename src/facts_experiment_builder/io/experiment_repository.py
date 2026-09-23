@@ -1,19 +1,21 @@
 from pathlib import Path
-
-# ---------------------- Core imports ----------------------------
+import yaml
+from typing import Any
 
 from facts_experiment_builder.core.experiment.experiment_config import (
     facts_experiment_to_config,
 )
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
 
-# ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.experiment_loader import (
-    load_experiment_config,
-)
 from facts_experiment_builder.io.write_config import (
     write_config_jinja2,
 )
+
+
+def load_experiment_config(metadata_path: Path) -> dict[str, Any]:
+    """Load experiment metadata from YAML file."""
+    with open(metadata_path) as f:
+        return yaml.safe_load(f)
 
 
 # adapter
