@@ -16,7 +16,6 @@ class ExperimentPaths:
     - Experiment parent directory (if exists)
     - Experiment output directory
     - Experiment config file
-    - Module schemas file
     - Experiment compose file
     """
 
