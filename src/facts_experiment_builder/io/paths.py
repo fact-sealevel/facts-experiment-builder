@@ -4,7 +4,6 @@ from pathlib import Path
 from facts_experiment_builder.core.experiment.name import ExperimentName
 
 _CONFIG_FILENAME = "experiment-config.yaml"
-_MODULE_SCHEMAS_FILENAME = "module-schemas.yaml"
 _COMPOSE_FILENAME = "experiment-compose.yaml"
 _OUTPUT_DIRNAME = "output"
 
@@ -43,10 +42,6 @@ class ExperimentPaths:
     @property
     def config_path(self) -> Path:
         return self.experiment_dir / _CONFIG_FILENAME
-
-    @property
-    def module_schemas_path(self) -> Path:
-        return self.experiment_dir / _MODULE_SCHEMAS_FILENAME
 
     @property
     def compose_path(self) -> Path:

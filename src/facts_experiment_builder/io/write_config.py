@@ -5,7 +5,6 @@ from facts_experiment_builder.core.experiment.experiment_config import (
 )
 from typing import Any, List, Dict
 from jinja2 import Environment, PackageLoader, StrictUndefined
-import yaml
 
 from markupsafe import Markup
 
@@ -111,7 +110,7 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
     return lines
 
 
-def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
+def format_module(module_key: str, module_data: Dict[str, Any], indent: int = 2) -> str:
     """Format a module section with comment handling and clue/value support.
 
     Uses 2-space indentation to match the actual YAML file format.
@@ -131,7 +130,7 @@ def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
             # Comment key
             lines.append(f"  {key}")
         else:
-            formatted_lines = format_module_value(key, value, indent=2)
+            formatted_lines = format_module_value(key, value, indent=indent)
             lines.extend(formatted_lines)
 
     return "\n".join(lines)
@@ -210,8 +209,8 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
         # Return as Markup to prevent Jinja2 from escaping
         return Markup(result)
 
-    def format_module_func(key, data):
-        result = format_module(key, data)
+    def format_module_func(key, data, indent=2):
+        result = format_module(key, data, indent=indent)
         return Markup(result)
 
     # create jinja2 env
@@ -233,7 +232,7 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Module schemas live in their own file (module-schemas.yaml); the main config
     # template only ever sees each module's `values` section.
     values_only_module_sections = {
-        module_name: {"values": sections.get("values", {})}
+        module_name: {"values": sections.values}
         for module_name, sections in experiment_config.module_sections.items()
     }
     template_vars = {
@@ -250,17 +249,3 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Write to file
     with open(config_path, "w") as f:
         f.write(rendered)
-
-
-def write_module_schemas_yaml(
-    experiment_config: ExperimentConfig, module_schemas_path: Path
-) -> None:
-    """Write each module's frozen schema (module_sections[name]["schema"]) to its own
-    YAML file, so experiment-config.yaml only needs to hold user-editable `values`."""
-    schemas = {
-        module_name: sections["schema"]
-        for module_name, sections in experiment_config.module_sections.items()
-        if "schema" in sections
-    }
-    with open(module_schemas_path, "w") as f:
-        yaml.safe_dump(schemas, f, default_flow_style=False, sort_keys=False)
