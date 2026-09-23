@@ -5,6 +5,7 @@ from facts_experiment_builder.application import generate_compose
 from facts_experiment_builder.application.generate_compose import (
     check_metadata_has_required_fields,
     _validate_climate_file_inputs,
+    check_module_schemas_present,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
@@ -370,3 +371,21 @@ def test_create_esl_workflow_services_passes_through_provided_inputs(monkeypatch
         captured["inputs"]["gesla-dir"] == "/data/module_specific_input_data/gesla_data"
     )
     assert "total-localsl-file" in captured["inputs"]
+
+
+def test_check_module_schemas_present_raises_when_key_missing():
+    with pytest.raises(ValueError, match="module_schemas"):
+        check_module_schemas_present({}, ["fair-temperature"])
+
+
+def test_check_module_schemas_present_raises_when_module_missing():
+    metadata = {"module_schemas": {"fair-temperature": {}}}
+    with pytest.raises(ValueError, match="tlm-sterodynamics"):
+        check_module_schemas_present(
+            metadata, ["fair-temperature", "tlm-sterodynamics"]
+        )
+
+
+def test_check_module_schemas_present_passes_when_all_present():
+    metadata = {"module_schemas": {"fair-temperature": {}}}
+    check_module_schemas_present(metadata, ["fair-temperature"])  # no raise
