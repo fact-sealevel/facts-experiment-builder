@@ -39,9 +39,7 @@ def test_validate_climate_file_inputs_passes_with_standard_key():
     """Validation succeeds when the module's climate input key is provided in metadata."""
     schema = _make_climate_schema("climate-data-file")
     metadata = {
-        "test-module": {
-            "inputs": {"climate-data-file": "fair-temperature/climate.nc"}
-        }
+        "test-module": {"inputs": {"climate-data-file": "fair-temperature/climate.nc"}}
     }
     _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
 
@@ -50,9 +48,7 @@ def test_validate_climate_file_inputs_passes_with_nonstandard_key():
     """Validation succeeds when the module uses a non-standard climate input name."""
     schema = _make_climate_schema("input-data-file")
     metadata = {
-        "test-module": {
-            "inputs": {"input-data-file": "fair-temperature/climate.nc"}
-        }
+        "test-module": {"inputs": {"input-data-file": "fair-temperature/climate.nc"}}
     }
     _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
 

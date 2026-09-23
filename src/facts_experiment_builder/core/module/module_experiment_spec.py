@@ -355,9 +355,8 @@ class ModuleExperimentSpec:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize to the flat dict shape used for a module's section in
-        experiment-config.yaml (schema is serialized separately — see class
-        docstring)."""
+        """Serialize to the flat dict shape used for a module's section in experiment-
+        config.yaml (schema is serialized separately — see class docstring)."""
         d: Dict[str, Any] = {
             "inputs": dict(self.inputs),
             "options": dict(self.options),
