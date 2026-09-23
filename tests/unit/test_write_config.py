@@ -2,7 +2,10 @@ from facts_experiment_builder.io.write_config import (
     format_module_value,
     write_config_jinja2,
 )
-from facts_experiment_builder.core.experiment.experiment_config import ExperimentConfig
+from facts_experiment_builder.core.experiment.experiment_config import (
+    ConfigModuleSection,
+    ExperimentConfig,
+)
 
 import yaml
 
@@ -34,7 +37,11 @@ def test_write_config_writes_module_schemas_section(tmp_path):
         manifest={},
         paths={},
         top_level_params={},
-        module_sections={"fair-temperature": {"values": {}}},
+        module_sections={
+            "fair-temperature": ConfigModuleSection(
+                module_name="fair-temperature", values={}
+            )
+        },
         included_modules=[],
         inputs=[],
         workflows={},

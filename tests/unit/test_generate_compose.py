@@ -40,7 +40,7 @@ def test_validate_climate_file_inputs_passes_with_standard_key():
     schema = _make_climate_schema("climate-data-file")
     metadata = {
         "test-module": {
-            "values": {"inputs": {"climate-data-file": "fair-temperature/climate.nc"}}
+            "inputs": {"climate-data-file": "fair-temperature/climate.nc"}
         }
     }
     _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
@@ -51,7 +51,7 @@ def test_validate_climate_file_inputs_passes_with_nonstandard_key():
     schema = _make_climate_schema("input-data-file")
     metadata = {
         "test-module": {
-            "values": {"inputs": {"input-data-file": "fair-temperature/climate.nc"}}
+            "inputs": {"input-data-file": "fair-temperature/climate.nc"}
         }
     }
     _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
@@ -60,7 +60,7 @@ def test_validate_climate_file_inputs_passes_with_nonstandard_key():
 def test_validate_climate_file_inputs_raises_when_nonstandard_key_missing():
     """Validation raises when a module with a non-standard climate input name has no value."""
     schema = _make_climate_schema("input-data-file")
-    metadata = {"test-module": {"values": {"inputs": {}}}}
+    metadata = {"test-module": {"inputs": {}}}
     with pytest.raises(ValueError, match="test-module"):
         _validate_climate_file_inputs(
             metadata, ["test-module"], {"test-module": schema}
@@ -76,17 +76,15 @@ def _make_workflow_metadata(mod: str = "tlm-sterodynamics") -> dict:
     """Minimal metadata dict for _collect_workflow_output_paths_by_type tests."""
     return {
         mod: {
-            "values": {
-                "outputs": {
-                    "output-gslr-file": {
-                        "value": f"{mod}/gslr.nc",
-                        "output_type": "global",
-                    },
-                    "output-lslr-file": {
-                        "value": f"{mod}/lslr.nc",
-                        "output_type": "local",
-                    },
-                }
+            "outputs": {
+                "output-gslr-file": {
+                    "value": f"{mod}/gslr.nc",
+                    "output_type": "global",
+                },
+                "output-lslr-file": {
+                    "value": f"{mod}/lslr.nc",
+                    "output_type": "local",
+                },
             }
         }
     }
@@ -135,17 +133,15 @@ def test_collect_workflow_output_paths_excludes_pass_to_total_false():
     wf = Workflow(name="wf1", module_names=[mod])
     metadata = {
         mod: {
-            "values": {
-                "outputs": {
-                    "output-gslr-file": {
-                        "value": f"{mod}/gslr.nc",
-                        "output_type": "global",
-                    },
-                    "output-gslr-wais-file": {
-                        "value": f"{mod}/gslr-wais.nc",
-                        "output_type": "global",
-                    },
-                }
+            "outputs": {
+                "output-gslr-file": {
+                    "value": f"{mod}/gslr.nc",
+                    "output_type": "global",
+                },
+                "output-gslr-wais-file": {
+                    "value": f"{mod}/gslr-wais.nc",
+                    "output_type": "global",
+                },
             }
         }
     }
@@ -184,11 +180,9 @@ def test_collect_workflow_output_paths_no_schema_includes_all():
     wf = Workflow(name="wf1", module_names=[mod])
     metadata = {
         mod: {
-            "values": {
-                "outputs": {
-                    "output-a": {"value": f"{mod}/a.nc", "output_type": "global"},
-                    "output-b": {"value": f"{mod}/b.nc", "output_type": "global"},
-                }
+            "outputs": {
+                "output-a": {"value": f"{mod}/a.nc", "output_type": "global"},
+                "output-b": {"value": f"{mod}/b.nc", "output_type": "global"},
             }
         }
     }
@@ -302,7 +296,7 @@ def _patch_build_module_service_spec(monkeypatch, captured):
     (filesystem-touching) service-spec build pipeline."""
 
     def fake_build(metadata, module_name, known_module_names, module_definition):
-        captured["inputs"] = dict(metadata[module_name]["values"]["inputs"])
+        captured["inputs"] = dict(metadata[module_name]["inputs"])
 
         class _Stub:
             def generate_compose_service(self):
@@ -324,7 +318,7 @@ def test_create_esl_workflow_services_does_not_synthesize_missing_inputs(monkeyp
     module_name = "extremesealevel-pointsoverthreshold"
     schema = _make_esl_schema(module_name)
     wf = Workflow(name="wf1", module_names=[module_name])
-    metadata = {module_name: {"values": {"inputs": {}, "outputs": {}}}}
+    metadata = {module_name: {"inputs": {}, "outputs": {}}}
 
     generate_compose._create_esl_workflow_services(
         esl_module_names=[module_name],
@@ -351,10 +345,8 @@ def test_create_esl_workflow_services_passes_through_provided_inputs(monkeypatch
     wf = Workflow(name="wf1", module_names=[module_name])
     metadata = {
         module_name: {
-            "values": {
-                "inputs": {"gesla-dir": "/data/module_specific_input_data/gesla_data"},
-                "outputs": {},
-            }
+            "inputs": {"gesla-dir": "/data/module_specific_input_data/gesla_data"},
+            "outputs": {},
         }
     }
 

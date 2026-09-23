@@ -67,16 +67,17 @@ def build_module_sections(
 ) -> dict[str, ConfigModuleSection]:
     """Build the per-module sections of experiment-config.yaml.
 
-    Each spec's to_dict() nests two parts: `values` (the resolved, human-editable
-    inputs/options/outputs/fingerprint_params/image) and `schema` (the frozen module
-    definition consulted from the registry at setup-experiment time) — see
-    ModuleExperimentSpec.to_dict().
+    `values` (the resolved, human-editable inputs/options/outputs/fingerprint_params/
+    image, from spec.to_dict()) and `schema` (the frozen module definition consulted
+    from the registry at setup-experiment time, from spec.schema) are kept separate
+    here: `values` goes into the module's own section, `schema` into the top-level
+    `module_schemas` section.
     """
     return {
         spec.module_name: ConfigModuleSection(
             module_name=spec.module_name,
-            values=spec.to_dict().get("values", {}),
-            schema=spec.to_dict().get("schema", None),
+            values=spec.to_dict(),
+            schema=spec.schema.to_dict() if spec.schema is not None else None,
         )
         for step in steps
         for spec in step.module_specs()

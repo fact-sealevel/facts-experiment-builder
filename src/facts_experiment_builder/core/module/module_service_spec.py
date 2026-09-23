@@ -536,8 +536,7 @@ def _resolve_experiment_paths(
 ) -> _ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
     # module_name = module_definition.module_name
     experiment_paths = get_experiment_paths(metadata, module_context)
-    module_wrapper = get_required_field(metadata, module_name, module_context)
-    module_metadata = get_required_field(module_wrapper, "values", module_context)
+    module_metadata = get_required_field(metadata, module_name, module_context)
 
     raw_exp_specific = metadata.get("experiment-specific-input-data")
     if isinstance(raw_exp_specific, dict):
@@ -844,8 +843,7 @@ def build_module_service_spec(
     """
     module_context = f"{module_name} module"
 
-    module_wrapper = get_required_field(metadata, module_name, module_context)
-    module_metadata = get_required_field(module_wrapper, "values", module_context)
+    module_metadata = get_required_field(metadata, module_name, module_context)
 
     # scenario_name = get_required_field(metadata, "scenario", module_context)
 

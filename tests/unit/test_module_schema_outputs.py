@@ -331,22 +331,20 @@ def test_from_module_schema_fingerprint_params_present_in_to_dict_when_populated
     schema = _schema_with_fp([FP_SPEC_MODULE_SPECIFIC])
     spec = ModuleExperimentSpec.from_module_schema(schema)
     d = spec.to_dict()
-    assert "fingerprint_params" in d["values"]
-    assert "fprint-gis-file" in d["values"]["fingerprint_params"]
+    assert "fingerprint_params" in d
+    assert "fprint-gis-file" in d["fingerprint_params"]
 
 
 def test_from_dict_round_trips_fingerprint_params():
     """from_dict() parses fingerprint_params so they survive a round-trip."""
     raw = {
-        "values": {
-            "inputs": {},
-            "options": {},
-            "outputs": {},
-            "fingerprint_params": {
-                "fprint-gis-file": {"clue": "GIS fp", "value": "fprint_gis.nc"}
-            },
-            "image": "img:tag",
-        }
+        "inputs": {},
+        "options": {},
+        "outputs": {},
+        "fingerprint_params": {
+            "fprint-gis-file": {"clue": "GIS fp", "value": "fprint_gis.nc"}
+        },
+        "image": "img:tag",
     }
     spec = ModuleExperimentSpec.from_dict("test-module", raw)
     assert spec.fingerprint_params.get("fprint-gis-file") == {
@@ -354,6 +352,6 @@ def test_from_dict_round_trips_fingerprint_params():
         "value": "fprint_gis.nc",
     }
     assert (
-        spec.to_dict()["values"]["fingerprint_params"]["fprint-gis-file"]["value"]
+        spec.to_dict()["fingerprint_params"]["fprint-gis-file"]["value"]
         == "fprint_gis.nc"
     )

@@ -229,13 +229,13 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Create template
     template = env.get_template("experiment-config.yaml.j2")
 
-    values_only_module_sections = {
-        module_name: {"values": sections.values}
+    module_sections_for_template = {
+        module_name: sections.values
         for module_name, sections in experiment_config.module_sections.items()
     }
     template_vars = {
         **vars(experiment_config),
-        "module_sections": values_only_module_sections,
+        "module_sections": module_sections_for_template,
     }
 
     # Render template

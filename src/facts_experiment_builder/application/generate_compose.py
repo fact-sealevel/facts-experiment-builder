@@ -106,9 +106,7 @@ def _validate_climate_file_inputs(
         if not module_schema.uses_climate_file:
             continue
 
-        module_inputs = (
-            metadata.get(module_name, {}).get("values", {}).get("inputs", {})
-        )
+        module_inputs = metadata.get(module_name, {}).get("inputs", {})
         climate_input_keys = module_schema.get_output_volume_input_keys()
 
         climate_file = next(
@@ -152,7 +150,7 @@ def _collect_workflow_output_paths_by_type(
     prefix = container_prefix.rstrip("/")
 
     for mod in wf.module_names:
-        out_section = (metadata.get(mod, {}) or {}).get("values") or {}
+        out_section = metadata.get(mod, {}) or {}
         if not isinstance(out_section, dict):
             continue
         outputs = out_section.get("outputs") or {}
@@ -243,7 +241,7 @@ def _create_facts_total_compose_service(
     """Build the compose service dict for a facts-total workflow from its synthetic
     section."""
     metadata_copy = dict(metadata)
-    metadata_copy[service_name] = {"values": section}
+    metadata_copy[service_name] = section
     wf_module = build_module_service_spec(
         metadata=metadata_copy,
         module_name=service_name,
@@ -427,7 +425,7 @@ def _create_esl_workflow_services(
                 "Check the module's YAML for an `inputs` entry with `mount.volume: output`."
             )
 
-        base_section = (metadata.get(module_name) or {}).get("values") or {}
+        base_section = metadata.get(module_name) or {}
         if not isinstance(base_section, dict):
             base_section = {}
         for _wf_name, wf in workflows.items():
@@ -442,7 +440,7 @@ def _create_esl_workflow_services(
                 "outputs": {**base_outputs, "output-dir": "."},
             }
             metadata_copy = dict(metadata)
-            metadata_copy[service_name] = {"values": synthetic_section}
+            metadata_copy[service_name] = synthetic_section
 
             esl_module = build_module_service_spec(
                 metadata=metadata_copy,
