@@ -132,7 +132,7 @@ def test_get_outputs_list_other_outputs_unaffected_by_suppress():
 
 
 # ---------------------------------------------------------------------------
-# _output_volume_key and get_output_volume_input_keys
+# output_volume_key and get_output_volume_input_keys
 # ---------------------------------------------------------------------------
 
 OUTPUT_VOLUME = {
@@ -164,17 +164,17 @@ def _schema_with_inputs(inputs, volumes=None):
 
 def test_output_volume_key_returns_correct_key():
     schema = _schema_with_inputs([])
-    assert schema._output_volume_key() == "output"
+    assert schema.output_volume_key() == "output"
 
 
 def test_output_volume_key_returns_none_when_no_output_volume():
     schema = _schema_with_inputs([], volumes=OTHER_VOLUMES)
-    assert schema._output_volume_key() is None
+    assert schema.output_volume_key() is None
 
 
 def test_output_volume_key_returns_none_for_empty_volumes():
     schema = _schema_with_inputs([], volumes={})
-    assert schema._output_volume_key() is None
+    assert schema.output_volume_key() is None
 
 
 def test_get_output_volume_input_keys_returns_name():
