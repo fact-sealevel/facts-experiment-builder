@@ -88,8 +88,8 @@ class ModuleSchema:
             if spec.get("output_type") not in suppress_output_types
         ]
 
-    def _output_volume_key(self) -> Optional[str]:
-        """The key in self.volumes that maps tot he shared output directory, or none."""
+    def output_volume_key(self) -> Optional[str]:
+        """The key in self.volumes that maps to the shared output directory, or none."""
         for vol_key, spec in self.volumes.items():
             if isinstance(spec, dict) and "output_paths" in spec.get("host_path", ""):
                 return vol_key
@@ -102,7 +102,7 @@ class ModuleSchema:
         Keyed by `name`, matching how `inputs` is keyed in the persisted experiment-
         config.yaml.
         """
-        output_vol = self._output_volume_key()
+        output_vol = self.output_volume_key()
         if not output_vol:
             return set()
         keys = set()

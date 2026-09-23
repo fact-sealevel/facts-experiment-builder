@@ -247,7 +247,8 @@ class ModuleServiceSpec:
         elif transform == "filename":
             # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
             if isinstance(value, (str, Path)) and not (
-                mount.get("volume") == "output" and "/" in str(value)
+                mount.get("volume") == self.module_definition.output_volume_key()
+                and "/" in str(value)
             ):
                 value = Path(value).name
 
@@ -273,7 +274,7 @@ class ModuleServiceSpec:
             container_path = (mount.get("container_path") or "").rstrip("/")
             if (
                 container_path
-                and mount.get("volume") == "output"
+                and mount.get("volume") == self.module_definition.output_volume_key()
                 and "/" in str(value)
                 and not Path(value).is_absolute()
             ):
@@ -338,7 +339,7 @@ class ModuleServiceSpec:
         container_path = (mount.get("container_path") or "").rstrip("/")
         volume = mount.get("volume", "")
         filename = Path(value).name
-        if volume == "output" and container_path:
+        if volume == self.module_definition.output_volume_key() and container_path:
             output_container_base = (
                 getattr(self.components, "output_container_base", None) or None
             )
@@ -379,7 +380,7 @@ class ModuleServiceSpec:
             host_path = str(Path(host_path).resolve())
             # For the output volume: mount the shared output root (parent of per-module dir)
             # so source is .../output and dest is /mnt/out; container paths use /mnt/out/<module_name>/...
-            if volume_name == "output":
+            if volume_name == self.module_definition.output_volume_key():
                 host_path = str(Path(host_path).parent)
 
             container_path = volume_spec.get("container_path", "")
