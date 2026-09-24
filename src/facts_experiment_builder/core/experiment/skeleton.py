@@ -252,7 +252,7 @@ def experiment_skeleton_to_facts_experiment(
     schemas: Dict[str, ModuleSchema],
     experiment_path: Path,
     module_specific_input_data: Optional[str] = None,
-    experiment_specific_input_data: Optional[str] = None,
+    experiment_specific_input_data: Optional[list] = None,
     shared_input_data: Optional[str] = None,
     projection_scale: str = "local",
 ) -> FactsExperiment:

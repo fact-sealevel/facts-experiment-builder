@@ -11,9 +11,6 @@ from facts_experiment_builder.core.module.module_schema import (
 from facts_experiment_builder.core.experiment.skeleton import (
     hydrate_experiment,
 )
-from facts_experiment_builder.core.experiment.skeleton import (
-    ExperimentSkeleton,
-)
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
 )
@@ -21,42 +18,11 @@ from facts_experiment_builder.io.write_config import format_module_value
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
-from tests.unit.helpers import InMemoryModuleDefinitions
-
-
-# factories to build some test fixtures
-def make_schema(
-    name="test-module", uses_climate_file=False, arguments=None
-) -> ModuleSchema:
-    if arguments is None:
-        arguments = {
-            "inputs": [],
-            "options": [],
-            "outputs": {"files": [], "other": []},
-            "top_level": [],
-        }
-    return ModuleSchema.from_dict(
-        {
-            "module_name": name,
-            "container_image": "test/image:latest",
-            "arguments": arguments,
-            "volumes": {},
-            "uses_climate_file": uses_climate_file,
-        }
-    )
-
-
-def make_skeleton(**overrides) -> ExperimentSkeleton:
-    defaults = dict(
-        climate_module=None,
-        climate_data=None,
-        sealevel_modules=[],
-        supplied_totaled_sealevel_step_data=None,
-        totaling_module=None,
-        extremesealevel_module=None,
-        module_regions=None,
-    )
-    return ExperimentSkeleton(**{**defaults, **overrides})
+from tests.unit.helpers import (
+    InMemoryModuleDefinitions,
+    make_schema,
+    make_skeleton,
+)
 
 
 def test_hydrate_experiment_builds_climate_step():
@@ -131,6 +97,13 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
     )
     config_path = experiment_path.config_path
     assert config_path.exists()
+
+    config_content = yaml.safe_load(config_path.read_text())
+    assert "schema" not in config_content["fair-temperature"]
+    assert (
+        config_content["module_schemas"]["fair-temperature"]["module_name"]
+        == "fair-temperature"
+    )
 
 
 # --- Testing setup experiment utility fns ---
@@ -382,55 +355,6 @@ def test_format_module_value_empty_dict_roundtrips_as_empty_dict():
 # --- climate_output_type integration ---
 
 
-def _make_climate_schema(module_name: str) -> ModuleSchema:
-    return ModuleSchema(
-        module_name=module_name,
-        container_image="img:tag",
-        arguments={
-            "outputs": {
-                "files": [
-                    {
-                        "name": "output-climate-file",
-                        "filename": "climate.nc",
-                        "output_type": "global",
-                    },
-                    {
-                        "name": "output-gsat-file",
-                        "filename": "gsat.nc",
-                        "output_type": "global",
-                    },
-                ]
-            }
-        },
-        volumes={},
-    )
-
-
-def _make_sealevel_schema(module_name: str, climate_output_type: str) -> ModuleSchema:
-    return ModuleSchema(
-        module_name=module_name,
-        container_image="img:tag",
-        uses_climate_file=True,
-        arguments={
-            "inputs": [
-                {
-                    "name": "climate-data-file",
-                    "source": "module_inputs.inputs.climate_data_file",
-                    "climate_step_output": climate_output_type,
-                    "mount": {"volume": "output", "container_path": "/mnt/out"},
-                }
-            ],
-            "outputs": {},
-        },
-        volumes={
-            "output": {
-                "host_path": "module_inputs.output_paths.output_dir",
-                "container_path": "/mnt/out",
-            }
-        },
-    )
-
-
 # TODO : add test similar to this in test_module_schema and test that incorrect things fail etc.
 def test_hydrate_experiment_prefills_climate_file_from_climate_module():
     """Sealevel module gets climate-data-file = '{climate_module}/{filename}' derived
@@ -484,7 +408,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value")
+        inputs.get("climate-data-file", {}).get("value")
         == "fair-temperature/climate.nc"
     )
 
@@ -541,7 +465,7 @@ def test_hydrate_experiment_doesnt_return_wrong_climate_file():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") != "fair-temperature/gsat.nc"
+        inputs.get("climate-data-file", {}).get("value") != "fair-temperature/gsat.nc"
     )
 
 
@@ -597,7 +521,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module_2():
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair2-climate/climate.nc"
     )
 
 
@@ -665,7 +589,7 @@ def test_hydrate_experiment_prefills_correct_file_for_different_climate_module()
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair2-climate/climate.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair2-climate/climate.nc"
     )
 
 
@@ -732,7 +656,7 @@ def test_hydrate_experiment_prefills_gsat_file_for_sealevel_module_expecting_gsa
 
     inputs = sealevel.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value") == "fair-temperature/gsat.nc"
+        inputs.get("climate-data-file", {}).get("value") == "fair-temperature/gsat.nc"
     )
 
 
@@ -811,9 +735,9 @@ def test_hydrate_experiment_prefills_per_module_independently():
 
     _, sealevel, _, _ = hydrate_experiment(skeleton, schemas)
 
-    gsat_input = sealevel.module_specs_list[0].inputs["climate_data_file"]["value"]
+    gsat_input = sealevel.module_specs_list[0].inputs["climate-data-file"]["value"]
     print("should be gsat: ", gsat_input)
     assert gsat_input == "fair-temperature/gsat.nc"
 
-    climate_input = sealevel.module_specs_list[1].inputs["climate_data_file"]["value"]
+    climate_input = sealevel.module_specs_list[1].inputs["climate-data-file"]["value"]
     assert climate_input == "fair-temperature/climate.nc"

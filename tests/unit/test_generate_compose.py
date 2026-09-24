@@ -5,6 +5,7 @@ from facts_experiment_builder.application import generate_compose
 from facts_experiment_builder.application.generate_compose import (
     check_metadata_has_required_fields,
     _validate_climate_file_inputs,
+    check_module_schemas_present,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
@@ -38,7 +39,7 @@ def test_validate_climate_file_inputs_passes_with_standard_key():
     """Validation succeeds when the module's climate input key is provided in metadata."""
     schema = _make_climate_schema("climate-data-file")
     metadata = {
-        "test-module": {"inputs": {"climate_data_file": "fair-temperature/climate.nc"}}
+        "test-module": {"inputs": {"climate-data-file": "fair-temperature/climate.nc"}}
     }
     _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
 
@@ -47,7 +48,7 @@ def test_validate_climate_file_inputs_passes_with_nonstandard_key():
     """Validation succeeds when the module uses a non-standard climate input name."""
     schema = _make_climate_schema("input-data-file")
     metadata = {
-        "test-module": {"inputs": {"input_data_file": "fair-temperature/climate.nc"}}
+        "test-module": {"inputs": {"input-data-file": "fair-temperature/climate.nc"}}
     }
     _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
 
@@ -76,7 +77,10 @@ def _make_workflow_metadata(mod: str = "tlm-sterodynamics") -> dict:
                     "value": f"{mod}/gslr.nc",
                     "output_type": "global",
                 },
-                "output-lslr-file": {"value": f"{mod}/lslr.nc", "output_type": "local"},
+                "output-lslr-file": {
+                    "value": f"{mod}/lslr.nc",
+                    "output_type": "local",
+                },
             }
         }
     }
@@ -249,40 +253,42 @@ def test_extract_all_module_names_empty_metadata():
 
 
 # ---------------------------------------------------------------------------
-# _create_esl_workflow_services — gesla_dir injection gated on schema declaration
+# _create_esl_workflow_services — inputs pass through unmodified, no synthesized
+# defaults (any per-input default belongs in that input's own arg-spec
+# `default_value`, resolved generically like any other input — not hardcoded here)
 # ---------------------------------------------------------------------------
 
 
-def _make_esl_schema(module_name: str, declares_gesla_dir: bool) -> ModuleSchema:
-    inputs = [
-        {
-            "name": "total-localsl-file",
-            "source": "module_inputs.inputs.total_localsl_file",
-            "mount": {"volume": "output", "container_path": "/mnt/out"},
-        }
-    ]
-    if declares_gesla_dir:
-        inputs.append(
-            {
-                "name": "gesla-dir",
-                "source": "module_inputs.inputs.gesla_dir",
-                "mount": {
-                    "volume": "module_specific_in",
-                    "container_path": "/mnt/module_specific_in",
-                },
-            }
-        )
+def _make_esl_schema(module_name: str) -> ModuleSchema:
     return ModuleSchema(
         module_name=module_name,
         container_image="img:tag",
-        arguments={"inputs": inputs},
-        volumes={},
+        arguments={
+            "inputs": [
+                {
+                    "name": "total-localsl-file",
+                    "source": "module_inputs.inputs.total_localsl_file",
+                    "mount": {"volume": "output", "container_path": "/mnt/out"},
+                },
+                {
+                    "name": "gesla-dir",
+                    "source": "module_inputs.inputs.gesla_dir",
+                    "mount": {
+                        "volume": "module_specific_in",
+                        "container_path": "/mnt/module_specific_in",
+                    },
+                },
+            ]
+        },
+        volumes={
+            "output": {"host_path": "module_inputs.output_paths.output_dir"},
+        },
     )
 
 
 def _patch_build_module_service_spec(monkeypatch, captured):
-    """Stub out build_module_service_spec so these tests exercise only the
-    gesla_dir-injection logic in _create_esl_workflow_services, not the full
+    """Stub out build_module_service_spec so these tests exercise only
+    _create_esl_workflow_services' own section-building, not the full
     (filesystem-touching) service-spec build pipeline."""
 
     def fake_build(metadata, module_name, known_module_names, module_definition):
@@ -297,46 +303,47 @@ def _patch_build_module_service_spec(monkeypatch, captured):
     monkeypatch.setattr(generate_compose, "build_module_service_spec", fake_build)
 
 
-def test_create_esl_workflow_services_skips_gesla_dir_when_not_declared(monkeypatch):
-    """extremesealevel2-afs-style module: schema has no gesla_dir input, so none is
-    injected (previously this caused an AttributeError downstream)."""
-    from facts_experiment_builder.core.workflow import Workflow
-
-    captured = {}
-    _patch_build_module_service_spec(monkeypatch, captured)
-
-    schema = _make_esl_schema("extremesealevel2-afs", declares_gesla_dir=False)
-    wf = Workflow(name="wf1", module_names=["extremesealevel2-afs"])
-    metadata = {"extremesealevel2-afs": {"inputs": {}, "outputs": {}}}
-
-    generate_compose._create_esl_workflow_services(
-        esl_module_names=["extremesealevel2-afs"],
-        workflows={"wf1": wf},
-        metadata=metadata,
-        experiment_dir=None,
-        projection_scale=None,
-        schemas={"extremesealevel2-afs": schema},
-    )
-
-    assert "gesla_dir" not in captured["inputs"]
-
-
-def test_create_esl_workflow_services_injects_gesla_dir_when_declared(monkeypatch):
-    """extremesealevel-pointsoverthreshold-style module: schema declares gesla_dir, so
-    a default path is still injected when metadata omits a value (no regression)."""
+def test_create_esl_workflow_services_does_not_synthesize_missing_inputs(monkeypatch):
+    """A declared input with no value in metadata is left absent — no default is
+    fabricated, regardless of the input's name."""
     from facts_experiment_builder.core.workflow import Workflow
 
     captured = {}
     _patch_build_module_service_spec(monkeypatch, captured)
 
     module_name = "extremesealevel-pointsoverthreshold"
-    schema = _make_esl_schema(module_name, declares_gesla_dir=True)
+    schema = _make_esl_schema(module_name)
+    wf = Workflow(name="wf1", module_names=[module_name])
+    metadata = {module_name: {"inputs": {}, "outputs": {}}}
+
+    generate_compose._create_esl_workflow_services(
+        esl_module_names=[module_name],
+        workflows={"wf1": wf},
+        metadata=metadata,
+        experiment_dir=None,
+        projection_scale=None,
+        schemas={module_name: schema},
+    )
+
+    assert "gesla-dir" not in captured["inputs"]
+
+
+def test_create_esl_workflow_services_passes_through_provided_inputs(monkeypatch):
+    """Inputs already present in metadata are carried through unmodified, alongside
+    the injected total-localsl-file."""
+    from facts_experiment_builder.core.workflow import Workflow
+
+    captured = {}
+    _patch_build_module_service_spec(monkeypatch, captured)
+
+    module_name = "extremesealevel-pointsoverthreshold"
+    schema = _make_esl_schema(module_name)
     wf = Workflow(name="wf1", module_names=[module_name])
     metadata = {
-        "shared-input-data": "/data/shared_input_data",
-        "module-specific-input-data": "/data/module_specific_input_data",
-        "output-data-location": "/data/output",
-        module_name: {"inputs": {}, "outputs": {}},
+        module_name: {
+            "inputs": {"gesla-dir": "/data/module_specific_input_data/gesla_data"},
+            "outputs": {},
+        }
     }
 
     generate_compose._create_esl_workflow_services(
@@ -349,6 +356,24 @@ def test_create_esl_workflow_services_injects_gesla_dir_when_declared(monkeypatc
     )
 
     assert (
-        captured["inputs"]["gesla_dir"]
-        == f"/data/module_specific_input_data/{module_name}/gesla_data"
+        captured["inputs"]["gesla-dir"] == "/data/module_specific_input_data/gesla_data"
     )
+    assert "total-localsl-file" in captured["inputs"]
+
+
+def test_check_module_schemas_present_raises_when_key_missing():
+    with pytest.raises(ValueError, match="module_schemas"):
+        check_module_schemas_present({}, ["fair-temperature"])
+
+
+def test_check_module_schemas_present_raises_when_module_missing():
+    metadata = {"module_schemas": {"fair-temperature": {}}}
+    with pytest.raises(ValueError, match="tlm-sterodynamics"):
+        check_module_schemas_present(
+            metadata, ["fair-temperature", "tlm-sterodynamics"]
+        )
+
+
+def test_check_module_schemas_present_passes_when_all_present():
+    metadata = {"module_schemas": {"fair-temperature": {}}}
+    check_module_schemas_present(metadata, ["fair-temperature"])  # no raise

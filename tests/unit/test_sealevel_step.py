@@ -37,7 +37,7 @@ def test_from_module_schemas_prefills_climate_file_for_matching_module():
     )
     inputs = step.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value")
+        inputs.get("climate-data-file", {}).get("value")
         == "fair-temperature/climate.nc"
     )
 
@@ -50,7 +50,7 @@ def test_from_module_schemas_no_prefill_when_module_not_in_climate_files():
     )
     inputs = step.module_specs_list[0].inputs
     assert (
-        inputs.get("climate_data_file", {}).get("value")
+        inputs.get("climate-data-file", {}).get("value")
         != "fair-temperature/climate.nc"
     )
 
@@ -59,7 +59,7 @@ def test_from_module_schemas_no_prefill_when_climate_files_is_none():
     schema = _sealevel_schema("bamber19-icesheets")
     step = SealevelStep.from_module_schemas([schema], climate_files=None)
     inputs = step.module_specs_list[0].inputs
-    assert inputs.get("climate_data_file", {}).get("value") is None
+    assert inputs.get("climate-data-file", {}).get("value") is None
 
 
 def test_from_module_schemas_prefills_per_module_independently():
@@ -75,11 +75,11 @@ def test_from_module_schemas_prefills_per_module_independently():
     inputs_a = step.module_specs_list[0].inputs
     inputs_b = step.module_specs_list[1].inputs
     assert (
-        inputs_a.get("climate_data_file", {}).get("value")
+        inputs_a.get("climate-data-file", {}).get("value")
         == "fair-temperature/climate.nc"
     )
     assert (
-        inputs_b.get("climate_data_file", {}).get("value") == "fair-temperature/gsat.nc"
+        inputs_b.get("climate-data-file", {}).get("value") == "fair-temperature/gsat.nc"
     )
 
 
@@ -90,4 +90,4 @@ def test_from_module_schemas_skips_prefill_when_uses_climate_file_false():
         climate_files={"no-climate-module": "fair-temperature/climate.nc"},
     )
     inputs = step.module_specs_list[0].inputs
-    assert inputs.get("climate_data_file", {}).get("value") is None
+    assert inputs.get("climate-data-file", {}).get("value") is None

@@ -28,7 +28,6 @@ This example is based on a real experiment using `fair-temperature`, a set of se
 ```yaml
 # About this experiment:
 # Date created: 2026-05-31
-# Module registry version: local@9b5e30c
 experiment_name:
         my-ssp585-experiment
 
@@ -356,6 +355,20 @@ extremesealevel-pointsoverthreshold:
       2413  # value from module defaults
   image: "ghcr.io/fact-sealevel/extremesealevel-pointsoverthreshold:0.1.0"   # do not edit
   outputs:    # do not edit
+
+##--------------------------------------------------------##
+##----- Module schemas -----##
+# Auto-generated. Do not edit.
+module_registry_version: local@9b5e30c   # version of the module registry used to generate this file
+
+module_schemas:
+  fair-temperature:
+    module_name: fair-temperature
+    container_image: "ghcr.io/fact-sealevel/fair-temperature:0.2.1"
+    arguments: { ... }
+    volumes: { ... }
+    # ... one entry per module in the experiment, frozen from the module
+    # registry at `setup-experiment` time.
 ```
 
 ---
@@ -431,5 +444,7 @@ pipeline-id:
 **`climate_data_file`** — Several sea-level modules list the temperature module's output (e.g. `"fair-temperature/climate.nc"`) as an input. This path is resolved automatically at compose-generation time; you do not need to change it.
 
 **`outputs`** — Output filenames are determined by the module. Do not edit them; `feb generate-compose` reads these to wire up dependencies between services (e.g. so facts-total knows where each sea-level module wrote its output).
+
+**`module_schemas`** — A third section, below the module-specific sections, containing each module's schema (image, arguments, volumes, etc.) as it existed in the module registry at the time `feb setup-experiment` ran. This is what lets `feb generate-compose` run without needing access to the module registry itself. It's auto-generated — do not hand-edit it. If you're working with an `experiment-config.yaml` created by an older version of FEB, it won't have this section, and `feb generate-compose` will fail with a message telling you to re-run `feb setup-experiment` to regenerate a compatible file.
 
 **Multiple workflows** — Each workflow in the `workflows:` section causes `facts-total` to run once, summing the listed modules. Use multiple workflows to compare different combinations of sea-level contributions in a single experiment run. See the [FACTS Glossary](FACTS_GLOSSARY.md) for more detail.

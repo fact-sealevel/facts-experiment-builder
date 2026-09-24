@@ -212,13 +212,11 @@ def _build_section_from_fields(
     result = {}
 
     for field_spec in fields:
-        source = field_spec.get("source", "")
-        if "." not in source:
+        name = field_spec.get("name", "")
+        if not name:
             continue
-        # Pull out the last part of this obj
-        underscore_name = source.split(".")[-1]
-        clue = field_spec.get("help", f"Add your {underscore_name} here.")
-        bundle = create_metadata_bundle(clue, prefilled_values.get(underscore_name))
+        clue = field_spec.get("help", f"Add your {name} here.")
+        bundle = create_metadata_bundle(clue, prefilled_values.get(name))
         default_value = field_spec.get("default_value")
         if default_value:
             bundle["default_value"] = default_value
@@ -237,7 +235,7 @@ def _build_section_from_fields(
                 ):
                     bundle["value"] = filename
             logger.info("filename: %s", filename)
-        result[underscore_name] = bundle
+        result[name] = bundle
 
     return result
 
@@ -246,12 +244,17 @@ def _build_section_from_fields(
 class ModuleExperimentSpec:
     """In-memory representation of one module's section in experiment-config.yaml.
 
-    Fields mirror the dict shape used in the YAML:
+    Serializes (via to_dict()) to a flat dict:
         inputs:  {field_name: clue/value-bundle-or-plain-value}
         options: {field_name: clue/value-bundle-or-plain-value}
-        fingerprint-params: ...
+        fingerprint_params: ...
         outputs: {output_name: {"value": path, "output_type": ...}}
         image:   str (container image URL)
+
+    `schema` (the frozen ModuleSchema consulted from the registry at
+    setup-experiment time) is carried on this object but serialized separately,
+    into the top-level `module_schemas` section of experiment-config.yaml — see
+    ExperimentConfig.module_schemas / build_module_sections().
     """
 
     module_name: str
@@ -260,6 +263,7 @@ class ModuleExperimentSpec:
     outputs: Dict[str, Any] = field(default_factory=dict)
     fingerprint_params: Dict[str, Any] = field(default_factory=dict)
     image: str = ""
+    schema: Optional[ModuleSchema] = None
 
     # Constructors
     @classmethod
@@ -336,6 +340,7 @@ class ModuleExperimentSpec:
             outputs=module_outputs,
             fingerprint_params=fingerprint_params,
             image=module_schema.container_image,
+            schema=module_schema,
         )
 
     @classmethod
@@ -350,7 +355,8 @@ class ModuleExperimentSpec:
         )
 
     def to_dict(self) -> Dict[str, Any]:
-        """Serialize back to raw dict used in experiment-config.yaml."""
+        """Serialize to the flat dict shape used for a module's section in experiment-
+        config.yaml (schema is serialized separately — see class docstring)."""
         d: Dict[str, Any] = {
             "inputs": dict(self.inputs),
             "options": dict(self.options),
