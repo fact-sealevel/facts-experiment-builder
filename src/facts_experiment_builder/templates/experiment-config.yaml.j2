@@ -2,7 +2,13 @@
 ### Experiment configuration YAML file ###
 # This is the main configuration file that describes the specified FACTS experiment.
 # It is generated with prepopulated keys based on the modules you specified in `setup-new-experiment`.
-# The values included here are defaults based on the default values for each module specified in /modules/module_name/defaults.yml.
+# The values included here are default values specified in this module's entry in the FACTS module registry (https://github.com/fact-sealevel/facts-module-registry).
+
+# **About this file:**
+# This file has three sections:
+# - The first section includes experiment-level information such as top-level parameter values, the modules and workflows included in the experiment, and paths to input and output data. 
+# - The second section includes values for module-specific options for each module included in the experiment. 
+# - The third section contains the module schema for each module included in the experiment. This is extracted from the module registry entry for a module using the state of the module registry at the time the experiment was created.
 
 # **How to use this file:**
 # 1. Fill in the desired values for the top-level parameters of the experiment.
@@ -17,7 +23,7 @@
 
 # About this experiment:
 # Date created: {{ date_created}}
-# Module registry version: {{ module_registry_version or "unknown" }}
+
 experiment_name:
 {{ format_value(experiment_name) }}
 
@@ -72,3 +78,16 @@ workflows:
 {% endfor %}
 
 
+##--------------------------------------------------------##
+##--------------------------------------------------------##
+##----- Module schemas -----##
+module_registry_version: #Version of module registry used to generate this experiment configuration file.
+{{ format_value(module_registry_version) }}
+
+module_schemas:
+{% for module_key in module_keys %}
+{% if module_key in module_schemas %}
+  {{ module_key }}:
+{{ format_module(module_key, module_schemas[module_key], indent=4) }}
+{% endif %}
+{% endfor %}

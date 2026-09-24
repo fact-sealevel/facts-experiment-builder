@@ -1,27 +1,10 @@
 from typing import Set, Any, Dict, Optional, List
 import os
 
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
     _SHARED_CONTAINER_PATH,
 )
-
-
-def _multiple_file_input_keys(module_definition: ModuleSchema) -> Set[str]:
-    """Return set of input field names that are multiple file inputs (from module
-    YAML)."""
-    keys: Set[str] = set()
-    for arg_spec in module_definition.arguments.get("inputs", []):
-        if not arg_spec.get("multiple", False):
-            continue
-        if not (arg_spec.get("mount") or arg_spec.get("type") == "file"):
-            continue
-        source = arg_spec.get("source", "")
-        if "." in source:
-            field = source.split(".")[-1]
-            keys.add(field)
-    return keys
 
 
 def _input_spec_by_key(module_definition: Any) -> Dict[str, dict]:

@@ -1,22 +1,50 @@
-# def test_experiment_repository_can_save_experiment(session):
-#     experiment = ExperimentConfig(
-#         experiment_name="test-exp",
-#         date_created="2026-08-05",
-#         projection_scale="local",
-#         manifest={"key": "val"},
-#         workflows={"wf1": ["list", "of", "modules"]},
-#         paths={"input": "path1", "output": "path2"},
-#         top_level_params={"one": 1, "two": 2},
-#         module_keys={"key": "value1"},
-#         module_registry_version="0.1.0",
-#         module_sections={"another_key": "another_value"},
-#         included_modules=["one", "two"],
-#         inputs=["input1"],
-#         outputs=["output1"],
-#     )
+from facts_experiment_builder.io.experiment_repository import (
+    load_experiment_config,
+)
 
-#     repo = repository.ExperimentRepository(session)
-#     repo.add(experiment)
 
-#     contents = yaml.safe_load(())
-#     # Want to write a test here that shows an experiment config (but eventually, the IO obj that corresponds to expconfig?) can be saved to disk.
+def test_load_experiment_config_returns_dict(tmp_path):
+    # Create a temporary YAML file for testing
+    test_yaml_content = """
+    experiment_name: test_experiment
+    top_level_params:
+      param1: value1
+      param2: value2
+    """
+    test_yaml_path = tmp_path / "test_experiment_config.yaml"
+    test_yaml_path.write_text(test_yaml_content)
+
+    # Load the experiment config using the function
+    loaded_config = load_experiment_config(test_yaml_path)
+
+    # Assert that the loaded config is a dictionary and has expected keys
+    assert isinstance(loaded_config, dict)
+    assert loaded_config["experiment_name"] == "test_experiment"
+    assert loaded_config["top_level_params"]["param1"] == "value1"
+    assert loaded_config["top_level_params"]["param2"] == "value2"
+
+
+def test_storage_exp_repo_get_returns_dict(tmp_path):
+    # Create a temporary YAML file for testing
+    test_yaml_content = """
+    experiment_name: test_experiment
+    top_level_params:
+      param1: value1
+      param2: value2
+    """
+    test_yaml_path = tmp_path / "test_experiment_config.yaml"
+    test_yaml_path.write_text(test_yaml_content)
+
+    # Use the StorageExperimentRepository to get the config
+    from facts_experiment_builder.io.experiment_repository import (
+        StorageExperimentRepository,
+    )
+
+    repo = StorageExperimentRepository()
+    loaded_config = repo.get(test_yaml_path)
+
+    # Assert that the loaded config is a dictionary and has expected keys
+    assert isinstance(loaded_config, dict)
+    assert loaded_config["experiment_name"] == "test_experiment"
+    assert loaded_config["top_level_params"]["param1"] == "value1"
+    assert loaded_config["top_level_params"]["param2"] == "value2"

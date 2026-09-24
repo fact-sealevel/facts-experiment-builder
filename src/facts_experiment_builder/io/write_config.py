@@ -110,7 +110,7 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
     return lines
 
 
-def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
+def format_module(module_key: str, module_data: Dict[str, Any], indent: int = 2) -> str:
     """Format a module section with comment handling and clue/value support.
 
     Uses 2-space indentation to match the actual YAML file format.
@@ -118,7 +118,7 @@ def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
 
     Args:
         module_key: Module name/key
-        module_data: Module data dictionary
+        module_data: Module data dictionary (the module's `values` section)
 
     Returns:
         Formatted YAML string for the module (without the module key line, as template adds it)
@@ -130,7 +130,7 @@ def format_module(module_key: str, module_data: Dict[str, Any]) -> str:
             # Comment key
             lines.append(f"  {key}")
         else:
-            formatted_lines = format_module_value(key, value, indent=2)
+            formatted_lines = format_module_value(key, value, indent=indent)
             lines.extend(formatted_lines)
 
     return "\n".join(lines)
@@ -209,8 +209,8 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
         # Return as Markup to prevent Jinja2 from escaping
         return Markup(result)
 
-    def format_module_func(key, data):
-        result = format_module(key, data)
+    def format_module_func(key, data, indent=2):
+        result = format_module(key, data, indent=indent)
         return Markup(result)
 
     # create jinja2 env
@@ -229,9 +229,18 @@ def write_config_jinja2(experiment_config: ExperimentConfig, config_path: Path):
     # Create template
     template = env.get_template("experiment-config.yaml.j2")
 
+    module_sections_for_template = {
+        module_name: sections.values
+        for module_name, sections in experiment_config.module_sections.items()
+    }
+    template_vars = {
+        **vars(experiment_config),
+        "module_sections": module_sections_for_template,
+    }
+
     # Render template
     try:
-        rendered = template.render(**vars(experiment_config))
+        rendered = template.render(**template_vars)
     except Exception as e:
         raise ValueError(f"Error rendering Jinja2 template: {e}") from e
 

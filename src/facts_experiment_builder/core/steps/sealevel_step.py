@@ -45,9 +45,8 @@ class SealevelStep(ExperimentStep):
             prefilled: Dict[str, str] = {}
             climate_data_file = climate_files.get(schema.module_name)
             if climate_data_file and schema.uses_climate_file:
-                output_vol_keys = schema.get_output_volume_input_keys()
-                climate_keys = {k for k in output_vol_keys if "-" not in k} or {
-                    "climate_data_file"
+                climate_keys = schema.get_output_volume_input_keys() or {
+                    "climate-data-file"
                 }
                 prefilled = {k: climate_data_file for k in climate_keys}
 

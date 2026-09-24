@@ -162,7 +162,7 @@ def test_from_module_schema_top_level_context_resolves_multi_key_filename():
         prefilled_options={"region": ["ALL", "WAIS"]},
         top_level_context={"pyear_end": 2300, "pyear-end": 2300},
     )
-    emu_file_bundle = spec.inputs.get("emu_file", {})
+    emu_file_bundle = spec.inputs.get("emu-file", {})
     assert emu_file_bundle.get("filename") == [
         "AIS_ALL_2300.RData",
         "AIS_WAIS_2300.RData",
@@ -227,8 +227,8 @@ def test_build_section_from_fields_propagates_default_value_to_value():
         }
     ]
     result = _build_section_from_fields(fields)
-    assert result["gesla_dir"]["value"] == "gesla_data_full"
-    assert result["gesla_dir"]["default_value"] == "gesla_data_full"
+    assert result["gesla-dir"]["value"] == "gesla_data_full"
+    assert result["gesla-dir"]["default_value"] == "gesla_data_full"
 
 
 def test_build_section_from_fields_prefilled_value_wins_over_default():
@@ -240,16 +240,16 @@ def test_build_section_from_fields_prefilled_value_wins_over_default():
         }
     ]
     result = _build_section_from_fields(
-        fields, prefilled_values={"gesla_dir": "/custom/path"}
+        fields, prefilled_values={"gesla-dir": "/custom/path"}
     )
-    assert result["gesla_dir"]["value"] == "/custom/path"
+    assert result["gesla-dir"]["value"] == "/custom/path"
 
 
 def test_build_section_from_fields_no_default_leaves_value_none():
     fields = [{"name": "esl-data-path", "source": "module_inputs.inputs.esl_data_path"}]
     result = _build_section_from_fields(fields)
-    assert result["esl_data_path"]["value"] is None
-    assert "default_value" not in result["esl_data_path"]
+    assert result["esl-data-path"]["value"] is None
+    assert "default_value" not in result["esl-data-path"]
 
 
 # ---------------------------------------------------------------------------
