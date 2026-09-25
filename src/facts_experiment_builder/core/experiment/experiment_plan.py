@@ -1,17 +1,15 @@
 from dataclasses import dataclass
-from typing import Optional, List, Set, Dict, Any
+from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment import (
     FactsExperiment,
 )
-from facts_experiment_builder.core.workflow import Workflow, workflows_from_metadata
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
-)
-from facts_experiment_builder.core.module.module_schema import (
     collect_metadata_param_keys,
 )
+from facts_experiment_builder.core.workflow import Workflow, workflows_from_metadata
 
 _REQUIRED_FIELDS = [
     "experiment_name",
@@ -43,8 +41,6 @@ def check_metadata_has_required_fields(metadata_obj, required_fields):
                 f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml have been completed."
             )
 
-    return None
-
 
 @dataclass(frozen=True)
 class _ExperimentPlan:
@@ -52,16 +48,16 @@ class _ExperimentPlan:
     lists."""
 
     experiment: FactsExperiment
-    climate_module_name: Optional[str]  # TODO rename to climate
-    sealevel_module_names: List[str]
-    framework_module_names: List[str]
-    esl_module_names: List[str]
-    suppress_output_types: Set[str]
-    workflows: Dict[str, Workflow]
+    climate_module_name: str | None  # TODO rename to climate
+    sealevel_module_names: list[str]
+    framework_module_names: list[str]
+    esl_module_names: list[str]
+    suppress_output_types: set[str]
+    workflows: dict[str, Workflow]
 
 
 def _make_experiment_plan(
-    metadata: Dict[str, Any], schemas: Dict[str, ModuleSchema]
+    metadata: dict[str, Any], schemas: dict[str, ModuleSchema]
 ) -> _ExperimentPlan:
     """Phase 1 of generating compose:
     Validate metadata and build a typed experiment plan.
@@ -88,7 +84,7 @@ def _make_experiment_plan(
         fingerprint_keys=_fp_keys,
     )
     # Set output (local or global) based on user spec. in experiment config
-    suppress_output_types: Set[str] = (
+    suppress_output_types: set[str] = (
         {"local"} if experiment.projection_scale == "global" else set()
     )
     # Separate module names by step

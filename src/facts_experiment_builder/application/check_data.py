@@ -7,16 +7,15 @@ console imports — all output decisions belong to the CLI layer.
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict
+
+from facts_experiment_builder.application.storage import ModuleRegistry
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.typed_path import (
-    _SHARED_CONTAINER_PATH,
     _MODULE_SPECIFIC_CONTAINER_PATH,
+    _SHARED_CONTAINER_PATH,
 )
-
-from facts_experiment_builder.application.storage import ModuleRegistry
 
 
 @dataclass
@@ -37,7 +36,7 @@ class InputFileCheck:
 @dataclass
 class CheckModuleResult:
     module_name: str
-    checks: List[InputFileCheck] = field(default_factory=list)
+    checks: list[InputFileCheck] = field(default_factory=list)
 
     @property
     def n_present(self) -> int:
@@ -64,9 +63,9 @@ class CheckDataResult:
     directories found at the specified location (List[str]).
     """
 
-    module_results: List[CheckModuleResult] = field(default_factory=list)
-    shared_checks: List[InputFileCheck] = field(default_factory=list)
-    unrecognized_dirs: List[str] = field(default_factory=list)
+    module_results: list[CheckModuleResult] = field(default_factory=list)
+    shared_checks: list[InputFileCheck] = field(default_factory=list)
+    unrecognized_dirs: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -140,7 +139,7 @@ def resolve_input_paths(
     return module_dir, shared_dir
 
 
-def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
+def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> list[str]:
     """Map a data directory name to one or more module names.
 
     Handles the multi-command module case where a shared directory (e.g. 'ipccar5')
@@ -155,7 +154,7 @@ def _dir_to_module_names(dir_name: str, known_modules: frozenset) -> List[str]:
     return sorted(matches)
 
 
-def plan_fp_checks(entry: Dict[str, dict]) -> List[PlannedCheck]:
+def plan_fp_checks(entry: dict[str, dict]) -> list[PlannedCheck]:
     field_name = entry.get("name", "")
     container_path = entry.get("mount", {}).get("container_path", "")
 
@@ -183,8 +182,8 @@ def plan_fp_checks(entry: Dict[str, dict]) -> List[PlannedCheck]:
 
 
 def plan_input_checks(
-    inp: Dict[str, dict], output_volume_input_keys: set
-) -> List[PlannedCheck]:
+    inp: dict[str, dict], output_volume_input_keys: set
+) -> list[PlannedCheck]:
     """Fn to decide what to check for a given input entry.
 
     Args:
@@ -255,7 +254,7 @@ def execute_check(plan: PlannedCheck, module_input_dir: Path) -> InputFileCheck:
 def _check_module(
     module_schema: ModuleSchema,
     module_input_dir: Path,
-) -> List[InputFileCheck]:
+) -> list[InputFileCheck]:
     # first, make plans for what checks to have based on inputs
     output_volume_input_keys = module_schema.get_output_volume_input_keys()
     plans = [
@@ -286,11 +285,11 @@ def _check_module(
 
 
 def check_shared_data(
-    discovered_module_names: List[str],
+    discovered_module_names: list[str],
     shared_input_dir: Path,
-    schemas: Dict[str, ModuleSchema],
+    schemas: dict[str, ModuleSchema],
     # registry: ModuleRegistry,
-) -> List[InputFileCheck]:
+) -> list[InputFileCheck]:
     """Check shared input files required by the discovered modules.
 
     Collects all unique shared inputs across all discovered modules from two
@@ -301,7 +300,7 @@ def check_shared_data(
     Deduplicates by filename so each shared file is reported once.
     """
     seen: set = set()
-    checks: List[InputFileCheck] = []
+    checks: list[InputFileCheck] = []
 
     for module_name in discovered_module_names:
         try:

@@ -1,8 +1,8 @@
 """Module to hold class, functions related to experiment config object before written to
 yaml."""
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
@@ -94,9 +94,9 @@ def make_included_modules_section(manifest: dict) -> list:
         included_modules.append("climate_module")
     if "sealevel_modules" in manifest:
         included_modules.append("sealevel_modules")
-    if "framework_modules" in manifest and manifest["framework_modules"]:
+    if manifest.get("framework_modules"):
         included_modules.append("framework_modules")
-    if "esl_modules" in manifest and manifest["esl_modules"]:
+    if manifest.get("esl_modules"):
         included_modules.append("esl_modules")
     return included_modules
 
@@ -143,7 +143,7 @@ def make_module_keys(
     )
     module_keys = [
         key
-        for key in module_sections.keys()
+        for key in module_sections
         if key not in excluded_keys
         and isinstance(module_sections[key], ConfigModuleSection)
     ]

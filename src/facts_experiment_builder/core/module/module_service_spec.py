@@ -1,27 +1,11 @@
 """Module in service: has all information needed to run a module and slot into an
 experiment implementation (e.g. one compose service)."""
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
-import os
+from typing import Any
 
-# ---------------------- Core imports ----------------------------
-from facts_experiment_builder.core.typed_path import (
-    TypedPath,
-    PathValue,
-    ContainerPath,
-    HostDirPath,
-    HostPath,
-    ExperimentSpecificInputPath,
-)
-from facts_experiment_builder.core.module.service_spec_utils import (
-    expand_path,
-    resolve_input_path,
-    resolve_output_path,
-    get_required_field,
-    get_experiment_paths,
-)
 from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
     ModuleOutputPaths,
@@ -29,17 +13,29 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
     build_module_output_paths,
 )
 from facts_experiment_builder.core.module.module_schema import (
-    ModuleSchema,
     ModuleContainerImage,
+    ModuleSchema,
+)
+from facts_experiment_builder.core.module.service_spec_utils import (
+    expand_path,
+    get_experiment_paths,
+    get_required_field,
+    resolve_input_path,
+    resolve_output_path,
 )
 from facts_experiment_builder.core.source_resolver import (
     resolve_value as resolve_source_value,
 )
 from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
 
-# ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.compose_service_writer import (
-    build_compose_service_dict,
+# ---------------------- Core imports ----------------------------
+from facts_experiment_builder.core.typed_path import (
+    ContainerPath,
+    ExperimentSpecificInputPath,
+    HostDirPath,
+    HostPath,
+    PathValue,
+    TypedPath,
 )
 
 
@@ -49,15 +45,15 @@ class ModuleServiceSpecComponents:
     specific paths, values, image, metadata)."""
 
     module_name: str
-    options: Dict[str, Any]
+    options: dict[str, Any]
     input_paths: ModuleInputPaths
     output_paths: ModuleOutputPaths
-    fingerprint_params: Dict[str, Any]
-    inputs: Dict[str, Union[PathValue, Any]]
-    outputs: Dict[str, Any]
+    fingerprint_params: dict[str, Any]
+    inputs: dict[str, PathValue | Any]
+    outputs: dict[str, Any]
     image: ModuleContainerImage
-    metadata: Dict[str, Any]
-    output_container_base: Optional[str] = None
+    metadata: dict[str, Any]
+    output_container_base: str | None = None
 
 
 class ModuleServiceSpec:
@@ -111,8 +107,8 @@ class ModuleServiceSpec:
         return resolve_source_value(source, context)
 
     def _build_command_args(
-        self, suppress_output_types: Optional[set] = None
-    ) -> List[str]:
+        self, suppress_output_types: set | None = None
+    ) -> list[str]:
         """Build command arguments from YAML configuration.
 
         Returns:
@@ -176,7 +172,7 @@ class ModuleServiceSpec:
 
         return command_args
 
-    def _host_path_to_container(self, path_str: str, arg_spec: Dict[str, Any]) -> str:
+    def _host_path_to_container(self, path_str: str, arg_spec: dict[str, Any]) -> str:
         """Transform a host path to container path using mount and transform from
         arg_spec."""
         mount = arg_spec.get("mount", {})
@@ -202,7 +198,7 @@ class ModuleServiceSpec:
 
     def _process_argument(
         self,
-        arg_spec: Dict[str, Any],
+        arg_spec: dict[str, Any],
     ) -> Any:
         """Process a single argument specification.
 
@@ -267,7 +263,6 @@ class ModuleServiceSpec:
                 if value[0].kind == "container":
                     return [tp.path for tp in value]
                 return [self._host_path_to_container(tp.path, arg_spec) for tp in value]
-            pass
 
         # Handle mount transformations for file paths (legacy str/Path; outputs use _process_output_argument).
         if mount and isinstance(value, (str, Path)):
@@ -310,7 +305,7 @@ class ModuleServiceSpec:
 
         return value
 
-    def _process_output_argument(self, arg_spec: Dict[str, Any]) -> Any:
+    def _process_output_argument(self, arg_spec: dict[str, Any]) -> Any:
         """Process a single output argument: resolve value from module_inputs.outputs.*
         and build container path as <container_path>/<module_name>/<filename>.
 
@@ -353,7 +348,7 @@ class ModuleServiceSpec:
             return f"{base}/{filename}"
         return value
 
-    def _build_volumes(self) -> List[str]:
+    def _build_volumes(self) -> list[str]:
         """Build volumes list from YAML configuration.
 
         Returns:
@@ -399,8 +394,8 @@ class ModuleServiceSpec:
         return volumes
 
     def _build_depends_on(
-        self, temperature_service_name: Optional[str] = None
-    ) -> Dict[str, Any]:
+        self, temperature_service_name: str | None = None
+    ) -> dict[str, Any]:
         """Build depends_on dictionary from YAML configuration.
 
         If uses_climate_file is True, automatically adds dependency on temperature service.
@@ -447,7 +442,7 @@ class ModuleServiceSpec:
 
         return depends_on
 
-    def _build_environment(self) -> Dict[str, str]:
+    def _build_environment(self) -> dict[str, str]:
         """Build environment variable dict for args declared with envvar in the module
         YAML.
 
@@ -456,7 +451,7 @@ class ModuleServiceSpec:
         with no resolvable value are omitted — the container's own defaults or host
         environment handle them.
         """
-        environment: Dict[str, str] = {}
+        environment: dict[str, str] = {}
         for arg_spec in self.module_definition.arguments.get("inputs", []):
             envvar = arg_spec.get("envvar")
             if not envvar:
@@ -468,9 +463,9 @@ class ModuleServiceSpec:
 
     def generate_compose_service(
         self,
-        temperature_service_name: Optional[str] = None,
-        suppress_output_types: Optional[set] = None,
-    ) -> Dict[str, Any]:
+        temperature_service_name: str | None = None,
+        suppress_output_types: set | None = None,
+    ) -> dict[str, Any]:
         """Generate Docker Compose service configuration.
 
         Args:
@@ -496,7 +491,7 @@ class ModuleServiceSpec:
             environment=environment,
         )
 
-    def generate_asyncflow_config(self) -> Dict[str, Any]:
+    def generate_asyncflow_config(self) -> dict[str, Any]:
         """Generate AsyncFlow configuration.
 
         Returns:
@@ -517,9 +512,9 @@ class ModuleServiceSpec:
 class _ResolvedPaths:
     shared_input_data: str
     module_specific_input_data: str
-    experiment_specific_input_data: Optional[str]
+    experiment_specific_input_data: str | None
     output_data_location: str
-    output_container_base: Optional[str] = None
+    output_container_base: str | None = None
 
 
 @dataclass
@@ -528,7 +523,7 @@ class ExperimentOutputPath:
 
 
 def _resolve_experiment_paths(
-    metadata: Dict[str, Any],
+    metadata: dict[str, Any],
     module_context: str,
     known_module_names: list,
     module_name: str,
@@ -611,7 +606,7 @@ def _resolve_module_inputs_dict(
     module_inputs_section: dict,
     shared_input_data: str,
     module_specific_input_data: str,
-    experiment_specific_input_data: Optional[str],
+    experiment_specific_input_data: str | None,
     module_name: str,
 ):
     # Inputs that mount from the shared output volume produced by another service (such as
@@ -748,7 +743,7 @@ def _resolve_module_inputs_dict(
 
 def _resolve_module_outputs_dict(
     module_definition: ModuleSchema,
-    module_outputs: Union[dict, list],
+    module_outputs: dict | list,
     module_context: str,
     module_name: str,
     output_data_location,
@@ -824,10 +819,10 @@ def _assemble_fingerprint_params(module_definition, module_fp_section, location_
 
 
 def build_module_service_spec(
-    metadata: Dict[str, Any],
+    metadata: dict[str, Any],
     # experiment_dir: Path,
     module_name: str,
-    known_module_names: List,
+    known_module_names: list,
     module_definition: ModuleSchema,
 ) -> ModuleServiceSpec:
     """Build a ModuleServiceSpec for the given module from experiment metadata and
@@ -951,3 +946,38 @@ def build_module_service_spec(
         components=impl_inputs,
         module_definition=module_definition,
     )
+
+
+def build_compose_service_dict(
+    image_str: str,
+    command: list[str],
+    volumes: list[str],
+    depends_on: dict[str, Any] | None = None,
+    environment: dict[str, str] | None = None,
+) -> dict[str, Any]:
+    """Build a Docker Compose service dictionary from a ModuleServiceSpec.
+
+    Args:
+        image_str: Full image string (e.g. "repo/image:tag")
+        command: List of command-line argument strings (e.g. ["--pipeline-id=aaa", ...])
+        volumes: List of volume mount strings (e.g. ["/host/path:/container/path"])
+        depends_on: Optional dict mapping service names to dependency conditions
+        environment: Optional dict of environment variables to set in the container
+
+    Returns:
+        Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
+    """
+    # TODO: better fix for this but should work for now
+    if command and command[0] == "main":
+        command = command[1:]
+    service = {
+        "image": image_str,
+        "command": command,
+        "volumes": volumes,
+        "restart": "no",
+    }
+    if environment:
+        service["environment"] = environment
+    if depends_on:
+        service["depends_on"] = depends_on
+    return service

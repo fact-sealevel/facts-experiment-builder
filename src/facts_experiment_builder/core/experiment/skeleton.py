@@ -1,31 +1,32 @@
 """Intent data for a new experiment, built from CLI inputs before YAML loading."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Any
 from pathlib import Path
+from typing import Any
 
-# ---------------------- Core imports ----------------------------
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
-from facts_experiment_builder.core.experiment.module_name_validation import (
-    parse_module_list_str,
-)
-from facts_experiment_builder.core.steps import (
-    ClimateStep,
-    SealevelStep,
-    TotalingStep,
-    ExtremeSealevelStep,
-)
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
-)
-from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
-from facts_experiment_builder.core.module.module_schema import (
-    collect_metadata_param_keys,
 )
 from facts_experiment_builder.core.experiment.experiment import (
     FactsExperiment,
     TopLevelParams,
 )
+from facts_experiment_builder.core.experiment.module_name_validation import (
+    parse_module_list_str,
+)
+
+# ---------------------- Core imports ----------------------------
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleSchema,
+    collect_metadata_param_keys,
+)
+from facts_experiment_builder.core.steps import (
+    ClimateStep,
+    ExtremeSealevelStep,
+    SealevelStep,
+    TotalingStep,
+)
+from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 
 
 def is_totaling_needed(sealevel_step: str) -> bool:
@@ -34,13 +35,13 @@ def is_totaling_needed(sealevel_step: str) -> bool:
     return len(sealevel_module_ls) > 1
 
 
-def parse_module_regions(module_regions_args: tuple) -> Dict[str, List[str]]:
+def parse_module_regions(module_regions_args: tuple) -> dict[str, list[str]]:
     """Parse a tuple of 'module-name=R1,R2' strings into {module: [regions]}.
 
     Accepts the raw value from a Click multiple=True option.
     Example: ("emulandice2-glaciers=RGI01,RGI02",) -> {"emulandice2-glaciers": ["RGI01", "RGI02"]}
     """
-    result: Dict[str, List[str]] = {}
+    result: dict[str, list[str]] = {}
     for entry in module_regions_args or ():
         if "=" not in entry:
             raise ValueError(
@@ -66,26 +67,24 @@ class ExperimentSkeleton:
     fully-formed ``FactsExperiment``.
     """
 
-    climate_module: Optional[str] = None  # None if data provided
-    climate_data: Optional[str] = None  # None if module provided
-    sealevel_modules: List[str] = None  # [] if data provided
-    supplied_totaled_sealevel_step_data: Optional[str] = (
-        None  # None if modules provided
-    )
-    totaling_module: Optional[str | None] = None  # None if no totaling step
-    extremesealevel_module: Optional[str] = None  # None if no ESL step
-    workflows: Dict[str, str] = field(default_factory=dict)
-    module_regions: Dict[str, List[str]] = field(default_factory=dict)
+    climate_module: str | None = None  # None if data provided
+    climate_data: str | None = None  # None if module provided
+    sealevel_modules: list[str] = None  # [] if data provided
+    supplied_totaled_sealevel_step_data: str | None = None  # None if modules provided
+    totaling_module: str | None = None  # None if no totaling step
+    extremesealevel_module: str | None = None  # None if no ESL step
+    workflows: dict[str, str] = field(default_factory=dict)
+    module_regions: dict[str, list[str]] = field(default_factory=dict)
 
     @classmethod
     def from_inputs(
         cls,
-        climate_step: Optional[str],
-        supplied_climate_step_data: Optional[str],
-        sealevel_step: Optional[str],
-        supplied_totaled_sealevel_step_data: Optional[str],
-        extremesealevel_step: Optional[str],
-        module_regions: Optional[Dict[str, List[str]]] = None,
+        climate_step: str | None,
+        supplied_climate_step_data: str | None,
+        sealevel_step: str | None,
+        supplied_totaled_sealevel_step_data: str | None,
+        extremesealevel_step: str | None,
+        module_regions: dict[str, list[str]] | None = None,
     ) -> "ExperimentSkeleton":
         """Build a skeleton by parsing comma-separated CLI module strings."""
         from facts_experiment_builder.core.experiment.module_name_validation import (
@@ -139,9 +138,9 @@ class ExperimentSkeleton:
         )
 
     @property
-    def all_module_names(self) -> List[str]:
+    def all_module_names(self) -> list[str]:
         """All module names across all steps (excludes data-only steps)."""
-        names: List[str] = []
+        names: list[str] = []
         if self.climate_module:
             names.append(self.climate_module)
         names.extend(self.sealevel_modules)
@@ -154,8 +153,8 @@ class ExperimentSkeleton:
 
 def hydrate_experiment(
     skeleton: ExperimentSkeleton,
-    schemas: Dict[str, ModuleSchema],
-    top_level_context: Optional[Dict[str, Any]] = None,
+    schemas: dict[str, ModuleSchema],
+    top_level_context: dict[str, Any] | None = None,
 ) -> tuple:
     """Hydrate experiment steps from an ExperimentSkeleton object and modules schemas.
 
@@ -187,7 +186,7 @@ def hydrate_experiment(
     KeyError
         If a module name referenced by `skeleton` is not present in `schemas`. Propagates immediately instead of silent failures.
     """
-    climate_files: Optional[Dict[str, str]] = None
+    climate_files: dict[str, str] | None = None
     sealevel_schemas = None
 
     # If skeleton has a climate module, extract schema and build step
@@ -249,11 +248,11 @@ def experiment_skeleton_to_facts_experiment(
     experiment_name: str,
     skeleton: ExperimentSkeleton,
     top_level_params: "TopLevelParams",
-    schemas: Dict[str, ModuleSchema],
+    schemas: dict[str, ModuleSchema],
     experiment_path: Path,
-    module_specific_input_data: Optional[str] = None,
-    experiment_specific_input_data: Optional[list] = None,
-    shared_input_data: Optional[str] = None,
+    module_specific_input_data: str | None = None,
+    experiment_specific_input_data: list | None = None,
+    shared_input_data: str | None = None,
     projection_scale: str = "local",
 ) -> FactsExperiment:
     """Assemble a FactsExperiment object from an ExperimentSkeleton, top-level params
@@ -296,7 +295,7 @@ def experiment_skeleton_to_facts_experiment(
     list_of_schemas = list(schemas.values())
 
     # Lookup table mapping schema key names (kebab and snake) to CLI-provided values
-    cli_values: Dict[str, object] = {
+    cli_values: dict[str, object] = {
         "pipeline-id": top_level_params.pipeline_id,
         "pipeline_id": top_level_params.pipeline_id,
         "scenario": top_level_params.scenario,

@@ -5,15 +5,13 @@ Intended to be run once from a fresh project directory before any
 console imports — all output decisions belong to the CLI layer.
 """
 
+import subprocess
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum, auto
 from pathlib import Path
-from typing import Optional
-import subprocess
 
 import yaml
-
 
 REGISTRY_URL = "https://github.com/fact-sealevel/facts-module-registry.git"
 REGISTRY_DIR_NAME = "facts-module-registry"
@@ -30,7 +28,7 @@ class StepStatus(Enum):
 class InitStepResult:
     status: StepStatus
     message: str
-    path: Optional[Path] = None
+    path: Path | None = None
 
 
 @dataclass
@@ -123,7 +121,7 @@ def ensure_workspace_marker(
     if marker_path.exists():
         return InitStepResult(StepStatus.ALREADY_EXISTS, "Already exists.", marker_path)
     contents = {
-        "initialized_at": datetime.now(timezone.utc).isoformat(),
+        "initialized_at": datetime.now(UTC).isoformat(),
         "registry_url": registry_url,
     }
     marker_path.write_text(yaml.dump(contents, default_flow_style=False))

@@ -1,9 +1,9 @@
 """Metadata bundle helpers: clue/value dict creation, detection."""
 
-from typing import Dict, Any
+from typing import Any
 
 
-def create_metadata_bundle(clue: str, value: Any = None) -> Dict[str, Any]:
+def create_metadata_bundle(clue: str, value: Any = None) -> dict[str, Any]:
     return {"clue": clue, "value": value}
 
 

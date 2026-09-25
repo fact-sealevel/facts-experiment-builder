@@ -17,7 +17,6 @@ from facts_experiment_builder.application.init_workspace import (
 )
 from facts_experiment_builder.cli.init_cli import init
 
-
 # ---------------------------------------------------------------------------
 # ensure_experiments_dir
 # ---------------------------------------------------------------------------
@@ -241,38 +240,42 @@ def test_init_cli_fresh_workspace(tmp_path):
         result = runner.invoke(init, [], catch_exceptions=False, obj=None)
         # CliRunner isolates the filesystem via a context manager, so chdir to tmp_path
     # Run again with the correct cwd
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        with patch(
+    with (
+        runner.isolated_filesystem(temp_dir=tmp_path),
+        patch(
             "facts_experiment_builder.application.init_workspace.subprocess.run"
-        ) as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stderr="")
-            result = runner.invoke(init, [])
+        ) as mock_run,
+    ):
+        mock_run.return_value = MagicMock(returncode=0, stderr="")
+        result = runner.invoke(init, [])
     assert result.exit_code == 0
     assert "Workspace ready" in result.output
 
 
 def test_init_cli_clone_failure_exits_nonzero(tmp_path):
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        with patch(
+    with (
+        runner.isolated_filesystem(temp_dir=tmp_path),
+        patch(
             "facts_experiment_builder.application.init_workspace.subprocess.run"
-        ) as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=1, stderr="fatal: network error"
-            )
-            result = runner.invoke(init, [])
+        ) as mock_run,
+    ):
+        mock_run.return_value = MagicMock(returncode=1, stderr="fatal: network error")
+        result = runner.invoke(init, [])
     assert result.exit_code != 0
 
 
 def test_init_cli_accepts_custom_registry_url(tmp_path):
     custom_url = "https://github.com/my-fork/facts-module-registry.git"
     runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        with patch(
+    with (
+        runner.isolated_filesystem(temp_dir=tmp_path),
+        patch(
             "facts_experiment_builder.application.init_workspace.subprocess.run"
-        ) as mock_run:
-            mock_run.return_value = MagicMock(returncode=0, stderr="")
-            result = runner.invoke(init, ["--registry-url", custom_url])
+        ) as mock_run,
+    ):
+        mock_run.return_value = MagicMock(returncode=0, stderr="")
+        result = runner.invoke(init, ["--registry-url", custom_url])
     assert result.exit_code == 0
     call_args = mock_run.call_args[0][0]
     assert custom_url in call_args

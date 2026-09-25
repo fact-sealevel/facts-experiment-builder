@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Optional, Dict, List
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_experiment_spec import (
@@ -11,8 +10,8 @@ from facts_experiment_builder.core.steps.base import ExperimentStep
 
 @dataclass
 class ClimateStep(ExperimentStep):
-    module_spec: Optional[ModuleExperimentSpec] = None
-    alternate_climate_data: Optional[str] = None  # used when no climate module passed
+    module_spec: ModuleExperimentSpec | None = None
+    alternate_climate_data: str | None = None  # used when no climate module passed
     _not_needed: bool = False  # used when totaled sealevel data bypasses this step
 
     @classmethod
@@ -20,7 +19,7 @@ class ClimateStep(ExperimentStep):
         return cls(module_spec=ModuleExperimentSpec.from_module_schema(schema))
 
     @classmethod
-    def from_dict(cls, module_name: Optional[str], d: Dict) -> "ClimateStep":
+    def from_dict(cls, module_name: str | None, d: dict) -> "ClimateStep":
         if not module_name or module_name.upper() == "NONE":
             return cls(alternate_climate_data=d.get("alternate_climate_data"))
         return cls(module_spec=ModuleExperimentSpec.from_dict(module_name, d))
@@ -38,7 +37,7 @@ class ClimateStep(ExperimentStep):
             return self.module_spec.is_configured()
         return self.alternate_climate_data is not None
 
-    def module_specs(self) -> List[ModuleExperimentSpec]:
+    def module_specs(self) -> list[ModuleExperimentSpec]:
         return [self.module_spec] if self.module_spec else []
 
     def merge_defaults(self, defaults_yml, module_schema=None) -> None:
@@ -53,5 +52,5 @@ class ClimateStep(ExperimentStep):
         return self.module_spec is not None
 
     @property
-    def module_name(self) -> Optional[str]:
+    def module_name(self) -> str | None:
         return self.module_spec.module_name if self.module_spec else None

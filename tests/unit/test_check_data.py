@@ -1,21 +1,23 @@
 """Unit tests for application/check_data.py."""
 
+from pathlib import Path
+
+import pytest
+
 from facts_experiment_builder.application.check_data import (
+    CheckModuleResult,
+    InputFileCheck,
+    PlannedCheck,
     _check_module,
     _dir_to_module_names,
     check_data,
-    CheckModuleResult,
-    plan_input_checks,
-    plan_fp_checks,
-    PlannedCheck,
     execute_check,
-    InputFileCheck,
+    plan_fp_checks,
+    plan_input_checks,
     resolve_input_paths,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
-from pathlib import Path
-import pytest
 
 
 # factories to build fixtures (same as test_setup_experiment)

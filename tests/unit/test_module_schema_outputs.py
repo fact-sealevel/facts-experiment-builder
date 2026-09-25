@@ -1,11 +1,11 @@
 """Tests for ModuleSchema output/input helper methods and ModuleExperimentSpec output handling."""
 
 import pytest
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
+
 from facts_experiment_builder.core.module.module_experiment_spec import (
     ModuleExperimentSpec,
 )
-
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 # ---------------------------------------------------------------------------
 # Fixtures

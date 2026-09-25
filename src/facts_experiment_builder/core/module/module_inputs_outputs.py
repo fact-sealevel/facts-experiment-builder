@@ -1,7 +1,7 @@
-from dataclasses import dataclass
-from typing import Literal
-from pathlib import Path
 import os
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Literal
 
 ModuleOutputType = Literal["local", "global", "total", "esl"]
 

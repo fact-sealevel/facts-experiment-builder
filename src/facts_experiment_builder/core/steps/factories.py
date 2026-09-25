@@ -1,18 +1,18 @@
-from typing import Any, Dict, Tuple
+from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.steps.climate_step import ClimateStep
-from facts_experiment_builder.core.steps.sealevel_step import SealevelStep
-from facts_experiment_builder.core.steps.totaling_step import TotalingStep
 from facts_experiment_builder.core.steps.extreme_sealevel_step import (
     ExtremeSealevelStep,
 )
+from facts_experiment_builder.core.steps.sealevel_step import SealevelStep
+from facts_experiment_builder.core.steps.totaling_step import TotalingStep
 
 
 def steps_from_metadata(
-    manifest: Dict[str, Any],
-    module_sections: Dict[str, Any],
-) -> Tuple[ClimateStep, SealevelStep, TotalingStep, ExtremeSealevelStep]:
+    manifest: dict[str, Any],
+    module_sections: dict[str, Any],
+) -> tuple[ClimateStep, SealevelStep, TotalingStep, ExtremeSealevelStep]:
     """Build all four step objects from a parsed manifest and module_sections dict."""
     temp_module_name = manifest.get("temperature_module")
     if temp_module_name and str(temp_module_name).upper() != "NONE":

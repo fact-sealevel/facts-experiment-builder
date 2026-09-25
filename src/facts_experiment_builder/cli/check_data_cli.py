@@ -1,16 +1,17 @@
 """CLI command for checking a FACTS data directory against the module registry."""
 
-import click
 from pathlib import Path
 
-# ---------------- CLI imports ---------------
-from facts_experiment_builder.cli.theme import console
+import click
 
 # ---------------- Application imports ---------------
 from facts_experiment_builder.application.check_data import (
     check_data,
     resolve_input_paths,
 )
+
+# ---------------- CLI imports ---------------
+from facts_experiment_builder.cli.theme import console
 
 # ---------------- IO imports ---------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
