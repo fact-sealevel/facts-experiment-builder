@@ -8,12 +8,7 @@ from facts_experiment_builder.io.write_config import (
     format_module_value,
     write_config_jinja2,
 )
-from facts_experiment_builder.core.experiment.experiment_config import (
-    ConfigModuleSection,
-    ExperimentConfig,
-)
 
-import yaml
 
 
 def test_format_module_value_returns_correct_when_value_is_nested_dict():
