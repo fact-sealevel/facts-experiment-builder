@@ -10,7 +10,6 @@ from facts_experiment_builder.io.write_config import (
 )
 
 
-
 def test_format_module_value_returns_correct_when_value_is_nested_dict():
     key = "rcmip_concentration_fname"
     value = {
