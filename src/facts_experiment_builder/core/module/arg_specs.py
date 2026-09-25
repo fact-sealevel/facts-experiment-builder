@@ -5,7 +5,8 @@ unknown fields, wrong types, and missing required keys at YAML load time (in
 ModuleSchema.from_dict).
 """
 
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
+
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
@@ -14,7 +15,7 @@ class MountSpec(BaseModel):
 
     container_path: str
     volume: str  # Optional[str] = None
-    transform: Optional[str] = None
+    transform: str | None = None
 
 
 class TopLevelArgSpec(BaseModel):
@@ -24,10 +25,10 @@ class TopLevelArgSpec(BaseModel):
     type: str
     source: str
     optional: bool = False
-    help: Optional[str] = None
-    transform: Optional[str] = None
-    mount: Optional[MountSpec] = None
-    alternatives: List[str] = Field(default_factory=list)
+    help: str | None = None
+    transform: str | None = None
+    mount: MountSpec | None = None
+    alternatives: list[str] = Field(default_factory=list)
 
 
 class OptionArgSpec(BaseModel):
@@ -37,13 +38,13 @@ class OptionArgSpec(BaseModel):
     type: str
     source: str
     optional: bool = False
-    help: Optional[str] = None
-    default_value: Optional[Any] = None
+    help: str | None = None
+    default_value: Any | None = None
     multiple: bool = False
-    envvar: Optional[str] = None
-    alternatives: List[str] = Field(default_factory=list)
-    allowed_values: Optional[list] = None
-    mount: Optional[MountSpec] = None  # needed for extremesealevel-pointsoverthreshold
+    envvar: str | None = None
+    alternatives: list[str] = Field(default_factory=list)
+    allowed_values: list | None = None
+    mount: MountSpec | None = None  # needed for extremesealevel-pointsoverthreshold
 
 
 class InputArgSpec(BaseModel):
@@ -52,17 +53,17 @@ class InputArgSpec(BaseModel):
     name: str
     type: str
     source: str
-    help: Optional[str] = None
-    filename: Union[str, list] = None
-    filename_map: Optional[Dict[str, Any]] = None
-    default_value: Optional[Any] = None
+    help: str | None = None
+    filename: str | list = None
+    filename_map: dict[str, Any] | None = None
+    default_value: Any | None = None
     optional: bool = False
     multiple: bool = False
     external_volume: bool = False
-    mount: Optional[MountSpec] = None
-    alternatives: List[str] = Field(default_factory=list)
-    climate_step_output: Optional[str] = None
-    envvar: Optional[str] = None
+    mount: MountSpec | None = None
+    alternatives: list[str] = Field(default_factory=list)
+    climate_step_output: str | None = None
+    envvar: str | None = None
 
     @model_validator(mode="after")
     def climate_step_output_required_for_climate_inputs_to_sealevel_modules(
@@ -84,13 +85,13 @@ class OutputFileSpec(BaseModel):
     name: str
     type: str
     source: str
-    help: Optional[str] = None
-    filename: Optional[str] = None
-    filename_map: Optional[Dict[str, Any]] = None
+    help: str | None = None
+    filename: str | None = None
+    filename_map: dict[str, Any] | None = None
     output_type: str
     optional: bool = False
-    mount: Optional[MountSpec] = None
-    alternatives: List[str] = Field(default_factory=list)
+    mount: MountSpec | None = None
+    alternatives: list[str] = Field(default_factory=list)
     pass_to_total: bool = True
 
 
@@ -100,17 +101,17 @@ class OtherOutputSpec(BaseModel):
     name: str
     type: str
     source: str
-    help: Optional[str] = None
+    help: str | None = None
     optional: bool = False
-    mount: Optional[MountSpec] = None
-    alternatives: List[str] = Field(default_factory=list)
+    mount: MountSpec | None = None
+    alternatives: list[str] = Field(default_factory=list)
 
 
 class OutputsSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    files: List[OutputFileSpec] = Field(default_factory=list)
-    other: List[OtherOutputSpec] = Field(default_factory=list)
+    files: list[OutputFileSpec] = Field(default_factory=list)
+    other: list[OtherOutputSpec] = Field(default_factory=list)
 
 
 class FingerprintParamSpec(BaseModel):
@@ -120,19 +121,19 @@ class FingerprintParamSpec(BaseModel):
     type: str
     source: str
     optional: bool = False
-    help: Optional[str] = None
-    filename: Optional[str] = None
-    default_value: Optional[str] = None
-    transform: Optional[str] = None
-    mount: Optional[MountSpec] = None
-    alternatives: List[str] = Field(default_factory=list)
+    help: str | None = None
+    filename: str | None = None
+    default_value: str | None = None
+    transform: str | None = None
+    mount: MountSpec | None = None
+    alternatives: list[str] = Field(default_factory=list)
 
 
 class ArgumentsSpec(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    top_level: List[TopLevelArgSpec] = Field(default_factory=list)
-    options: List[OptionArgSpec] = Field(default_factory=list)
-    inputs: List[InputArgSpec] = Field(default_factory=list)
+    top_level: list[TopLevelArgSpec] = Field(default_factory=list)
+    options: list[OptionArgSpec] = Field(default_factory=list)
+    inputs: list[InputArgSpec] = Field(default_factory=list)
     outputs: OutputsSpec = Field(default_factory=OutputsSpec)
-    fingerprint_params: List[FingerprintParamSpec] = Field(default_factory=list)
+    fingerprint_params: list[FingerprintParamSpec] = Field(default_factory=list)

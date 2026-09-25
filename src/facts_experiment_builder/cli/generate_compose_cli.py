@@ -1,25 +1,24 @@
-import click
-from pathlib import Path
 import logging
+from pathlib import Path
 
-# ---------------------- CLI imports ----------------------------
-from facts_experiment_builder.cli.theme import console
+import click
 
 # ---------------------- Core imports ----------------------------
-
-
 # ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.generate_compose import (
     generate_compose,
+)
+
+# ---------------------- CLI imports ----------------------------
+from facts_experiment_builder.cli.theme import console
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
 )
 
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.write_compose import (
     make_compose_yaml,
     write_compose_yaml,
-)
-from facts_experiment_builder.io.experiment_repository import (
-    StorageExperimentRepository,
 )
 
 logger = logging.getLogger(__name__)

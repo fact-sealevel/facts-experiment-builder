@@ -1,8 +1,9 @@
 """Unit tests for cli/check_data_cli.py."""
 
-import pytest
 import click
+import pytest
 from click.testing import CliRunner
+
 from facts_experiment_builder.cli.check_data_cli import (
     check_provided_paths,
     main,

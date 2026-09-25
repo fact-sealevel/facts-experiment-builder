@@ -1,12 +1,14 @@
 """Minimal pytest suite for setup_experiment_cli."""
 
-from click.testing import CliRunner
-from facts_experiment_builder.cli.setup_experiment_cli import (
-    main,
-    configure_logging,
-)
-from pathlib import Path
 import logging
+from pathlib import Path
+
+from click.testing import CliRunner
+
+from facts_experiment_builder.cli.setup_experiment_cli import (
+    configure_logging,
+    main,
+)
 
 runner = CliRunner()
 

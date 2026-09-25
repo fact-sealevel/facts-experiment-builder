@@ -1,25 +1,26 @@
 """Shared fixtures for unit tests."""
 
 import logging
+from pathlib import Path
+
+import click
 import pytest
 import yaml
-import click
-from pathlib import Path
 
 from facts_experiment_builder.core.module.arg_specs import (
     FingerprintParamSpec,
     InputArgSpec,
     MountSpec,
 )
+from facts_experiment_builder.core.module.module_inputs_outputs import (
+    ModuleInputPaths,
+    ModuleOutputPaths,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleContainerImage,
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
-)
-from facts_experiment_builder.core.module.module_inputs_outputs import (
-    ModuleInputPaths,
-    ModuleOutputPaths,
 )
 
 

@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_experiment_spec import (
@@ -11,16 +11,16 @@ from facts_experiment_builder.core.steps.base import ExperimentStep
 
 @dataclass
 class SealevelStep(ExperimentStep):
-    module_specs_list: List[ModuleExperimentSpec] = field(default_factory=list)
-    supplied_totaled_sealevel_data: Optional[str] = None
+    module_specs_list: list[ModuleExperimentSpec] = field(default_factory=list)
+    supplied_totaled_sealevel_data: str | None = None
 
     @classmethod
     def from_module_schemas(
         cls,
-        schemas: List[ModuleSchema],
-        climate_files: Optional[Dict[str, str]] = None,
-        module_regions: Optional[Dict[str, List[str]]] = None,
-        top_level_context: Optional[Dict[str, Any]] = None,
+        schemas: list[ModuleSchema],
+        climate_files: dict[str, str] | None = None,
+        module_regions: dict[str, list[str]] | None = None,
+        top_level_context: dict[str, Any] | None = None,
     ) -> "SealevelStep":
         """Build a SealevelStep from module schemas.
 
@@ -42,7 +42,7 @@ class SealevelStep(ExperimentStep):
         module_regions = module_regions or {}
         specs = []
         for schema in schemas:
-            prefilled: Dict[str, str] = {}
+            prefilled: dict[str, str] = {}
             climate_data_file = climate_files.get(schema.module_name)
             if climate_data_file and schema.uses_climate_file:
                 climate_keys = schema.get_output_volume_input_keys() or {
@@ -64,7 +64,7 @@ class SealevelStep(ExperimentStep):
 
     @classmethod
     def from_dict(
-        cls, module_names: List[str], metadata: Dict[str, Any]
+        cls, module_names: list[str], metadata: dict[str, Any]
     ) -> "SealevelStep":
         specs = [
             ModuleExperimentSpec.from_dict(name, metadata.get(name) or {})
@@ -77,13 +77,13 @@ class SealevelStep(ExperimentStep):
             return True
         return all(s.is_configured() for s in self.module_specs_list)
 
-    def module_specs(self) -> List[ModuleExperimentSpec]:
+    def module_specs(self) -> list[ModuleExperimentSpec]:
         return list(self.module_specs_list)
 
-    def to_dict(self) -> Dict[str, Dict[str, Any]]:
+    def to_dict(self) -> dict[str, dict[str, Any]]:
         """Returns {module_name: spec_dict, ...} for each sealevel module."""
         return {s.module_name: s.to_dict() for s in self.module_specs_list}
 
     @property
-    def module_names(self) -> List[str]:
+    def module_names(self) -> list[str]:
         return [s.module_name for s in self.module_specs_list]

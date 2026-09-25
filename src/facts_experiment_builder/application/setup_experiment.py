@@ -1,33 +1,28 @@
-from dataclasses import dataclass
 import dataclasses
-from pathlib import Path
 import logging
-
-# ---------------- Core imports ---------------
-from facts_experiment_builder.core.experiment.experiment import (
-    TopLevelParams,
-)
-from facts_experiment_builder.core.experiment.skeleton import (
-    ExperimentSkeleton,
-    parse_module_regions,
-)
-from facts_experiment_builder.core.experiment.skeleton import (
-    experiment_skeleton_to_facts_experiment,
-)
-
-# --------------- IO imports --------------
-from facts_experiment_builder.core.experiment.name import (
-    ExperimentName,
-)
-
-from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
-
+from dataclasses import dataclass
+from pathlib import Path
 
 from facts_experiment_builder.application.storage import (
     ExperimentRepository,
     ModuleRegistry,
 )
 
+# ---------------- Core imports ---------------
+from facts_experiment_builder.core.experiment.experiment import (
+    TopLevelParams,
+)
+
+# --------------- IO imports --------------
+from facts_experiment_builder.core.experiment.name import (
+    ExperimentName,
+)
+from facts_experiment_builder.core.experiment.skeleton import (
+    ExperimentSkeleton,
+    experiment_skeleton_to_facts_experiment,
+    parse_module_regions,
+)
+from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
 
 logger = logging.getLogger(__name__)
 

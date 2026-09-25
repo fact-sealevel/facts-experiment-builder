@@ -1,13 +1,13 @@
 import click
 
-# ---------------------- CLI imports ----------------------------
 from facts_experiment_builder.cli.theme import console
-
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list_str,
     unparse_module_list,
     validate_module_names,
+)
+from facts_experiment_builder.core.workflow import (
+    WorkflowName,
 )
 
 
@@ -31,6 +31,7 @@ def _collect_workflows(
         workflow_name, module_list_str = _collect_single_workflow(
             complete_modules_list=complete_modules_list
         )
+
         workflow_dict[workflow_name] = module_list_str.strip()
         console.print(f"  Workflows so far: [secondary]{workflow_dict}[/secondary]")
         if not click.confirm(
@@ -47,10 +48,12 @@ def _collect_single_workflow(complete_modules_list: list[str]) -> tuple[str, str
     Once workflow is received from user, parses response and validates against list of modules included in experiment to ensure no invalid modules.
     Returns: tuple(workflow_name, str of modules in workflow separated by ',' )
     """
-    workflow_name = click.prompt(
+    name = click.prompt(
         "Enter a name for this workflow (e.g. wf1)",
         type=str,
     )
+    workflow_name_obj = WorkflowName(name=name)
+    workflow_name = workflow_name_obj.name
     module_list_str = click.prompt(
         "Enter the names of the modules to include in this workflow, separated by commas",
         type=str,

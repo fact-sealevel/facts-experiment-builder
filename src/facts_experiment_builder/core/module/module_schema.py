@@ -5,7 +5,7 @@ content and, with experiment data, to build ModuleServiceSpec.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
@@ -18,9 +18,9 @@ from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 class ModuleDefaultValues:
     """Default values for a module."""
 
-    inputs: Dict[str, Any]
-    options: Dict[str, Any]
-    outputs: Dict[str, Any]
+    inputs: dict[str, Any]
+    options: dict[str, Any]
+    outputs: dict[str, Any]
 
 
 @dataclass
@@ -29,14 +29,14 @@ class ModuleSchema:
 
     module_name: str
     container_image: str
-    arguments: Dict[str, List[Dict[str, Any]]]  # top_level, options, inputs, outputs
-    volumes: Dict[str, Dict[str, Any]]
-    depends_on: Optional[List[Dict[str, Any]]] = None
+    arguments: dict[str, list[dict[str, Any]]]  # top_level, options, inputs, outputs
+    volumes: dict[str, dict[str, Any]]
+    depends_on: list[dict[str, Any]] | None = None
     command: str = ""
     uses_climate_file: bool = False
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: dict[str, Any] = field(default_factory=dict)
     per_workflow: bool = False
-    output_types: List[str] = field(default_factory=lambda: ["global", "local"])
+    output_types: list[str] = field(default_factory=lambda: ["global", "local"])
 
     def __post_init__(self) -> None:
         if self.arguments is None:
@@ -48,7 +48,7 @@ class ModuleSchema:
     def input_dir_name(self) -> str:
         return self.extra.get("input_dir_name") or self.module_name
 
-    def get_file_outputs(self) -> List[Dict[str, Any]]:
+    def get_file_outputs(self) -> list[dict[str, Any]]:
         """File outputs (have filename + output_type)."""
         outputs = self.arguments.get("outputs", {})
         if not isinstance(outputs, dict):
@@ -59,7 +59,7 @@ class ModuleSchema:
             )
         return list(outputs.get("files") or [])
 
-    def get_other_outputs(self) -> List[Dict[str, Any]]:
+    def get_other_outputs(self) -> list[dict[str, Any]]:
         """Non-file outputs (directories, string paths, etc.)."""
         outputs = self.arguments.get("outputs") or {}
         if not isinstance(outputs, dict):
@@ -71,8 +71,8 @@ class ModuleSchema:
         return list(outputs.get("other") or [])
 
     def get_outputs_list(
-        self, suppress_output_types: Optional[set] = None
-    ) -> List[Dict[str, Any]]:
+        self, suppress_output_types: set | None = None
+    ) -> list[dict[str, Any]]:
         """All outputs as a flat list (file and other combined).
 
         Args:
@@ -88,7 +88,7 @@ class ModuleSchema:
             if spec.get("output_type") not in suppress_output_types
         ]
 
-    def output_volume_key(self) -> Optional[str]:
+    def output_volume_key(self) -> str | None:
         """The key in self.volumes that maps to the shared output directory, or none."""
         for vol_key, spec in self.volumes.items():
             if isinstance(spec, dict) and "output_paths" in spec.get("host_path", ""):
@@ -114,7 +114,7 @@ class ModuleSchema:
                     keys.add(name)
         return keys
 
-    def get_climate_output_type(self) -> Optional[str]:
+    def get_climate_output_type(self) -> str | None:
         """Return the climate output name this module needs, derived from its climate
         input spec.
 
@@ -165,7 +165,7 @@ class ModuleSchema:
     def to_dict(self) -> dict:
         """Serialize back to the raw dict shape consumed by from_dict(), for freezing
         into experiment-config.yaml at setup-experiment time."""
-        data: Dict[str, Any] = {
+        data: dict[str, Any] = {
             "module_name": self.module_name,
             "container_image": self.container_image,
             "arguments": dict(self.arguments),
@@ -198,8 +198,8 @@ class ModuleContainerImage:
 
 
 def collect_metadata_param_keys(
-    schemas: List["ModuleSchema"], section: str
-) -> Dict[str, str]:
+    schemas: list["ModuleSchema"], section: str
+) -> dict[str, str]:
     """This function loops through the ModuleSchema (rep.
 
     of module yaml) for each module in an ExperimentSkeleton object. It is looking for a specific section ('top-level','options','inputs',outputs', etc.)
@@ -219,7 +219,7 @@ def collect_metadata_param_keys(
     Returns:
         Dict mapping key_name to help_text.
     """
-    result: Dict[str, str] = {}
+    result: dict[str, str] = {}
     for schema in schemas:
         for arg_spec in schema.arguments.get(section, []):
             source = arg_spec.get("source", "")

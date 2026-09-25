@@ -1,23 +1,23 @@
-import yaml
 from pathlib import Path
+
+import yaml
+
 from facts_experiment_builder.application.setup_experiment import (
     PrepareExperimentOutput,
-    prepare_experiment_setup,
     finalize_experiment_setup,
-)
-from facts_experiment_builder.core.module.module_schema import (
-    collect_metadata_param_keys,
+    prepare_experiment_setup,
 )
 from facts_experiment_builder.core.experiment.skeleton import (
     hydrate_experiment,
 )
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
+    collect_metadata_param_keys,
 )
-from facts_experiment_builder.io.write_config import format_module_value
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
+from facts_experiment_builder.io.write_config import format_module_value
 from tests.unit.helpers import (
     InMemoryModuleDefinitions,
     make_schema,

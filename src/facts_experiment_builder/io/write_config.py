@@ -1,15 +1,16 @@
 from pathlib import Path
+from typing import Any
+
+from jinja2 import Environment, PackageLoader, StrictUndefined
+from markupsafe import Markup
+
 from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 from facts_experiment_builder.core.experiment.experiment_config import (
     ExperimentConfig,
 )
-from typing import Any, List, Dict
-from jinja2 import Environment, PackageLoader, StrictUndefined
-
-from markupsafe import Markup
 
 
-def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
+def format_module_value(key: str, value: Any, indent: int = 2) -> list[str]:
     """Format a single key-value pair in a module section, handling clue/value dicts.
 
     Handles clue/value dicts created by create_metadata_bundle() where the value
@@ -110,7 +111,7 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> List[str]:
     return lines
 
 
-def format_module(module_key: str, module_data: Dict[str, Any], indent: int = 2) -> str:
+def format_module(module_key: str, module_data: dict[str, Any], indent: int = 2) -> str:
     """Format a module section with comment handling and clue/value support.
 
     Uses 2-space indentation to match the actual YAML file format.

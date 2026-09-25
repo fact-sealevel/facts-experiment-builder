@@ -1,15 +1,16 @@
 """CLI command for initializing a FACTS workspace."""
 
-import click
 from pathlib import Path
 
-from facts_experiment_builder.cli.theme import console
+import click
+
 from facts_experiment_builder.application.init_workspace import (
-    init_workspace,
+    REGISTRY_URL,
     InitStepResult,
     StepStatus,
-    REGISTRY_URL,
+    init_workspace,
 )
+from facts_experiment_builder.cli.theme import console
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})

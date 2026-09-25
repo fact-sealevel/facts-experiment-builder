@@ -1,10 +1,10 @@
-import yaml
-from typing import Dict
 from pathlib import Path
+
+import yaml
 
 
 def make_compose_yaml(
-    content_dict: Dict,
+    content_dict: dict,
     sort_keys: bool = False,
     indent=3,  # 3 spaces for each level
     width=1000,  # Wide width to avoid line wrapping

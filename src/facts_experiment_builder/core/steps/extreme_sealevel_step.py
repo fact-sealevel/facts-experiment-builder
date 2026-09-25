@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_experiment_spec import (
@@ -11,7 +11,7 @@ from facts_experiment_builder.core.steps.base import ExperimentStep
 
 @dataclass
 class ExtremeSealevelStep(ExperimentStep):
-    module_spec: Optional[ModuleExperimentSpec] = None
+    module_spec: ModuleExperimentSpec | None = None
 
     @classmethod
     def from_module_schema(cls, schema: ModuleSchema) -> "ExtremeSealevelStep":
@@ -19,7 +19,7 @@ class ExtremeSealevelStep(ExperimentStep):
 
     @classmethod
     def from_dict(
-        cls, module_name: Optional[str], d: Dict[str, Any]
+        cls, module_name: str | None, d: dict[str, Any]
     ) -> "ExtremeSealevelStep":
         if not module_name:
             return cls()
@@ -28,14 +28,14 @@ class ExtremeSealevelStep(ExperimentStep):
     def is_configured(self) -> bool:
         return True if self.module_spec is None else self.module_spec.is_configured()
 
-    def module_specs(self) -> List[ModuleExperimentSpec]:
+    def module_specs(self) -> list[ModuleExperimentSpec]:
         return [self.module_spec] if self.module_spec else []
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return self.module_spec.to_dict() if self.module_spec else {}
 
     def merge_defaults(
-        self, defaults_yml: Dict[str, Any], schema: Optional[ModuleSchema] = None
+        self, defaults_yml: dict[str, Any], schema: ModuleSchema | None = None
     ) -> None:
         if self.module_spec is not None:
             self.module_spec.merge_defaults(defaults_yml, schema)
@@ -45,5 +45,5 @@ class ExtremeSealevelStep(ExperimentStep):
         return self.module_spec is not None
 
     @property
-    def module_name(self) -> Optional[str]:
+    def module_name(self) -> str | None:
         return self.module_spec.module_name if self.module_spec else None

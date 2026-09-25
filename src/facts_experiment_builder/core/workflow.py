@@ -1,8 +1,31 @@
 """Core Workflow type: one workflow (name + sealevel module list) with parsing and
 helpers."""
 
+import re
 from dataclasses import dataclass
-from typing import List, Union
+
+_VALID_WORKFLOW_NAME = re.compile(
+    r"^[a-zA-Z0-9_.-]+$"
+)  # alphanumeric, no spaces or special chars
+
+
+@dataclass(frozen=True)
+class WorkflowName:
+    """Name of a workflow, provided by user in setup-experiment CLI or in experiment
+    YAML.
+
+    Used as key in metadata['workflows'].
+    """
+
+    name: str
+
+    def __post_init__(self):
+        if not self.name or not isinstance(self.name, str):
+            raise ValueError("Workflow name must be a non-empty string")
+        if not _VALID_WORKFLOW_NAME.match(self.name):
+            raise ValueError(
+                "Workflow name must be alphanumeric or one of '-', '_' (no spaces or other special characters)"
+            )
 
 
 @dataclass(frozen=True)
@@ -13,12 +36,33 @@ class Workflow:
     """
 
     name: str
-    module_names: List[str]
+    module_names: list[str]
+
+    def __post_init__(self):
+        if not isinstance(self.module_names, list):
+            raise ValueError(
+                f"Workflow module_names must be a list of strings, got: {self.module_names}"
+            )
+        for m in self.module_names:
+            if not isinstance(m, str) or not m.strip():
+                raise ValueError(
+                    f"Workflow module_names must be non-empty strings, got: {self.module_names}"
+                )
+        if len(set(self.module_names)) != len(self.module_names):
+            raise ValueError(
+                f"Workflow module_names must not contain duplicates, got: {self.module_names}"
+            )
 
     @classmethod
     def from_module_list_str(cls, name: str, module_list_str: str) -> "Workflow":
         """Build from workflow name and comma-separated module list string."""
-        modules = [m.strip() for m in (module_list_str or "").split(",") if m.strip()]
+        # Deferred import: avoids a circular import, since core.experiment's
+        # __init__ eagerly imports experiment.py, which imports Workflow from here.
+        from facts_experiment_builder.core.experiment.module_name_validation import (
+            parse_module_list_str,
+        )
+
+        modules = parse_module_list_str(module_list_str)
         return cls(name=name, module_names=modules)
 
     def to_module_list_str(self) -> str:
@@ -26,7 +70,7 @@ class Workflow:
         return ",".join(self.module_names)
 
     @classmethod
-    def from_dict(cls, name: str, value: Union[str, List[str]]) -> "Workflow":
+    def from_dict(cls, name: str, value: str | list[str]) -> "Workflow":
         """Build from metadata value: string (comma-separated) or list of module
         names."""
         if isinstance(value, list):

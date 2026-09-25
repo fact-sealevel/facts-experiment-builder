@@ -1,14 +1,14 @@
-from tests.unit.helpers import (
-    make_schema,
+from facts_experiment_builder.core.experiment.experiment import (
+    FactsExperiment,
 )
 from facts_experiment_builder.core.experiment.experiment_config import (
     facts_experiment_to_config,
 )
-from facts_experiment_builder.core.experiment.experiment import (
-    FactsExperiment,
-)
 from facts_experiment_builder.core.steps.climate_step import (
     ClimateStep,
+)
+from facts_experiment_builder.core.steps.extreme_sealevel_step import (
+    ExtremeSealevelStep,
 )
 from facts_experiment_builder.core.steps.sealevel_step import (
     SealevelStep,
@@ -16,8 +16,8 @@ from facts_experiment_builder.core.steps.sealevel_step import (
 from facts_experiment_builder.core.steps.totaling_step import (
     TotalingStep,
 )
-from facts_experiment_builder.core.steps.extreme_sealevel_step import (
-    ExtremeSealevelStep,
+from tests.unit.helpers import (
+    make_schema,
 )
 
 

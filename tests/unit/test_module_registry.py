@@ -1,6 +1,5 @@
 from pathlib import Path
 
-
 import pytest
 
 _REGISTRY_DIR = Path(__file__).resolve().parent.parent.parent / "facts-module-registry"

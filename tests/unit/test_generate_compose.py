@@ -1,10 +1,11 @@
 """Tests for the generate_compose module."""
 
 import pytest
+
 from facts_experiment_builder.application import generate_compose
 from facts_experiment_builder.application.generate_compose import (
-    check_metadata_has_required_fields,
     _validate_climate_file_inputs,
+    check_metadata_has_required_fields,
     check_module_schemas_present,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema

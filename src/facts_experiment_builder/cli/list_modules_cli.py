@@ -1,13 +1,14 @@
-import click
 from pathlib import Path
 
-# ---------------------- CLI imports ----------------------------
-from facts_experiment_builder.cli.theme import console
+import click
 
 # ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.list_modules import (
     list_modules,
 )
+
+# ---------------------- CLI imports ----------------------------
+from facts_experiment_builder.cli.theme import console
 
 
 @click.command()

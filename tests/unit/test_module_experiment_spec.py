@@ -1,14 +1,14 @@
 import pytest
+
 from facts_experiment_builder.core.module.module_experiment_spec import (
-    _resolve_filename,
-    _options_defaults_from_schema,
+    ModuleExperimentSpec,
     _build_options_context,
     _build_outputs,
     _build_section_from_fields,
-    ModuleExperimentSpec,
+    _options_defaults_from_schema,
+    _resolve_filename,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
-
 
 # ---------------------------------------------------------------------------
 # _resolve_filename — single-key format (existing behaviour)
