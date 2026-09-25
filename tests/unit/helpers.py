@@ -1,5 +1,5 @@
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.experiment.skeleton import ExperimentSkeleton
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
 class InMemoryModuleDefinitions:

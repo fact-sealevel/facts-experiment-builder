@@ -1,10 +1,7 @@
 """CLI input parsers: translate raw option strings into values for the application
 layer."""
 
-from typing import List, Optional
-
-
-def parse_comma_separated_modules(raw: Optional[str]) -> List[str]:
+def parse_comma_separated_modules(raw: str | None) -> list[str]:
     """Parse a comma-separated string of module names into a list of non-empty strings.
 
     Intended for options like --sealevel-modules and --framework-modules.

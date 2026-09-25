@@ -1,4 +1,5 @@
 from typing import Protocol
+
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 

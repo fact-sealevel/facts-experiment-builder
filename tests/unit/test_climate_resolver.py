@@ -1,6 +1,7 @@
 """Tests for resolve_climate_file."""
 
 import pytest
+
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 

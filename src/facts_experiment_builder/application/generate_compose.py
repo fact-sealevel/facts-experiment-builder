@@ -1,31 +1,30 @@
 #!/usr/bin/env python3
 """Generate Docker Compose file from experiment config."""
 
+import logging
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, List, Optional, Iterable
-import logging
+from typing import Any
 
-from facts_experiment_builder.core.module.module_service_spec import (
-    build_module_service_spec,
-)
-from facts_experiment_builder.core.experiment.name import ExperimentName
-from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
-from facts_experiment_builder.core.module.module_schema import (
-    ModuleSchema,
+from facts_experiment_builder.application.storage import (
+    ExperimentRepository,
 )
 from facts_experiment_builder.core.experiment.experiment_plan import (
     _ExperimentPlan,
     _make_experiment_plan,
 )
+from facts_experiment_builder.core.experiment.name import ExperimentName
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleSchema,
+)
+from facts_experiment_builder.core.module.module_service_spec import (
+    ModuleServiceSpec,
+    build_module_service_spec,
+)
 from facts_experiment_builder.core.workflow import (
     Workflow,
 )
-
-from facts_experiment_builder.application.storage import (
-    ExperimentRepository,
-)
-
 from facts_experiment_builder.io.paths import ExperimentPaths
 
 logger = logging.getLogger(__name__)
@@ -58,7 +57,7 @@ class PrepareComposeOutput:
 class _ModuleSpecs:
     """Result of phase 2: all created ModuleServiceSpec instances."""
 
-    temperature_module: Optional[ModuleServiceSpec]
+    temperature_module: ModuleServiceSpec | None
     sealevel_modules: dict[str, ModuleServiceSpec]
     framework_modules: dict[str, ModuleServiceSpec]
     esl_modules: dict[str, ModuleServiceSpec]
@@ -69,9 +68,9 @@ def _log_success(msg: str, *args: object) -> None:
     logger.log(_SUCCESS, msg, *args)
 
 
-def _extract_all_module_names_from_manifest(metadata: dict[str, Any]) -> List[str]:
+def _extract_all_module_names_from_manifest(metadata: dict[str, Any]) -> list[str]:
     """Extract a flat list of all module names from the experiment manifest keys."""
-    names: List[str] = []
+    names: list[str] = []
     temp = metadata.get("climate_module")
     if temp and str(temp).upper() != "NONE":
         names.append(str(temp))
@@ -89,7 +88,7 @@ def _extract_all_module_names_from_manifest(metadata: dict[str, Any]) -> List[st
 
 def _validate_climate_file_inputs(
     metadata: dict[str, Any],
-    sealevel_modules: List[str],
+    sealevel_modules: list[str],
     schemas: dict[str, ModuleSchema],
 ) -> None:
     """Validate that sealevel modules have climate file inputs when no temperature
@@ -137,7 +136,7 @@ def _collect_workflow_output_paths_by_type(
     schemas: dict[str, "ModuleSchema"],
     *,
     container_prefix: str = "/mnt/total_out",
-) -> List[str]:
+) -> list[str]:
     """Collect container paths for workflow module outputs that match the given
     output_type and have pass_to_total=True in their module schema.
 
@@ -146,7 +145,7 @@ def _collect_workflow_output_paths_by_type(
     only outputs whose OutputFileSpec has pass_to_total=True are included. Outputs from
     modules not found in `schemas` are included for backward compatibility.
     """
-    paths: List[str] = []
+    paths: list[str] = []
     prefix = container_prefix.rstrip("/")
 
     for mod in wf.module_names:
@@ -235,7 +234,7 @@ def _create_facts_total_compose_service(
     wf: Workflow,
     metadata: dict[str, Any],
     experiment_dir: Path,
-    known_module_names: List,
+    known_module_names: list,
     schema: ModuleSchema,
 ) -> dict[str, Any]:
     """Build the compose service dict for a facts-total workflow from its synthetic
@@ -270,8 +269,6 @@ def check_metadata_has_required_fields(metadata_obj, required_fields):
                 f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml have been completed."
             )
 
-    return None
-
 
 def check_module_schemas_present(
     metadata: dict[str, Any],
@@ -301,13 +298,13 @@ def _build_module_specs(
     plan: _ExperimentPlan,
     metadata: dict[str, Any],
     schemas: dict,
-    known_module_names: List,
+    known_module_names: list,
 ) -> _ModuleSpecs:
     """Phase 2: Create a ModuleServiceSpec for each module in the experiment.
 
     All filesystem I/O for module YAML loading is isolated here.
     """
-    temperature_module: Optional[ModuleServiceSpec] = None
+    temperature_module: ModuleServiceSpec | None = None
     sealevel_modules: dict[str, ModuleServiceSpec] = {}
     framework_modules: dict[str, ModuleServiceSpec] = {}
     esl_modules: dict[str, ModuleServiceSpec] = {}
@@ -399,11 +396,11 @@ def _build_module_specs(
 
 
 def _create_esl_workflow_services(
-    esl_module_names: List[str],
+    esl_module_names: list[str],
     workflows: dict[str, Workflow],
     metadata: dict[str, Any],
     experiment_dir: Path,
-    projection_scale: Optional[str],
+    projection_scale: str | None,
     schemas: dict[str, ModuleSchema],
 ) -> dict[str, Any]:
     """Build one ESL compose service per workflow, keyed by service name."""

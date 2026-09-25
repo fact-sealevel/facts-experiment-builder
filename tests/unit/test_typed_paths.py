@@ -1,23 +1,23 @@
 """Tests for typed paths (TypedPath, HostPath, ContainerPath) and builder behavior."""
 
-from facts_experiment_builder.core.typed_path import (
-    TypedPath,
-    HostPath,
-    HostDirPath,
-    ContainerPath,
+from facts_experiment_builder.core.module.module_inputs_outputs import (
+    build_module_input_paths,
+    build_module_output_paths,
+)
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_service_spec import (
+    ModuleContainerImage,
+    ModuleServiceSpec,
+    ModuleServiceSpecComponents,
 )
 from facts_experiment_builder.core.module.service_spec_utils import (
     _dir_input_keys,
 )
-from facts_experiment_builder.core.module.module_service_spec import (
-    ModuleServiceSpec,
-    ModuleServiceSpecComponents,
-    ModuleContainerImage,
-)
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
-from facts_experiment_builder.core.module.module_inputs_outputs import (
-    build_module_input_paths,
-    build_module_output_paths,
+from facts_experiment_builder.core.typed_path import (
+    ContainerPath,
+    HostDirPath,
+    HostPath,
+    TypedPath,
 )
 
 

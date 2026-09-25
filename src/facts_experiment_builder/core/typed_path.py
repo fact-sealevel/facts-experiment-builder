@@ -5,7 +5,7 @@ rewrite).
 """
 
 from dataclasses import dataclass
-from typing import List, Literal, Union
+from typing import Literal, Union
 
 PathKind = Literal["host", "host_dir", "container", "experiment_specific_in"]
 
@@ -62,4 +62,4 @@ def ExperimentSpecificInputPath(path: str) -> TypedPath:
     return TypedPath(path=path, kind="experiment_specific_in")
 
 
-PathValue = Union[TypedPath, List[TypedPath]]
+PathValue = Union[TypedPath, list[TypedPath]]

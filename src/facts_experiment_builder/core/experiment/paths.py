@@ -1,8 +1,8 @@
 """Module for logic around experiment paths, including experiment name."""
 
-from pathlib import Path
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 _VALID = re.compile(r"^[A-Za-z0-9._-]+$")
 

@@ -1,5 +1,5 @@
-from typing import Set, Any, Dict, Optional, List
 import os
+from typing import Any
 
 from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
@@ -7,7 +7,7 @@ from facts_experiment_builder.core.typed_path import (
 )
 
 
-def _input_spec_by_key(module_definition: Any) -> Dict[str, dict]:
+def _input_spec_by_key(module_definition: Any) -> dict[str, dict]:
     result = {}
     for arg_spec in module_definition.arguments.get("inputs", []):
         source = arg_spec.get("source", "")
@@ -22,10 +22,10 @@ def declares_input(module_definition: Any, field_name: str) -> bool:
     return field_name in _input_spec_by_key(module_definition)
 
 
-def _dir_input_keys(module_definition: Any) -> Set[str]:
+def _dir_input_keys(module_definition: Any) -> set[str]:
     """Return set of input field names declared as directory paths (type: 'dir') in the
     module YAML."""
-    keys: Set[str] = set()
+    keys: set[str] = set()
     for arg_spec in module_definition.arguments.get("inputs", []):
         if arg_spec.get("type") != "dir":
             continue
@@ -72,7 +72,7 @@ def expand_path(path_str: Any, context: str = "") -> str:
     return os.path.abspath(os.path.expandvars(os.path.expanduser(path_str)))
 
 
-def is_shared_input(mount: Optional[dict]) -> bool:
+def is_shared_input(mount: dict | None) -> bool:
     """Determine if an input field is a shared input (shared across modules).
 
     Shared inputs include location files and fingerprint directories.
@@ -104,7 +104,7 @@ def is_shared_input(mount: Optional[dict]) -> bool:
 def resolve_input_path(
     field_name: str,
     field_value: Any,
-    mount: Optional[Dict],
+    mount: dict | None,
     shared_input_data: str,
     module_specific_input_data: str,
     module_name: str = "",
@@ -240,7 +240,7 @@ def resolve_output_path(field_value: Any, output_data_location: str, context: st
 
 
 def get_required_field(
-    metadata: Dict[str, Any], field_name: str, context: str = ""
+    metadata: dict[str, Any], field_name: str, context: str = ""
 ) -> Any:
     """Get a required field from metadata, raising an error if missing.
 
@@ -264,9 +264,9 @@ def get_required_field(
 
 
 def get_required_field_with_alternatives(
-    metadata: Dict[str, Any],
+    metadata: dict[str, Any],
     primary_field: str,
-    alternative_fields: List[str],
+    alternative_fields: list[str],
     context: str = "",
 ) -> Any:
     """Get a required field, trying primary first, then alternatives.
@@ -301,7 +301,7 @@ def get_required_field_with_alternatives(
     )
 
 
-def get_experiment_paths(metadata: Dict[str, Any], context: str = "") -> Dict[str, str]:
+def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[str, str]:
     """Extract experiment-level paths from metadata.
 
     Args:

@@ -3,12 +3,18 @@
 This script uses Jinja2-based YAML generation from setup_experiment.py.
 """
 
+# from typing import TYPE_CHECKING
+import logging
 from pathlib import Path
+
 import click
 from pydantic import ValidationError
 
-# from typing import TYPE_CHECKING
-import logging
+# ---------------------- Application imports ----------------------------
+from facts_experiment_builder.application.setup_experiment import (
+    finalize_experiment_setup,
+    prepare_experiment_setup,
+)
 
 # if TYPE_CHECKING:
 #     from facts_experiment_builder.core.experiment.experiment_skeleton import (
@@ -19,28 +25,22 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
-
-# ---------------------- Core imports ----------------------------
-from facts_experiment_builder.core.experiment.skeleton import (
-    is_totaling_needed,
-    ExperimentSkeleton,
-)
 from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
 )
 
-# ---------------------- Application imports ----------------------------
-from facts_experiment_builder.application.setup_experiment import (
-    prepare_experiment_setup,
-    finalize_experiment_setup,
+# ---------------------- Core imports ----------------------------
+from facts_experiment_builder.core.experiment.skeleton import (
+    ExperimentSkeleton,
+    is_totaling_needed,
+)
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
 )
 
 # ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.io.paths import ExperimentPaths
-from facts_experiment_builder.io.experiment_repository import (
-    StorageExperimentRepository,
-)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.WARNING)

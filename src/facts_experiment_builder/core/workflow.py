@@ -1,9 +1,8 @@
 """Core Workflow type: one workflow (name + sealevel module list) with parsing and
 helpers."""
 
-from dataclasses import dataclass
-from typing import Dict, List, Union
 import re
+from dataclasses import dataclass
 
 _VALID_WORKFLOW_NAME = re.compile(
     r"^[a-zA-Z0-9_.-]+$"
@@ -37,7 +36,7 @@ class Workflow:
     """
 
     name: str
-    module_names: List[str]
+    module_names: list[str]
 
     def __post_init__(self):
         if not isinstance(self.module_names, list):
@@ -71,7 +70,7 @@ class Workflow:
         return ",".join(self.module_names)
 
     @classmethod
-    def from_dict(cls, name: str, value: Union[str, List[str]]) -> "Workflow":
+    def from_dict(cls, name: str, value: str | list[str]) -> "Workflow":
         """Build from metadata value: string (comma-separated) or list of module
         names."""
         if isinstance(value, list):

@@ -1,9 +1,10 @@
+import pytest
+
 from facts_experiment_builder.core.experiment.skeleton import (
-    parse_module_regions,
     ExperimentSkeleton,
     is_totaling_needed,
+    parse_module_regions,
 )
-import pytest
 
 
 def test_is_totaling_needed_returns_false_if_less_than_2_sealevel_modules():

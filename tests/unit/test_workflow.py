@@ -1,11 +1,13 @@
-from hypothesis import given, strategies as st
+import pytest
+from hypothesis import given
+from hypothesis import strategies as st
+
 from facts_experiment_builder.core.workflow import (
+    _VALID_WORKFLOW_NAME,
     Workflow,
     WorkflowName,
-    _VALID_WORKFLOW_NAME,
     workflows_from_metadata,
 )
-import pytest
 
 valid_names = st.from_regex(_VALID_WORKFLOW_NAME, fullmatch=True)
 clean_module_name = st.from_regex(r"\A[A-Za-z0-9_-]+\Z", fullmatch=True)

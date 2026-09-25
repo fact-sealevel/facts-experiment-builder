@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
 import logging
+from dataclasses import dataclass, field
+from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.components.metadata_bundle import (
@@ -13,7 +13,7 @@ from facts_experiment_builder.core.module.module_schema import ModuleSchema
 logger = logging.getLogger(__name__)
 
 
-def _map_get(mapping: Dict[str, Any], val: Any) -> Any:
+def _map_get(mapping: dict[str, Any], val: Any) -> Any:
     """Look up val in mapping, tolerating int vs.
 
     string key mismatches.     YAML parses bare integers as int, but a value coming from
@@ -31,7 +31,7 @@ def _map_get(mapping: Dict[str, Any], val: Any) -> Any:
     return result
 
 
-def _multi_key_miss(arg_spec: dict, key: str, val: Any, parent: Any) -> Optional[str]:
+def _multi_key_miss(arg_spec: dict, key: str, val: Any, parent: Any) -> str | None:
     """Called when a multi-key filename_map lookup fails to find an entry.
 
     ``parent`` is the map node that was searched (before the failed step), so its keys
@@ -54,7 +54,7 @@ def _multi_key_miss(arg_spec: dict, key: str, val: Any, parent: Any) -> Optional
     return fallback
 
 
-def _resolve_filename(arg_spec: dict, options_context: Dict[str, Any]) -> Optional[Any]:
+def _resolve_filename(arg_spec: dict, options_context: dict[str, Any]) -> Any | None:
     """Return filename for an arg spec, preferring filename_map over filename.
 
     Supports two filename_map formats:
@@ -123,13 +123,13 @@ def _resolve_filename(arg_spec: dict, options_context: Dict[str, Any]) -> Option
     return arg_spec.get("filename")
 
 
-def _options_defaults_from_schema(options_specs: list[dict]) -> Dict[str, Any]:
+def _options_defaults_from_schema(options_specs: list[dict]) -> dict[str, Any]:
     """Extract {option-name: default_value} from the schema's options specs.
 
     Both kebab-case and snake_case keys are included so filename_map lookups work
     regardless of which form appears in the map.
     """
-    context: Dict[str, Any] = {}
+    context: dict[str, Any] = {}
     for opt_spec in options_specs:
         name = opt_spec.get("name", "")
         if name and "default_value" in opt_spec:
@@ -139,10 +139,10 @@ def _options_defaults_from_schema(options_specs: list[dict]) -> Dict[str, Any]:
 
 
 def _build_options_context(
-    schema_defaults: Dict[str, Any],
-    prefilled_options: Dict[str, Any],
-    top_level_context: Dict[str, Any],
-) -> Dict[str, Any]:
+    schema_defaults: dict[str, Any],
+    prefilled_options: dict[str, Any],
+    top_level_context: dict[str, Any],
+) -> dict[str, Any]:
     """Merge options context with priority: top_level < schema defaults <
     prefilled_options.
 
@@ -160,13 +160,13 @@ def _build_outputs(
     file_outputs: list[dict],
     other_outputs: list[dict],
     module_name: str,
-    options_context: Dict[str, Any],
-) -> Dict[str, Any]:
+    options_context: dict[str, Any],
+) -> dict[str, Any]:
     """Build the outputs dict for a module spec.
 
     Raises ValueError if a file output is missing filename/filename_map or output_type.
     """
-    outputs: Dict[str, Any] = {}
+    outputs: dict[str, Any] = {}
     for arg_spec in file_outputs:
         arg_name = arg_spec.get("name", "")
         if not arg_name:
@@ -204,9 +204,9 @@ def _build_outputs(
 def _build_section_from_fields(
     fields: list[dict],
     include_filename: bool = False,
-    prefilled_values: Optional[Dict[str, str]] = None,
-    options_context: Optional[Dict[str, Any]] = None,
-) -> Dict:
+    prefilled_values: dict[str, str] | None = None,
+    options_context: dict[str, Any] | None = None,
+) -> dict:
     prefilled_values = prefilled_values or {}
     options_context = options_context or {}
     result = {}
@@ -258,22 +258,22 @@ class ModuleExperimentSpec:
     """
 
     module_name: str
-    inputs: Dict[str, Any] = field(default_factory=dict)
-    options: Dict[str, Any] = field(default_factory=dict)
-    outputs: Dict[str, Any] = field(default_factory=dict)
-    fingerprint_params: Dict[str, Any] = field(default_factory=dict)
+    inputs: dict[str, Any] = field(default_factory=dict)
+    options: dict[str, Any] = field(default_factory=dict)
+    outputs: dict[str, Any] = field(default_factory=dict)
+    fingerprint_params: dict[str, Any] = field(default_factory=dict)
     image: str = ""
-    schema: Optional[ModuleSchema] = None
+    schema: ModuleSchema | None = None
 
     # Constructors
     @classmethod
     def from_module_schema(
         cls,
         module_schema: ModuleSchema,
-        prefilled_inputs: Optional[Dict[str, str]] = None,
-        prefilled_options: Optional[Dict[str, Any]] = None,
-        top_level_context: Optional[Dict[str, Any]] = None,
-    ) -> "ModuleExperimentSpec":
+        prefilled_inputs: dict[str, str] | None = None,
+        prefilled_options: dict[str, Any] | None = None,
+        top_level_context: dict[str, Any] | None = None,
+    ) -> ModuleExperimentSpec:
         """Build an initial spec with clue,value,default,filename placeholders.
 
         Args:
@@ -304,7 +304,7 @@ class ModuleExperimentSpec:
             prefilled_values=prefilled_inputs,
             options_context=options_context,
         )
-        options: Dict[str, Any] = {}
+        options: dict[str, Any] = {}
         top_level_names = [
             arg.get("name", "") for arg in module_schema.arguments.get("top_level", [])
         ]
@@ -344,7 +344,7 @@ class ModuleExperimentSpec:
         )
 
     @classmethod
-    def from_dict(cls, module_name: str, d: Dict[str, Any]) -> "ModuleExperimentSpec":
+    def from_dict(cls, module_name: str, d: dict[str, Any]) -> ModuleExperimentSpec:
         return cls(
             module_name=module_name,
             inputs=dict(d.get("inputs") or {}),
@@ -354,10 +354,10 @@ class ModuleExperimentSpec:
             image=d.get("image", ""),
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize to the flat dict shape used for a module's section in experiment-
         config.yaml (schema is serialized separately — see class docstring)."""
-        d: Dict[str, Any] = {
+        d: dict[str, Any] = {
             "inputs": dict(self.inputs),
             "options": dict(self.options),
             "image": self.image,

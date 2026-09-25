@@ -1,12 +1,12 @@
 from pathlib import Path
-import yaml
 from typing import Any
 
+import yaml
+
+from facts_experiment_builder.core.experiment.experiment import FactsExperiment
 from facts_experiment_builder.core.experiment.experiment_config import (
     facts_experiment_to_config,
 )
-from facts_experiment_builder.core.experiment.experiment import FactsExperiment
-
 from facts_experiment_builder.io.write_config import (
     write_config_jinja2,
 )

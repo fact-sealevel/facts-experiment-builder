@@ -1,6 +1,7 @@
-from facts_experiment_builder.core.module.module_service_spec import _parse_image
-from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
 import pytest
+
+from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
+from facts_experiment_builder.core.module.module_service_spec import _parse_image
 
 
 def test_input_arg_spec_by_key_returns_correct_spec():

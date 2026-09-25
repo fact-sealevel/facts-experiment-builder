@@ -1,10 +1,11 @@
 """Protocols (ports) describing the interfaces the application expects to interact with
 storage."""
 
-from typing import Protocol
 from pathlib import Path
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from typing import Protocol
+
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
 class ModuleRegistry(Protocol):

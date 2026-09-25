@@ -1,7 +1,8 @@
 """Tests for facts_experiment_builder.core.module.module_schema."""
 
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
 import pytest
+
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
 def test_module_schema_construction_minimal():

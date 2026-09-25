@@ -1,22 +1,23 @@
 """In-memory representation of an experiment (analogous to experiment-config.yaml)."""
 
 from dataclasses import dataclass
-from typing import Dict, Any, List, Optional, Set
 from datetime import datetime
+from typing import Any
+
+from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
+from facts_experiment_builder.core.steps import (
+    ClimateStep,
+    ExperimentStep,
+    ExtremeSealevelStep,
+    SealevelStep,
+    TotalingStep,
+    steps_from_metadata,
+)
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.workflow import (
     Workflow,
 )
-from facts_experiment_builder.core.steps import (
-    ClimateStep,
-    ExperimentStep,
-    SealevelStep,
-    TotalingStep,
-    ExtremeSealevelStep,
-    steps_from_metadata,
-)
-from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 
 
 @dataclass
@@ -58,7 +59,7 @@ PATH_KEYS_ALTERNATIVES = {
     "output-data-location": ["output_data_location", "output-path", "output_path"],
 }
 
-_STRUCTURAL_KEYS: Set[str] = (
+_STRUCTURAL_KEYS: set[str] = (
     set(MANIFEST_KEYS)
     | set(PATH_KEYS_PRIMARY)
     | {k for alts in PATH_KEYS_ALTERNATIVES.values() for k in alts}
@@ -92,16 +93,16 @@ class FactsExperiment:
     def __init__(
         self,
         experiment_name: str,
-        top_level_params: Dict[str, Any],  # TopLevelParams
+        top_level_params: dict[str, Any],  # TopLevelParams
         climate_step: ClimateStep,
         sealevel_step: SealevelStep,
         totaling_step: TotalingStep,
         extreme_sealevel_step: ExtremeSealevelStep,
-        paths: Dict[str, Any],
-        fingerprint_params: Dict[str, Any],
-        projection_scale: Optional[str] = "local",
-        extra: Optional[Dict[str, Any]] = None,
-        workflows: Optional[Dict[str, str]] = None,
+        paths: dict[str, Any],
+        fingerprint_params: dict[str, Any],
+        projection_scale: str | None = "local",
+        extra: dict[str, Any] | None = None,
+        workflows: dict[str, str] | None = None,
     ):
         self._experiment_name = experiment_name
         self._top_level_params = dict(top_level_params)
@@ -124,7 +125,7 @@ class FactsExperiment:
         return self._experiment_name
 
     @property
-    def top_level_params(self) -> Dict[str, Any]:
+    def top_level_params(self) -> dict[str, Any]:
         """Top-level parameters shared across modules (pipeline-id, scenario, baseyear,
         pyear_start, pyear_end, pyear_step, nsamps, seed)."""
         return self._top_level_params
@@ -146,11 +147,11 @@ class FactsExperiment:
         return self._extreme_sealevel_step
 
     @property
-    def projection_scale(self) -> Optional[str]:
+    def projection_scale(self) -> str | None:
         """The projection scale for this experiment."""
         return self._projection_scale
 
-    def list_all_steps(self) -> List[ExperimentStep]:
+    def list_all_steps(self) -> list[ExperimentStep]:
         """All experiment steps in order: climate → sealevel → totaling → ESL."""
         return [
             self._climate_step,
@@ -160,25 +161,25 @@ class FactsExperiment:
         ]
 
     @property
-    def paths(self) -> Dict[str, Any]:
+    def paths(self) -> dict[str, Any]:
         """Paths to the input and output data for this experiment."""
         return self._paths
 
     @property
-    def fingerprint_params(self) -> Dict[str, Any]:
+    def fingerprint_params(self) -> dict[str, Any]:
         """Fingerprint parameters (fingerprint-dir, location-file)."""
         return self._fingerprint_params
 
     @property
-    def extra(self) -> Dict[str, Any]:
+    def extra(self) -> dict[str, Any]:
         return self._extra
 
     @property
-    def workflows(self) -> Dict[str, str]:
+    def workflows(self) -> dict[str, str]:
         """Workflows for facts-total: workflow name -> comma-separated module list."""
         return self._workflows
 
-    def get_workflows_as_objects(self) -> Dict[str, Workflow]:
+    def get_workflows_as_objects(self) -> dict[str, Workflow]:
         """Workflows as Workflow instances (name -> Workflow)."""
         return {
             name: Workflow.from_dict(name, value)
@@ -188,9 +189,9 @@ class FactsExperiment:
     @classmethod
     def from_metadata_dict(
         cls,
-        metadata: Dict[str, Any],
-        top_level_keys: Optional[Set[str]] = None,
-        fingerprint_keys: Optional[Set[str]] = None,
+        metadata: dict[str, Any],
+        top_level_keys: set[str] | None = None,
+        fingerprint_keys: set[str] | None = None,
     ) -> "FactsExperiment":
         """Build a FactsExperiment from the metadata dict shape (e.g. from YAML).
 
