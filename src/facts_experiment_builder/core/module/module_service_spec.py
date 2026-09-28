@@ -1,7 +1,6 @@
 """Module in service: has all information needed to run a module and slot into an
 experiment implementation (e.g. one compose service)."""
 
-import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -16,16 +15,13 @@ from facts_experiment_builder.core.module.module_schema import (
     ModuleContainerImage,
     ModuleSchema,
 )
-from facts_experiment_builder.core.module.service_spec_utils import (
-    expand_path,
-    get_experiment_paths,
+from facts_experiment_builder.core.module.module_service_path_resolution import (
     get_required_field,
+    resolve_experiment_paths,
     resolve_input_path,
     resolve_output_path,
 )
-from facts_experiment_builder.core.source_resolver import (
-    resolve_value as resolve_source_value,
-)
+
 from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
 
 # ---------------------- Core imports ----------------------------
@@ -37,6 +33,51 @@ from facts_experiment_builder.core.typed_path import (
     PathValue,
     TypedPath,
 )
+
+
+def resolve_source_value(source: str, context: dict[str, Any]) -> Any:
+    """Resolve a value from a source path like 'metadata.pipeline-id' or
+    'module_inputs.inputs.rcmip_fname'.
+
+    The context dict typically has keys 'metadata' (experiment metadata) and 'module_inputs'
+    (ModuleServiceSpecComponents or similar), so that source strings in module YAML can
+    reference e.g. metadata.pipeline-id or module_inputs.outputs.foo.
+
+    Args:
+        source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location-file")
+        context: dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
+
+    Returns:
+        Resolved value, or None if any segment is missing
+    """
+    if not source or not isinstance(context, dict):
+        return None
+
+    parts = source.split(".")
+    obj = context
+
+    for part in parts:
+        if obj is None:
+            return None
+        if isinstance(obj, dict):
+            if part not in obj:
+                snake_case = part.replace("-", "_")
+                if snake_case in obj:
+                    part = snake_case
+                else:
+                    obj = obj.get(part)
+                    continue
+            obj = obj.get(part)
+        elif hasattr(obj, part):
+            obj = getattr(obj, part)
+        else:
+            snake_case = part.replace("-", "_")
+            if hasattr(obj, snake_case):
+                obj = getattr(obj, snake_case)
+            else:
+                return None
+
+    return obj
 
 
 @dataclass(frozen=True)
@@ -508,96 +549,49 @@ class ModuleServiceSpec:
         # }
 
 
-@dataclass
-class _ResolvedPaths:
-    shared_input_data: str
-    module_specific_input_data: str
-    experiment_specific_input_data: str | None
-    output_data_location: str
-    output_container_base: str | None = None
+def resolve_value(source: str, context: dict[str, Any]) -> Any:
+    """Resolve a value from a source path like 'metadata.pipeline-id' or
+    'module_inputs.inputs.rcmip_fname'.
 
+    The context dict typically has keys 'metadata' (experiment metadata) and 'module_inputs'
+    (ModuleServiceSpecComponents or similar), so that source strings in module YAML can
+    reference e.g. metadata.pipeline-id or module_inputs.outputs.foo.
 
-@dataclass
-class ExperimentOutputPath:
-    path: str
+    Args:
+        source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location-file")
+        context: dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
 
+    Returns:
+        Resolved value, or None if any segment is missing
+    """
+    if not source or not isinstance(context, dict):
+        return None
 
-def _resolve_experiment_paths(
-    metadata: dict[str, Any],
-    module_context: str,
-    known_module_names: list,
-    module_name: str,
-    module_definition: ModuleSchema,
-) -> _ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
-    # module_name = module_definition.module_name
-    experiment_paths = get_experiment_paths(metadata, module_context)
-    module_metadata = get_required_field(metadata, module_name, module_context)
+    parts = source.split(".")
+    obj = context
 
-    raw_exp_specific = metadata.get("experiment-specific-input-data")
-    if isinstance(raw_exp_specific, dict):
-        raw_exp_specific = raw_exp_specific.get("value")
-    experiment_specific_input = (
-        expand_path(
-            raw_exp_specific, f"{module_context} (experiment-specific-input-data)"
-        )
-        if raw_exp_specific
-        else None
-    )
+    for part in parts:
+        if obj is None:
+            return None
+        if isinstance(obj, dict):
+            if part not in obj:
+                snake_case = part.replace("-", "_")
+                if snake_case in obj:
+                    part = snake_case
+                else:
+                    obj = obj.get(part)
+                    continue
+            obj = obj.get(part)
+        elif hasattr(obj, part):
+            obj = getattr(obj, part)
+        else:
+            snake_case = part.replace("-", "_")
+            if hasattr(obj, snake_case):
+                obj = getattr(obj, snake_case)
+            else:
+                return None
 
-    shared_input_data = expand_path(
-        experiment_paths["shared_input_data"],
-        f"{module_context} (shared-input-data)",
-    )
-
-    module_specific_input_base = expand_path(
-        experiment_paths["module_specific_input_data"],
-        f"{module_context} (module-specific-input-data)",
-    )
-    # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
-    # so volume host path is always base + current module's suffix only (never another module's name).
-    if (
-        Path(module_specific_input_base).name in known_module_names
-    ):  # registry.module_names():
-        module_specific_input_base = str(Path(module_specific_input_base).parent)
-    # Module-specific input dir: driven by input_dir_name in module YAML (e.g. "ipccar5" for both
-    # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that
-    # per-workflow service names (e.g. extremesealevel-pointsoverthreshold-wf1) resolve to the base
-    # module's dir automatically.
-    module_specific_input_path_suffix = module_definition.input_dir_name  # ()
-    module_specific_input_data = (
-        module_specific_input_base + "/" + module_specific_input_path_suffix
-    )
-
-    output_data_partial = expand_path(
-        experiment_paths["output_data_location"],
-        f"{module_context} (output-data-location)",
-    )
-    # Only facts-total workflow services (names like facts-total-wf1) use a shared output
-    # subdir and optional container base. Other modules are unchanged.
-    is_facts_total_workflow = module_name.startswith("facts-total-")
-    if is_facts_total_workflow:
-        output_data_location = output_data_partial + "/facts-total"
-        if not Path(output_data_location).exists():
-            os.makedirs(output_data_location, exist_ok=True)
-
-        output_container_base = (
-            module_metadata.get("_output_container_base")
-            or "/mnt/total_out/facts-total"
-        )
-    else:
-        output_data_location = output_data_partial + "/" + module_name
-        if not Path(output_data_location).exists():
-            os.makedirs(output_data_location, exist_ok=True)
-        output_container_base = None
-
-    resolved_paths = _ResolvedPaths(
-        shared_input_data=shared_input_data,
-        module_specific_input_data=module_specific_input_data,
-        output_data_location=output_data_location,
-        experiment_specific_input_data=experiment_specific_input,
-        output_container_base=output_container_base,
-    )
-    return resolved_paths
+    return obj
 
 
 def _resolve_module_inputs_dict(
@@ -842,7 +836,7 @@ def build_module_service_spec(
 
     # scenario_name = get_required_field(metadata, "scenario", module_context)
 
-    resolved_paths = _resolve_experiment_paths(
+    resolved_paths = resolve_experiment_paths(
         metadata=metadata,
         module_context=module_context,
         known_module_names=known_module_names,

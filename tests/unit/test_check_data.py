@@ -14,7 +14,7 @@ from facts_experiment_builder.application.check_data import (
     execute_check,
     plan_fp_checks,
     plan_input_checks,
-    resolve_input_paths,
+    resolve_validate_input_paths,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
@@ -427,7 +427,7 @@ def test_value_error_if_module_specific_data_dir_not_exist(tmp_path):
         ValueError,
         match="Create it and download module input data first. See the quickstart guide.",
     ):
-        resolve_input_paths(
+        resolve_validate_input_paths(
             data_dir=data_dir,
             module_specific_input_data=module_specific_input_data,
             shared_input_data=shared_input_data,
@@ -443,7 +443,7 @@ def test_value_error_if_expected_subdirs_not_found_and_unexpected_is_found(tmp_p
         ValueError,
         match="Names MUST match 'module_specific_input_data' and 'shared_input_data'",
     ):
-        resolve_input_paths(
+        resolve_validate_input_paths(
             data_dir=data_dir, module_specific_input_data=None, shared_input_data=None
         )
 
@@ -455,7 +455,7 @@ def test_value_error_if_no_shared_data_dir_found(tmp_path):
     module_dir.mkdir(parents=True)
 
     with pytest.raises(ValueError, match="Shared input data directory not found:"):
-        resolve_input_paths(
+        resolve_validate_input_paths(
             data_dir=data_dir,
             module_specific_input_data=module_dir,
             shared_input_data=shared_input_data,
@@ -464,7 +464,7 @@ def test_value_error_if_no_shared_data_dir_found(tmp_path):
 
 def test_resolve_fails_when_both_subdirs_missing(tmp_path):
     with pytest.raises(ValueError, match="Expected subdirectory not found:"):
-        resolve_input_paths(tmp_path, None, None)
+        resolve_validate_input_paths(tmp_path, None, None)
 
 
 def test_resolve_fails_when_module_subdir_missing(tmp_path):
@@ -472,7 +472,7 @@ def test_resolve_fails_when_module_subdir_missing(tmp_path):
     with pytest.raises(
         ValueError, match="Expected subdirectory not found:.*module_specific_input_data"
     ):
-        resolve_input_paths(tmp_path, None, None)
+        resolve_validate_input_paths(tmp_path, None, None)
 
 
 def test_resolve_fails_when_shared_subdir_missing(tmp_path):
@@ -480,7 +480,7 @@ def test_resolve_fails_when_shared_subdir_missing(tmp_path):
     with pytest.raises(
         ValueError, match="Expected subdirectory not found:.*shared_input_data"
     ):
-        resolve_input_paths(tmp_path, None, None)
+        resolve_validate_input_paths(tmp_path, None, None)
 
 
 def test_resolve_error_lists_existing_subdirs_when_misnamed(tmp_path):
@@ -488,7 +488,7 @@ def test_resolve_error_lists_existing_subdirs_when_misnamed(tmp_path):
     (tmp_path / "incorrect_shared_data_name").mkdir()
 
     with pytest.raises(ValueError) as exc_info:
-        resolve_input_paths(tmp_path, None, None)
+        resolve_validate_input_paths(tmp_path, None, None)
 
     msg = str(exc_info.value)
     assert "Expected subdirectory not found:" in msg
@@ -500,13 +500,13 @@ def test_resolve_data_dir_only_returns_derived_paths(tmp_path):
     (tmp_path / "module_specific_input_data").mkdir()
     (tmp_path / "shared_input_data").mkdir()
 
-    module_dir, shared_dir = resolve_input_paths(tmp_path, None, None)
+    module_dir, shared_dir = resolve_validate_input_paths(tmp_path, None, None)
 
     assert module_dir == tmp_path / "module_specific_input_data"
     assert shared_dir == tmp_path / "shared_input_data"
 
 
-# --- resolve_input_paths: explicit path cases ---
+# --- resolve_validate_input_paths: explicit path cases ---
 
 
 def test_resolve_explicit_paths_returned_directly(tmp_path):
@@ -515,7 +515,9 @@ def test_resolve_explicit_paths_returned_directly(tmp_path):
     module_path.mkdir()
     shared_path.mkdir()
 
-    module_dir, shared_dir = resolve_input_paths(tmp_path, module_path, shared_path)
+    module_dir, shared_dir = resolve_validate_input_paths(
+        tmp_path, module_path, shared_path
+    )
 
     assert module_dir == module_path
     assert shared_dir == shared_path
@@ -528,7 +530,7 @@ def test_resolve_fails_when_explicit_module_path_missing(tmp_path):
     with pytest.raises(
         ValueError, match="Module-specific input data directory not found"
     ):
-        resolve_input_paths(tmp_path, tmp_path / "does_not_exist", shared_path)
+        resolve_validate_input_paths(tmp_path, tmp_path / "does_not_exist", shared_path)
 
 
 def test_resolve_fails_when_explicit_shared_path_missing(tmp_path):
@@ -536,10 +538,10 @@ def test_resolve_fails_when_explicit_shared_path_missing(tmp_path):
     module_path.mkdir()
 
     with pytest.raises(ValueError, match="Shared input data directory not found"):
-        resolve_input_paths(tmp_path, module_path, tmp_path / "does_not_exist")
+        resolve_validate_input_paths(tmp_path, module_path, tmp_path / "does_not_exist")
 
 
-# --- resolve_input_paths: mixed (one explicit, one derived) ---
+# --- resolve_validate_input_paths: mixed (one explicit, one derived) ---
 
 
 def test_resolve_explicit_module_overrides_data_dir(tmp_path):
@@ -547,7 +549,9 @@ def test_resolve_explicit_module_overrides_data_dir(tmp_path):
     explicit_module.mkdir()
     (tmp_path / "shared_input_data").mkdir()
 
-    module_dir, shared_dir = resolve_input_paths(tmp_path, explicit_module, None)
+    module_dir, shared_dir = resolve_validate_input_paths(
+        tmp_path, explicit_module, None
+    )
 
     assert module_dir == explicit_module
     assert shared_dir == tmp_path / "shared_input_data"
@@ -558,7 +562,9 @@ def test_resolve_explicit_shared_overrides_data_dir(tmp_path):
     explicit_shared = tmp_path / "custom_shared"
     explicit_shared.mkdir()
 
-    module_dir, shared_dir = resolve_input_paths(tmp_path, None, explicit_shared)
+    module_dir, shared_dir = resolve_validate_input_paths(
+        tmp_path, None, explicit_shared
+    )
 
     assert module_dir == tmp_path / "module_specific_input_data"
     assert shared_dir == explicit_shared
