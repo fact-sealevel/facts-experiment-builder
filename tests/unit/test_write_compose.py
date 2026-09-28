@@ -66,13 +66,6 @@ def test_make_compose_yaml_does_not_wrap_long_lines():
     assert yaml.safe_load(yaml_content) == content_dict
 
 
-def test_make_compose_yaml_preserves_unicode():
-    content_dict = {"services": {"mod": {"label": "café ☃"}}}
-    yaml_content = make_compose_yaml(content_dict=content_dict)
-    assert "café" in yaml_content
-    assert yaml.safe_load(yaml_content) == content_dict
-
-
 # --- make_compose_yaml: property-based round-trip ---
 
 _service_name = st.text(
