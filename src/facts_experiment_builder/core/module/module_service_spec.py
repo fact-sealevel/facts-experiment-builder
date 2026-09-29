@@ -39,6 +39,7 @@ def resolve_source_value(source: str, context: dict[str, Any]) -> Any:
     """Resolve a value from a source path like 'metadata.pipeline-id' or
     'module_inputs.inputs.rcmip_fname'.
 
+    The context dict is all of the information about a module needed to create a Docker Compose service. Information is taken from experiment-config.yaml
     The context dict typically has keys 'metadata' (experiment metadata) and 'module_inputs'
     (ModuleServiceSpecComponents or similar), so that source strings in module YAML can
     reference e.g. metadata.pipeline-id or module_inputs.outputs.foo.
@@ -50,9 +51,8 @@ def resolve_source_value(source: str, context: dict[str, Any]) -> Any:
     Returns:
         Resolved value, or None if any segment is missing
     """
-    if not source or not isinstance(context, dict):
+    if not source:
         return None
-
     parts = source.split(".")
     obj = context
 
