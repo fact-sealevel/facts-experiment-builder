@@ -16,6 +16,11 @@ from facts_experiment_builder.application.check_data import (
     plan_input_checks,
     resolve_validate_input_paths,
 )
+from facts_experiment_builder.core.module.arg_specs import (
+    ArgumentsSpec,
+    FingerprintParamSpec,
+    InputArgSpec,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 
@@ -23,12 +28,18 @@ from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 # factories to build fixtures (same as test_setup_experiment)
 def test_plan_fp_uses_default_value_if_type_dir():
     plans = plan_fp_checks(
-        {
-            "name": "some_dir",
-            "type": "dir",
-            "default_value": "dirname",
-            "mount": {"volume": "input", "container_path": "/mnt/module_specific_in"},
-        }
+        FingerprintParamSpec(
+            **{
+                "name": "some_dir",
+                "type": "dir",
+                "source": "module_inputs.fingerprint_params.some_dir",
+                "default_value": "dirname",
+                "mount": {
+                    "volume": "input",
+                    "container_path": "/mnt/module_specific_in",
+                },
+            }
+        )
     )
     assert len(plans) == 1, f"Expected len == 1 but len = {len(plans)}"
     assert plans == [PlannedCheck("some_dir", "dirname", "")]
@@ -36,18 +47,31 @@ def test_plan_fp_uses_default_value_if_type_dir():
 
 def test_plan_fp_skips_if_fp_container_is_shared():
     plans = plan_fp_checks(
-        {"name": "a", "mount": {"volume": "input", "container_path": "/mnt/shared_in"}}
+        FingerprintParamSpec(
+            **{
+                "name": "a",
+                "type": "file",
+                "source": "module_inputs.fingerprint_params.a",
+                "mount": {"volume": "input", "container_path": "/mnt/shared_in"},
+            }
+        )
     )
     assert plans == [PlannedCheck("a", None, "uses shared fp data, checked elsewhere.")]
 
 
 def test_plan_fp_returns_cannot_verify_if_no_fname_or_default_value():
     plans = plan_fp_checks(
-        {
-            "name": "something_fake",
-            "type": "dir",
-            "mount": {"volume": "input", "container_path": "/mnt/module_specific_in"},
-        }
+        FingerprintParamSpec(
+            **{
+                "name": "something_fake",
+                "type": "dir",
+                "source": "module_inputs.fingerprint_params.something_fake",
+                "mount": {
+                    "volume": "input",
+                    "container_path": "/mnt/module_specific_in",
+                },
+            }
+        )
     )
     assert plans == [
         PlannedCheck(
@@ -60,7 +84,13 @@ def test_plan_fp_returns_cannot_verify_if_no_fname_or_default_value():
 
 def test_output_mount_skipped_in_plan():
     plans = plan_input_checks(
-        {"name": "x", "mount": {"volume": "output"}}, output_volume_input_keys={"x"}
+        InputArgSpec(
+            name="x",
+            type="file",
+            source="module_inputs.inputs.x",
+            mount={"volume": "output", "container_path": "/mnt/out"},
+        ),
+        output_volume_input_keys={"x"},
     )
     assert plans == [
         PlannedCheck(
@@ -71,7 +101,13 @@ def test_output_mount_skipped_in_plan():
 
 def test_output_mount_skipped_when_plan_executed(tmp_path):
     plans = plan_input_checks(
-        {"name": "x", "mount": {"volume": "output"}}, output_volume_input_keys={"x"}
+        InputArgSpec(
+            name="x",
+            type="file",
+            source="module_inputs.inputs.x",
+            mount={"volume": "output", "container_path": "/mnt/out"},
+        ),
+        output_volume_input_keys={"x"},
     )
     plan = plans[0]
     result = execute_check(plan=plan, module_input_dir=tmp_path)
@@ -82,7 +118,14 @@ def test_output_mount_skipped_when_plan_executed(tmp_path):
 
 def test_file_type_uses_filename():
     plans = plan_input_checks(
-        {"name": "x", "type": "file", "filename": "am.nc"},
+        InputArgSpec(
+            **{
+                "name": "x",
+                "source": "module_inputs.inputs.x",
+                "type": "file",
+                "filename": "am.nc",
+            }
+        ),
         output_volume_input_keys=set(),
     )
     assert plans == [PlannedCheck("x", "am.nc")]
@@ -90,7 +133,14 @@ def test_file_type_uses_filename():
 
 def test_list_filename_yields_one_plan_each():
     plans = plan_input_checks(
-        {"name": "x", "type": "file", "filename": ["a.nc", "b.nc"]},
+        InputArgSpec(
+            **{
+                "name": "x",
+                "source": "module_inputs.inputs.x",
+                "type": "file",
+                "filename": ["a.nc", "b.nc"],
+            }
+        ),
         output_volume_input_keys=set(),
     )
     assert [p.rel_path for p in plans] == ["a.nc", "b.nc"]
@@ -98,7 +148,10 @@ def test_list_filename_yields_one_plan_each():
 
 def test_unknown_type_is_unverifiable():
     plans = plan_input_checks(
-        {"name": "x", "type": "mystery"}, output_volume_input_keys=set()
+        InputArgSpec(
+            **{"name": "x", "source": "module_inputs.inputs.x", "type": "mystery"}
+        ),
+        output_volume_input_keys=set(),
     )
     assert plans[0].rel_path is None
 
@@ -116,12 +169,15 @@ def test_execute_reports_missing_file(tmp_path):
 
 def test_plan_input_checks_returns_empty_for_shared_input():
     plans = plan_input_checks(
-        {
-            "name": "x",
-            "type": "file",
-            "filename": "a.nc",
-            "mount": {"volume": "input", "container_path": "/mnt/shared_in"},
-        },
+        InputArgSpec(
+            **{
+                "name": "x",
+                "type": "file",
+                "source": "module_inputs.inputs.x",
+                "filename": "a.nc",
+                "mount": {"volume": "input", "container_path": "/mnt/shared_in"},
+            }
+        ),
         output_volume_input_keys=set(),
     )
     assert plans == []
@@ -129,7 +185,14 @@ def test_plan_input_checks_returns_empty_for_shared_input():
 
 def test_plan_input_checks_assigns_default_value_for_dir_type():
     plans = plan_input_checks(
-        {"name": "x", "type": "dir", "default_value": "dirname"},
+        InputArgSpec(
+            **{
+                "name": "x",
+                "source": "module_inputs.inputs.x",
+                "type": "dir",
+                "default_value": "dirname",
+            }
+        ),
         output_volume_input_keys=set(),
     )
 
@@ -138,7 +201,14 @@ def test_plan_input_checks_assigns_default_value_for_dir_type():
 
 def test_plan_input_checks_assigns_filename_for_file_type():
     plans = plan_input_checks(
-        {"name": "x", "type": "file", "filename": "file.nc"},
+        InputArgSpec(
+            **{
+                "name": "x",
+                "source": "module_inputs.inputs.x",
+                "type": "file",
+                "filename": "file.nc",
+            }
+        ),
         output_volume_input_keys=set(),
     )
     assert plans[0].rel_path == "file.nc"
@@ -146,7 +216,14 @@ def test_plan_input_checks_assigns_filename_for_file_type():
 
 def test_plan_input_checks_assigns_default_value_for_dir_type_w_parent():
     plans = plan_input_checks(
-        {"name": "x", "type": "dir", "default_value": "dirname/child"},
+        InputArgSpec(
+            **{
+                "name": "x",
+                "source": "module_inputs.inputs.x",
+                "type": "dir",
+                "default_value": "dirname/child",
+            }
+        ),
         output_volume_input_keys=set(),
     )
 
@@ -187,7 +264,9 @@ def test_check_module_skips_output_volume(
     schema = ModuleSchema(
         module_name="my-module",
         container_image="img:tag",
-        arguments={"inputs": [climate_data_file_arg_spec.model_dump()], "outputs": {}},
+        arguments=ArgumentsSpec.model_validate(
+            {"inputs": [climate_data_file_arg_spec.model_dump()], "outputs": {}}
+        ),
         volumes={"output": {"host_path": "module_inputs.output_paths.output_dir"}},
     )
     checks = _check_module(schema, tmp_path / "module_data")
@@ -201,7 +280,9 @@ def test_check_module_skips_missing_filename(tmp_path, non_file_input_arg_spec):
     schema = ModuleSchema(
         module_name="my-module",
         container_image="img:tag",
-        arguments={"inputs": [non_file_input_arg_spec.model_dump()], "outputs": {}},
+        arguments=ArgumentsSpec.model_validate(
+            {"inputs": [non_file_input_arg_spec.model_dump()], "outputs": {}}
+        ),
         volumes={},
     )
     checks = _check_module(schema, tmp_path / "module_data")
@@ -300,11 +381,13 @@ def test_check_module_fingerprint_params_module_specific_checked(
     schema = ModuleSchema(
         module_name="my-module",
         container_image="img:tag",
-        arguments={
-            "inputs": [],
-            "fingerprint_params": [fp_module_specific_arg_spec.model_dump()],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [],
+                "fingerprint_params": [fp_module_specific_arg_spec.model_dump()],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     module_input_dir = tmp_path / "module_data"
@@ -347,11 +430,13 @@ def test_check_module_fingerprint_params_shared_not_checked_here(
     schema = ModuleSchema(
         module_name="my-module",
         container_image="img:tag",
-        arguments={
-            "inputs": [],
-            "fingerprint_params": [fp_shared_arg_spec.model_dump()],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [],
+                "fingerprint_params": [fp_shared_arg_spec.model_dump()],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     checks = _check_module(schema, tmp_path / "module_data")

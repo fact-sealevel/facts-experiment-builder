@@ -8,6 +8,7 @@ from facts_experiment_builder.application.generate_compose import (
     check_metadata_has_required_fields,
     check_module_schemas_present,
 )
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
@@ -17,16 +18,19 @@ def _make_climate_schema(input_name: str) -> ModuleSchema:
         module_name="test-module",
         container_image="img:tag",
         uses_climate_file=True,
-        arguments={
-            "inputs": [
-                {
-                    "name": input_name,
-                    "type": "str",
-                    "source": f"module_inputs.inputs.{source_key}",
-                    "mount": {"volume": "output", "container_path": "/mnt/out"},
-                }
-            ]
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": input_name,
+                        "type": "str",
+                        "source": f"module_inputs.inputs.{source_key}",
+                        "climate_step_output": "output-climate-file",
+                        "mount": {"volume": "output", "container_path": "/mnt/out"},
+                    }
+                ]
+            }
+        ),
         volumes={
             "output": {
                 "host_path": "module_inputs.output_paths.output_dir",
@@ -91,7 +95,7 @@ def _make_module_schema(mod: str, file_outputs: list) -> ModuleSchema:
     return ModuleSchema(
         module_name=mod,
         container_image="img:tag",
-        arguments={"outputs": {"files": file_outputs}},
+        arguments=ArgumentsSpec.model_validate({"outputs": {"files": file_outputs}}),
         volumes={},
     )
 
@@ -148,14 +152,14 @@ def test_collect_workflow_output_paths_excludes_pass_to_total_false():
             {
                 "name": "output-gslr-file",
                 "type": "file",
-                "source": "s",
+                "source": "module_inputs.outputs.output_gslr_file",
                 "output_type": "global",
                 "pass_to_total": True,
             },
             {
                 "name": "output-gslr-wais-file",
                 "type": "file",
-                "source": "s",
+                "source": "module_inputs.outputs.output_gslr_wais_file",
                 "output_type": "global",
                 "pass_to_total": False,
             },
@@ -264,23 +268,27 @@ def _make_esl_schema(module_name: str) -> ModuleSchema:
     return ModuleSchema(
         module_name=module_name,
         container_image="img:tag",
-        arguments={
-            "inputs": [
-                {
-                    "name": "total-localsl-file",
-                    "source": "module_inputs.inputs.total_localsl_file",
-                    "mount": {"volume": "output", "container_path": "/mnt/out"},
-                },
-                {
-                    "name": "gesla-dir",
-                    "source": "module_inputs.inputs.gesla_dir",
-                    "mount": {
-                        "volume": "module_specific_in",
-                        "container_path": "/mnt/module_specific_in",
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "total-localsl-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.total_localsl_file",
+                        "mount": {"volume": "output", "container_path": "/mnt/out"},
                     },
-                },
-            ]
-        },
+                    {
+                        "name": "gesla-dir",
+                        "type": "dir",
+                        "source": "module_inputs.inputs.gesla_dir",
+                        "mount": {
+                            "volume": "module_specific_in",
+                            "container_path": "/mnt/module_specific_in",
+                        },
+                    },
+                ]
+            }
+        ),
         volumes={
             "output": {"host_path": "module_inputs.output_paths.output_dir"},
         },

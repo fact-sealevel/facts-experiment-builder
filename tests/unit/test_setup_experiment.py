@@ -10,6 +10,7 @@ from facts_experiment_builder.application.setup_experiment import (
 from facts_experiment_builder.core.experiment.skeleton import (
     hydrate_experiment,
 )
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
     collect_metadata_param_keys,
@@ -253,13 +254,15 @@ def make_schema_with_args(
     return ModuleSchema(
         module_name=name,
         container_image="test/image:latest",
-        arguments={
-            "inputs": [],
-            "options": [],
-            "outputs": {},
-            "top_level": top_level or [],
-            "fingerprint_params": fingerprint_params or [],
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [],
+                "options": [],
+                "outputs": {},
+                "top_level": top_level or [],
+                "fingerprint_params": fingerprint_params or [],
+            }
+        ),
         volumes={},
     )
 
@@ -269,12 +272,19 @@ def test_collect_metadata_param_keys_top_level_returns_metadata_sourced_keys():
         top_level=[
             {
                 "name": "pipeline-id",
+                "type": "str",
                 "source": "metadata.pipeline-id",
                 "help": "Pipeline ID",
             },
-            {"name": "baseyear", "source": "metadata.baseyear", "help": "Base year"},
+            {
+                "name": "baseyear",
+                "type": "str",
+                "source": "metadata.baseyear",
+                "help": "Base year",
+            },
             {
                 "name": "chunksize",
+                "type": "str",
                 "source": "module_inputs.options.chunksize",
                 "help": "Chunk size",
             },
@@ -290,11 +300,13 @@ def test_collect_metadata_param_keys_fingerprint_params_excludes_module_inputs()
         fingerprint_params=[
             {
                 "name": "location-file",
+                "type": "str",
                 "source": "metadata.location-file",
                 "help": "Location file",
             },
             {
                 "name": "fingerprint-dir",
+                "type": "str",
                 "source": "module_inputs.fingerprint_params.fingerprint_dir",
                 "help": "FP dir",
             },
@@ -309,14 +321,29 @@ def test_collect_metadata_param_keys_deduplicates_across_schemas():
     schema_a = make_schema_with_args(
         name="module-a",
         top_level=[
-            {"name": "pipeline-id", "source": "metadata.pipeline-id", "help": "From A"}
+            {
+                "name": "pipeline-id",
+                "type": "str",
+                "source": "metadata.pipeline-id",
+                "help": "From A",
+            }
         ],
     )
     schema_b = make_schema_with_args(
         name="module-b",
         top_level=[
-            {"name": "pipeline-id", "source": "metadata.pipeline-id", "help": "From B"},
-            {"name": "scenario", "source": "metadata.scenario", "help": "Scenario"},
+            {
+                "name": "pipeline-id",
+                "type": "str",
+                "source": "metadata.pipeline-id",
+                "help": "From B",
+            },
+            {
+                "name": "scenario",
+                "type": "str",
+                "source": "metadata.scenario",
+                "help": "Scenario",
+            },
         ],
     )
     result = collect_metadata_param_keys([schema_a, schema_b], "top_level")
@@ -330,6 +357,7 @@ def test_collect_metadata_param_keys_empty_when_no_metadata_sources():
         fingerprint_params=[
             {
                 "name": "fingerprint-dir",
+                "type": "str",
                 "source": "module_inputs.fingerprint_params.fingerprint_dir",
             },
         ]
@@ -374,7 +402,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module():
                         {
                             "name": "output-climate-file",
                             "type": "file",
-                            "source": "module_inputs.output.output_0",
+                            "source": "module_inputs.outputs.output_0",
                             "output_type": "global",
                             "filename": "climate.nc",
                             "help": "help",
@@ -431,7 +459,7 @@ def test_hydrate_experiment_doesnt_return_wrong_climate_file():
                         {
                             "name": "output-climate-file",
                             "type": "file",
-                            "source": "module_inputs.output.output_0",
+                            "source": "module_inputs.outputs.output_0",
                             "output_type": "global",
                             "filename": "climate.nc",
                             "help": "help",
@@ -487,7 +515,7 @@ def test_hydrate_experiment_prefills_climate_file_from_climate_module_2():
                         {
                             "name": "output-climate-file",
                             "type": "file",
-                            "source": "module_inputs.output.output_0",
+                            "source": "module_inputs.outputs.output_0",
                             "output_type": "global",
                             "filename": "climate.nc",
                             "help": "help",
@@ -555,7 +583,7 @@ def test_hydrate_experiment_prefills_correct_file_for_different_climate_module()
                         {
                             "name": "output-climate-file",
                             "type": "file",
-                            "source": "module_inputs.output.output_0",
+                            "source": "module_inputs.outputs.output_0",
                             "output_type": "global",
                             "filename": "climate.nc",
                             "help": "help",
@@ -609,7 +637,7 @@ def test_hydrate_experiment_prefills_gsat_file_for_sealevel_module_expecting_gsa
                         {
                             "name": "output-climate-file",
                             "type": "file",
-                            "source": "module_inputs.output.output_0",
+                            "source": "module_inputs.outputs.output_0",
                             "output_type": "global",
                             "filename": "climate.nc",
                             "help": "help",
@@ -622,7 +650,7 @@ def test_hydrate_experiment_prefills_gsat_file_for_sealevel_module_expecting_gsa
                         {
                             "name": "output-gsat-file",
                             "type": "file",
-                            "source": "module_inpputs.output.output_1",
+                            "source": "module_inputs.outputs.output_1",
                             "output_type": "global",
                             "filename": "gsat.nc",
                             "help": "help",
@@ -676,7 +704,7 @@ def test_hydrate_experiment_prefills_per_module_independently():
                         {
                             "name": "output-climate-file",
                             "type": "file",
-                            "source": "module_inputs.output.output_0",
+                            "source": "module_inputs.outputs.output_0",
                             "output_type": "global",
                             "filename": "climate.nc",
                             "help": "help",
@@ -689,7 +717,7 @@ def test_hydrate_experiment_prefills_per_module_independently():
                         {
                             "name": "output-gsat-file",
                             "type": "file",
-                            "source": "module_inpputs.output.output_1",
+                            "source": "module_inputs.outputs.output_1",
                             "output_type": "global",
                             "filename": "gsat.nc",
                             "help": "help",

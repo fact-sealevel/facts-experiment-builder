@@ -2,6 +2,7 @@
 
 import pytest
 
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
@@ -10,12 +11,12 @@ def test_module_schema_construction_minimal():
     mod = ModuleSchema(
         module_name="test-module",
         container_image="ghcr.io/org/image:0.1.0",
-        arguments={},
+        arguments=ArgumentsSpec(),
         volumes={},
     )
     assert mod.module_name == "test-module"
     assert mod.container_image == "ghcr.io/org/image:0.1.0"
-    assert mod.arguments == {}
+    assert mod.arguments == ArgumentsSpec()
     assert mod.volumes == {}
     assert mod.depends_on is None
     assert mod.command == ""
@@ -28,7 +29,7 @@ def test_module_schema_construction_with_optionals():
     mod = ModuleSchema(
         module_name="ipccar5-glaciers",
         container_image="ghcr.io/fact-sealevel/ipccar5:0.1.1",
-        arguments={"top_level": [], "options": []},
+        arguments=ArgumentsSpec.model_validate({"top_level": [], "options": []}),
         volumes={
             "module_specific_input": {"host_path": "x", "container_path": "/mnt/in"}
         },
@@ -49,12 +50,12 @@ def test_module_schema_construction_with_optionals():
         {"service": "fair-temperature", "condition": "service_completed_successfully"}
     ]
     assert mod.extra == {"climate_file_required": True}
-    assert "top_level" in mod.arguments
+    assert mod.arguments.top_level == []
     assert "module_specific_input" in mod.volumes
 
 
 def test_module_schema_post_init_normalizes_none_arguments():
-    """__post_init__ sets arguments to {} when passed None (if dataclass allows)."""
+    """__post_init__ sets arguments to an empty ArgumentsSpec when passed None."""
     # ModuleSchema uses a dataclass with arguments: Dict[...]; passing None can happen from YAML load.
     # The type hint doesn't allow None, but __post_init__ guards for it.
     mod = ModuleSchema(
@@ -63,7 +64,7 @@ def test_module_schema_post_init_normalizes_none_arguments():
         arguments=None,  # type: ignore[arg-type]
         volumes={},
     )
-    assert mod.arguments == {}
+    assert mod.arguments == ArgumentsSpec()
 
 
 def test_module_schema_post_init_normalizes_none_volumes():
@@ -71,7 +72,7 @@ def test_module_schema_post_init_normalizes_none_volumes():
     mod = ModuleSchema(
         module_name="test",
         container_image="img:tag",
-        arguments={},
+        arguments=ArgumentsSpec(),
         volumes=None,  # type: ignore[arg-type]
     )
     assert mod.volumes == {}
@@ -89,26 +90,30 @@ def test_module_schema_arguments_structure_preserved():
                 "name": "climate-data-file",
                 "type": "file",
                 "source": "module_inputs.inputs.climate_data_file",
+                "climate_step_output": "output-climate-file",
             }
         ],
-        "outputs": [
-            {
-                "name": "output-gslr-file",
-                "type": "file",
-                "source": "module_inputs.outputs.output_gslr_file",
-            }
-        ],
+        "outputs": {
+            "files": [
+                {
+                    "name": "output-gslr-file",
+                    "type": "file",
+                    "source": "module_inputs.outputs.output_gslr_file",
+                    "output_type": "global",
+                }
+            ]
+        },
     }
     mod = ModuleSchema(
         module_name="test",
         container_image="img:tag",
-        arguments=arguments,
+        arguments=ArgumentsSpec.model_validate(arguments),
         volumes={},
     )
-    assert mod.arguments == arguments
-    assert mod.arguments["top_level"][0]["name"] == "scenario"
-    assert len(mod.arguments["inputs"]) == 1
-    assert mod.arguments["inputs"][0]["name"] == "climate-data-file"
+    assert mod.arguments.model_dump(exclude_unset=True) == arguments
+    assert mod.arguments.top_level[0].name == "scenario"
+    assert len(mod.arguments.inputs) == 1
+    assert mod.arguments.inputs[0].name == "climate-data-file"
 
 
 def test_module_schema_volumes_structure_preserved():
@@ -126,7 +131,7 @@ def test_module_schema_volumes_structure_preserved():
     mod = ModuleSchema(
         module_name="test",
         container_image="img:tag",
-        arguments={},
+        arguments=ArgumentsSpec(),
         volumes=volumes,
     )
     assert mod.volumes == volumes
@@ -141,7 +146,7 @@ def test_module_schema_extra_default():
     mod = ModuleSchema(
         module_name="test",
         container_image="img:tag",
-        arguments={},
+        arguments=ArgumentsSpec(),
         volumes={},
     )
     assert mod.extra == {}
@@ -156,7 +161,7 @@ def test_from_dict_minimal():
     schema = ModuleSchema.from_dict({"module_name": "foo", "container_image": "img:1"})
     assert schema.module_name == "foo"
     assert schema.container_image == "img:1"
-    assert schema.arguments == {}
+    assert schema.arguments == ArgumentsSpec()
     assert schema.volumes == {}
     assert schema.depends_on is None
     assert schema.command == ""
@@ -169,14 +174,14 @@ def test_from_dict_empty():
     schema = ModuleSchema.from_dict({})
     assert schema.module_name == ""
     assert schema.container_image == ""
-    assert schema.arguments == {}
+    assert schema.arguments == ArgumentsSpec()
     assert schema.volumes == {}
 
 
 def test_from_dict_normalizes_none_arguments():
-    """from_dict sets arguments to {} when the YAML value is null/None."""
+    """from_dict sets arguments to an empty ArgumentsSpec when the YAML value is null/None."""
     schema = ModuleSchema.from_dict({"module_name": "foo", "arguments": None})
-    assert schema.arguments == {}
+    assert schema.arguments == ArgumentsSpec()
 
 
 def test_from_dict_normalizes_none_volumes():
@@ -222,7 +227,7 @@ def test_from_dict_full():
     assert schema.depends_on == [
         {"service": "fair-temperature", "condition": "service_completed_successfully"}
     ]
-    assert "top_level" in schema.arguments
+    assert schema.arguments.top_level == []
     assert "output" in schema.volumes
     assert schema.per_workflow is False
     # assert schema.extra == {"per_workflow": False}
@@ -235,7 +240,10 @@ def test_from_dict_full():
 
 def test_get_climate_output_type_returns_none_when_no_climate_input():
     mod = ModuleSchema(
-        module_name="m", container_image="img:tag", arguments={}, volumes={}
+        module_name="m",
+        container_image="img:tag",
+        arguments=ArgumentsSpec(),
+        volumes={},
     )
     assert mod.get_climate_output_type() is None
 
@@ -244,15 +252,18 @@ def test_get_climate_output_type_reads_climate_step_output_from_climate_data_fil
     mod = ModuleSchema(
         module_name="sealevel-module",
         container_image="img:tag",
-        arguments={
-            "inputs": [
-                {
-                    "name": "climate-data-file",
-                    "source": "module_inputs.inputs.climate_data_file",
-                    "climate_step_output": "output-climate-file",
-                }
-            ]
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "climate-data-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.climate_data_file",
+                        "climate_step_output": "output-climate-file",
+                    }
+                ]
+            }
+        ),
         volumes={},
     )
     assert mod.get_climate_output_type() == "output-climate-file"
@@ -262,15 +273,18 @@ def test_get_climate_output_type_reads_from_input_data_file_input():
     mod = ModuleSchema(
         module_name="sealevel-module",
         container_image="img:tag",
-        arguments={
-            "inputs": [
-                {
-                    "name": "input-data-file",
-                    "source": "module_inputs.inputs.input_data_file",
-                    "climate_step_output": "output-gsat-file",
-                }
-            ]
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "input-data-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.input_data_file",
+                        "climate_step_output": "output-gsat-file",
+                    }
+                ]
+            }
+        ),
         volumes={},
     )
     assert mod.get_climate_output_type() == "output-gsat-file"
@@ -280,14 +294,17 @@ def test_get_climate_output_type_returns_none_for_non_climate_inputs():
     mod = ModuleSchema(
         module_name="sealevel-module",
         container_image="img:tag",
-        arguments={
-            "inputs": [
-                {
-                    "name": "location-file",
-                    "source": "module_inputs.inputs.location_file",
-                }
-            ]
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "location-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.location_file",
+                    }
+                ]
+            }
+        ),
         volumes={},
     )
     assert mod.get_climate_output_type() is None

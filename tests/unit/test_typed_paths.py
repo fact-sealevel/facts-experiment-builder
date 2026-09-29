@@ -4,6 +4,8 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
     build_module_input_paths,
     build_module_output_paths,
 )
+from facts_experiment_builder.core.components.top_level_params import TopLevelParams
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleContainerImage,
@@ -62,26 +64,29 @@ def test_container_path_list_pass_through():
         },
         outputs={},
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
-        metadata={},
+        top_level_params=TopLevelParams(),
         output_container_base=None,
     )
     module_def = ModuleSchema(
         module_name="test-mod",
         container_image="img:tag",
-        arguments={
-            "top_level": [],
-            "options": [],
-            "fingerprint_params": [],
-            "inputs": [
-                {
-                    "name": "item",
-                    "source": "module_inputs.inputs.item",
-                    "mount": {"volume": "input", "container_path": "/mnt/total_in"},
-                    "multiple": True,
-                }
-            ],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "top_level": [],
+                "options": [],
+                "fingerprint_params": [],
+                "inputs": [
+                    {
+                        "name": "item",
+                        "type": "file",
+                        "source": "module_inputs.inputs.item",
+                        "mount": {"volume": "input", "container_path": "/mnt/total_in"},
+                        "multiple": True,
+                    }
+                ],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     spec = ModuleServiceSpec(components=components, module_definition=module_def)
@@ -115,29 +120,32 @@ def test_host_path_list_transformed_to_container():
         },
         outputs={},
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
-        metadata={},
+        top_level_params=TopLevelParams(),
         output_container_base=None,
     )
     module_def = ModuleSchema(
         module_name="test-mod",
         container_image="img:tag",
-        arguments={
-            "top_level": [],
-            "options": [],
-            "fingerprint_params": [],
-            "inputs": [
-                {
-                    "name": "gwd-file",
-                    "source": "module_inputs.inputs.gwd_file",
-                    "mount": {
-                        "volume": "input",
-                        "container_path": "/mnt/module_specific_in",
-                    },
-                    "multiple": True,
-                }
-            ],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "top_level": [],
+                "options": [],
+                "fingerprint_params": [],
+                "inputs": [
+                    {
+                        "name": "gwd-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.gwd_file",
+                        "mount": {
+                            "volume": "input",
+                            "container_path": "/mnt/module_specific_in",
+                        },
+                        "multiple": True,
+                    }
+                ],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     spec = ModuleServiceSpec(components=components, module_definition=module_def)
@@ -165,30 +173,33 @@ def _make_spec_with_envvar_arg(envvar_name, input_value):
         inputs={"forcing_head_path": input_value} if input_value is not None else {},
         outputs={},
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
-        metadata={},
+        top_level_params=TopLevelParams(),
         output_container_base=None,
     )
     module_def = ModuleSchema(
         module_name="test-mod",
         container_image="img:tag",
-        arguments={
-            "top_level": [],
-            "options": [],
-            "fingerprint_params": [],
-            "inputs": [
-                {
-                    "name": "forcing-head-path",
-                    "source": "module_inputs.inputs.forcing_head_path",
-                    "envvar": envvar_name,
-                    "optional": True,
-                    "mount": {
-                        "volume": "module_specific_input",
-                        "container_path": "/mnt/module_specific_in",
-                    },
-                }
-            ],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "top_level": [],
+                "options": [],
+                "fingerprint_params": [],
+                "inputs": [
+                    {
+                        "name": "forcing-head-path",
+                        "type": "file",
+                        "source": "module_inputs.inputs.forcing_head_path",
+                        "envvar": envvar_name,
+                        "optional": True,
+                        "mount": {
+                            "volume": "module_specific_input",
+                            "container_path": "/mnt/module_specific_in",
+                        },
+                    }
+                ],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     return ModuleServiceSpec(components=components, module_definition=module_def)
@@ -249,29 +260,31 @@ def test_host_dir_path_gets_trailing_slash_in_command():
         },
         outputs={},
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
-        metadata={},
+        top_level_params=TopLevelParams(),
         output_container_base=None,
     )
     module_def = ModuleSchema(
         module_name="ebm3-sterodynamics",
         container_image="img:tag",
-        arguments={
-            "top_level": [],
-            "options": [],
-            "fingerprint_params": [],
-            "inputs": [
-                {
-                    "name": "zosdir",
-                    "type": "dir",
-                    "source": "module_inputs.inputs.zosdir",
-                    "mount": {
-                        "volume": "module_specific_in",
-                        "container_path": "/mnt/module_specific_in",
-                    },
-                }
-            ],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "top_level": [],
+                "options": [],
+                "fingerprint_params": [],
+                "inputs": [
+                    {
+                        "name": "zosdir",
+                        "type": "dir",
+                        "source": "module_inputs.inputs.zosdir",
+                        "mount": {
+                            "volume": "module_specific_in",
+                            "container_path": "/mnt/module_specific_in",
+                        },
+                    }
+                ],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     spec = ModuleServiceSpec(components=components, module_definition=module_def)
@@ -304,29 +317,31 @@ def test_host_path_does_not_get_trailing_slash_in_command():
         },
         outputs={},
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
-        metadata={},
+        top_level_params=TopLevelParams(),
         output_container_base=None,
     )
     module_def = ModuleSchema(
         module_name="test-mod",
         container_image="img:tag",
-        arguments={
-            "top_level": [],
-            "options": [],
-            "fingerprint_params": [],
-            "inputs": [
-                {
-                    "name": "expansion-coefficients-file",
-                    "type": "file",
-                    "source": "module_inputs.inputs.expansion_coefficients_file",
-                    "mount": {
-                        "volume": "input",
-                        "container_path": "/mnt/module_specific_in",
-                    },
-                }
-            ],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "top_level": [],
+                "options": [],
+                "fingerprint_params": [],
+                "inputs": [
+                    {
+                        "name": "expansion-coefficients-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.expansion_coefficients_file",
+                        "mount": {
+                            "volume": "input",
+                            "container_path": "/mnt/module_specific_in",
+                        },
+                    }
+                ],
+                "outputs": {},
+            }
+        ),
         volumes={},
     )
     spec = ModuleServiceSpec(components=components, module_definition=module_def)

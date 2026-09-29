@@ -7,7 +7,9 @@ import click
 import pytest
 import yaml
 
+from facts_experiment_builder.core.components.top_level_params import TopLevelParams
 from facts_experiment_builder.core.module.arg_specs import (
+    ArgumentsSpec,
     FingerprintParamSpec,
     InputArgSpec,
     MountSpec,
@@ -197,7 +199,7 @@ def sealevel_module_schema_that_uses_climate_file():
     return ModuleSchema(
         module_name="my-module",
         container_image="img:tag",
-        arguments={},
+        arguments=ArgumentsSpec(),
         volumes={},
         uses_climate_file=True,
     )
@@ -221,7 +223,7 @@ def module_service_spec_components():
         inputs={},
         outputs={},
         image=ModuleContainerImage(image_url="registry/image", image_tag="latest"),
-        metadata={},
+        top_level_params=TopLevelParams(),
     )
 
 

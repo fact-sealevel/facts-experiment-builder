@@ -1,5 +1,13 @@
 import pytest
+from pydantic import ValidationError
 
+from facts_experiment_builder.core.module.arg_specs import (
+    ArgumentsSpec,
+    InputArgSpec,
+    OptionArgSpec,
+    OtherOutputSpec,
+    OutputFileSpec,
+)
 from facts_experiment_builder.core.module.module_experiment_spec import (
     ModuleExperimentSpec,
     _build_options_context,
@@ -16,31 +24,47 @@ from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
 def test_resolve_filename_single_key_hit():
-    arg_spec = {"filename_map": {"region": {"ALL": "output-ALL.nc"}}}
+    arg_spec = InputArgSpec(
+        name="output",
+        type="file",
+        source="module_inputs.inputs.output",
+        filename_map={"region": {"ALL": "output-ALL.nc"}},
+    )
     assert _resolve_filename(arg_spec, {"region": "ALL"}) == "output-ALL.nc"
 
 
 def test_resolve_filename_single_key_miss_returns_fallback():
-    arg_spec = {
-        "filename_map": {"region": {"ALL": "output-ALL.nc"}},
-        "filename": "default.nc",
-    }
+    arg_spec = InputArgSpec(
+        name="output",
+        type="file",
+        source="module_inputs.inputs.output",
+        filename_map={"region": {"ALL": "output-ALL.nc"}},
+        filename="default.nc",
+    )
     assert _resolve_filename(arg_spec, {"region": "UNKNOWN"}) == "default.nc"
 
 
 def test_resolve_filename_single_key_list_value_does_not_raise():
     """List values in options_context must not cause TypeError in single-key branch."""
-    arg_spec = {
-        "filename_map": {"region": {"ALL": "output-ALL.nc"}},
-        "filename": "default.nc",
-    }
+    arg_spec = InputArgSpec(
+        name="output",
+        type="file",
+        source="module_inputs.inputs.output",
+        filename_map={"region": {"ALL": "output-ALL.nc"}},
+        filename="default.nc",
+    )
     # region is a list — single-key format skips it and returns the fallback filename
     result = _resolve_filename(arg_spec, {"region": ["ALL", "WAIS"]})
     assert result == "default.nc"
 
 
 def test_resolve_filename_no_map_returns_filename():
-    arg_spec = {"filename": "fallback.nc"}
+    arg_spec = InputArgSpec(
+        name="output",
+        type="file",
+        source="module_inputs.inputs.output",
+        filename="fallback.nc",
+    )
     assert _resolve_filename(arg_spec, {}) == "fallback.nc"
 
 
@@ -48,9 +72,11 @@ def test_resolve_filename_no_map_returns_filename():
 # _resolve_filename — multi-key format
 # ---------------------------------------------------------------------------
 
-MULTI_KEY_SPEC = {
-    "name": "emu-file",
-    "filename_map": {
+MULTI_KEY_SPEC = InputArgSpec(
+    name="emu-file",
+    type="file",
+    source="module_inputs.inputs.emu_file",
+    filename_map={
         "keys": ["pyear_end", "region"],
         "map": {
             2300: {
@@ -62,7 +88,7 @@ MULTI_KEY_SPEC = {
             },
         },
     },
-}
+)
 
 
 def test_resolve_filename_multi_key_scalar_hit():
@@ -83,8 +109,7 @@ def test_resolve_filename_multi_key_list_region_returns_list():
 
 
 def test_resolve_filename_multi_key_miss_with_fallback_returns_fallback():
-    spec = dict(MULTI_KEY_SPEC)
-    spec["filename"] = "default.RData"
+    spec = MULTI_KEY_SPEC.model_copy(update={"filename": "default.RData"})
     ctx = {"pyear_end": 2400, "region": "ALL"}  # 2400 not in map
     assert _resolve_filename(spec, ctx) == "default.RData"
 
@@ -103,7 +128,7 @@ def test_resolve_filename_multi_key_miss_error_includes_valid_values():
 
 def test_resolve_filename_multi_key_missing_first_key_returns_filename_fallback():
     """When pyear_end is absent, fall back to filename if present."""
-    spec = dict(MULTI_KEY_SPEC, filename="default.RData")
+    spec = MULTI_KEY_SPEC.model_copy(update={"filename": "default.RData"})
     ctx = {"region": "ALL"}  # pyear_end missing
     assert _resolve_filename(spec, ctx) == "default.RData"
 
@@ -117,40 +142,44 @@ def _make_schema_with_multi_key_input() -> ModuleSchema:
     return ModuleSchema(
         module_name="emulandice2-ais",
         container_image="test/image:latest",
-        arguments={
-            "inputs": [
-                {
-                    "name": "emu-file",
-                    "source": "module_inputs.inputs.emu_file",
-                    "optional": True,
-                    "help": "Emulation file",
-                    "filename_map": {
-                        "keys": ["pyear_end", "region"],
-                        "map": {
-                            2300: {
-                                "ALL": "AIS_ALL_2300.RData",
-                                "WAIS": "AIS_WAIS_2300.RData",
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "emu-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.emu_file",
+                        "optional": True,
+                        "help": "Emulation file",
+                        "filename_map": {
+                            "keys": ["pyear_end", "region"],
+                            "map": {
+                                2300: {
+                                    "ALL": "AIS_ALL_2300.RData",
+                                    "WAIS": "AIS_WAIS_2300.RData",
+                                },
                             },
                         },
-                    },
-                    "mount": {
-                        "volume": "module_specific_input",
-                        "container_path": "/mnt/in",
-                    },
-                }
-            ],
-            "options": [
-                {
-                    "name": "region",
-                    "source": "module_inputs.options.region",
-                    "optional": False,
-                    "default_value": "ALL",
-                }
-            ],
-            "outputs": {"files": [], "other": []},
-            "top_level": [],
-            "fingerprint_params": [],
-        },
+                        "mount": {
+                            "volume": "module_specific_input",
+                            "container_path": "/mnt/in",
+                        },
+                    }
+                ],
+                "options": [
+                    {
+                        "name": "region",
+                        "type": "str",
+                        "source": "module_inputs.options.region",
+                        "optional": False,
+                        "default_value": "ALL",
+                    }
+                ],
+                "outputs": {"files": [], "other": []},
+                "top_level": [],
+                "fingerprint_params": [],
+            }
+        ),
         volumes={},
     )
 
@@ -194,20 +223,36 @@ def test_options_defaults_empty_list():
 
 
 def test_options_defaults_extracts_default_value():
-    specs = [{"name": "region", "default_value": "ALL", "source": "..."}]
+    specs = [
+        OptionArgSpec(
+            name="region",
+            type="str",
+            default_value="ALL",
+            source="module_inputs.options.region",
+        )
+    ]
     result = _options_defaults_from_schema(specs)
     assert result["region"] == "ALL"
 
 
 def test_options_defaults_emits_both_case_forms():
-    specs = [{"name": "pyear-end", "default_value": 2300}]
+    specs = [
+        OptionArgSpec(
+            name="pyear-end",
+            type="int",
+            default_value=2300,
+            source="module_inputs.options.pyear_end",
+        )
+    ]
     result = _options_defaults_from_schema(specs)
     assert result["pyear-end"] == 2300
     assert result["pyear_end"] == 2300
 
 
 def test_options_defaults_ignores_specs_without_default():
-    specs = [{"name": "region", "source": "..."}]
+    specs = [
+        OptionArgSpec(name="region", type="str", source="module_inputs.options.region")
+    ]
     assert _options_defaults_from_schema(specs) == {}
 
 
@@ -220,11 +265,12 @@ def test_build_section_from_fields_propagates_default_value_to_value():
     """A field's default_value should populate bundle['value'] when nothing more
     specific is supplied, so it reaches the experiment-config as a real value."""
     fields = [
-        {
-            "name": "gesla-dir",
-            "source": "module_inputs.inputs.gesla_dir",
-            "default_value": "gesla_data_full",
-        }
+        InputArgSpec(
+            name="gesla-dir",
+            type="dir",
+            source="module_inputs.inputs.gesla_dir",
+            default_value="gesla_data_full",
+        )
     ]
     result = _build_section_from_fields(fields)
     assert result["gesla-dir"]["value"] == "gesla_data_full"
@@ -233,11 +279,12 @@ def test_build_section_from_fields_propagates_default_value_to_value():
 
 def test_build_section_from_fields_prefilled_value_wins_over_default():
     fields = [
-        {
-            "name": "gesla-dir",
-            "source": "module_inputs.inputs.gesla_dir",
-            "default_value": "gesla_data_full",
-        }
+        InputArgSpec(
+            name="gesla-dir",
+            type="dir",
+            source="module_inputs.inputs.gesla_dir",
+            default_value="gesla_data_full",
+        )
     ]
     result = _build_section_from_fields(
         fields, prefilled_values={"gesla-dir": "/custom/path"}
@@ -246,7 +293,13 @@ def test_build_section_from_fields_prefilled_value_wins_over_default():
 
 
 def test_build_section_from_fields_no_default_leaves_value_none():
-    fields = [{"name": "esl-data-path", "source": "module_inputs.inputs.esl_data_path"}]
+    fields = [
+        InputArgSpec(
+            name="esl-data-path",
+            type="str",
+            source="module_inputs.inputs.esl_data_path",
+        )
+    ]
     result = _build_section_from_fields(fields)
     assert result["esl-data-path"]["value"] is None
     assert "default_value" not in result["esl-data-path"]
@@ -300,7 +353,13 @@ def test_build_outputs_empty():
 
 def test_build_outputs_file_output_prefixes_module_name():
     file_outputs = [
-        {"name": "output-file", "filename": "out.nc", "output_type": "global"}
+        OutputFileSpec(
+            name="output-file",
+            type="file",
+            source="module_inputs.outputs.output_file",
+            filename="out.nc",
+            output_type="global",
+        )
     ]
     result = _build_outputs(file_outputs, [], "my-module", {})
     assert result["output-file"]["value"] == "my-module/out.nc"
@@ -309,31 +368,62 @@ def test_build_outputs_file_output_prefixes_module_name():
 
 def test_build_outputs_file_output_list_filename():
     file_outputs = [
-        {
-            "name": "output-file",
-            "filename_map": {"region": {"EAIS": "eais.nc", "WAIS": "wais.nc"}},
-            "output_type": "global",
-        }
+        OutputFileSpec(
+            name="output-file",
+            type="file",
+            source="module_inputs.outputs.output_file",
+            filename_map={"region": {"EAIS": "eais.nc", "WAIS": "wais.nc"}},
+            output_type="global",
+        )
     ]
     result = _build_outputs(file_outputs, [], "my-module", {"region": "EAIS"})
     assert result["output-file"]["value"] == "my-module/eais.nc"
 
 
 def test_build_outputs_raises_when_filename_missing():
-    file_outputs = [{"name": "output-file", "output_type": "global"}]
+    file_outputs = [
+        OutputFileSpec(
+            name="output-file",
+            type="file",
+            source="module_inputs.outputs.output_file",
+            output_type="global",
+        )
+    ]
     with pytest.raises(ValueError, match="missing.*filename"):
         _build_outputs(file_outputs, [], "my-module", {})
 
 
 def test_build_outputs_raises_when_output_type_missing():
-    file_outputs = [{"name": "output-file", "filename": "out.nc"}]
+    # output_type is now required on OutputFileSpec, so a missing one is rejected
+    # at model construction rather than inside _build_outputs.
+    with pytest.raises(ValidationError, match="output_type"):
+        OutputFileSpec(
+            name="output-file",
+            type="file",
+            source="module_inputs.outputs.output_file",
+            filename="out.nc",
+        )
+
+
+def test_build_outputs_raises_when_output_type_empty():
+    file_outputs = [
+        OutputFileSpec(
+            name="output-file",
+            type="file",
+            source="module_inputs.outputs.output_file",
+            filename="out.nc",
+            output_type="",
+        )
+    ]
     with pytest.raises(ValueError, match="output_type"):
         _build_outputs(file_outputs, [], "my-module", {})
 
 
 def test_build_outputs_other_output_uses_module_name():
     other_outputs = [
-        {"name": "output-dir", "source": "module_inputs.outputs.output_dir"}
+        OtherOutputSpec(
+            name="output-dir", type="str", source="module_inputs.outputs.output_dir"
+        )
     ]
     result = _build_outputs([], other_outputs, "my-module", {})
     assert result["output-dir"] == {"value": "my-module"}
