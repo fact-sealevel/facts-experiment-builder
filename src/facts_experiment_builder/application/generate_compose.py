@@ -160,8 +160,7 @@ def _collect_workflow_output_paths_by_type(
         pass_to_total_by_name: dict[str, bool] = {}
         if schema is not None:
             pass_to_total_by_name = {
-                o["name"]: o.get("pass_to_total", True)
-                for o in schema.get_file_outputs()
+                o.name: o.pass_to_total for o in schema.get_file_outputs()
             }
 
         for key, v in outputs.items():
