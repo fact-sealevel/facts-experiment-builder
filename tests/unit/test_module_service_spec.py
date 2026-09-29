@@ -1,15 +1,22 @@
 import pytest
 
 from facts_experiment_builder.core.components.top_level_params import TopLevelParams
-from facts_experiment_builder.core.module.module_schema import ModuleContainerImage
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleContainerImage,
+    ModuleSchema,
+)
 from facts_experiment_builder.core.module.module_service_spec import (
     _parse_image,
     ModuleServiceSpecComponents,
+    ModuleServiceSpec,
 )
 from facts_experiment_builder.core.module.source_path import SourcePath
 from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
     ModuleOutputPaths,
+)
+from tests.unit.helpers import (
+    make_schema,
 )
 
 
@@ -28,14 +35,14 @@ def test_parse_image_raises_error_with_no_tag():
     string = "ghcr.io/example/image"
     module_context = "test module"
     with pytest.raises(ValueError):
-        _parse_image(image_data=string, module_context=module_context)
+        _parse_image(image_data=string, module_name_str=module_context)
 
 
 def test_parse_image_non_string_raises():
     image_dict = {"image_url": "some url", "another key": "another val"}
     module_context = "test module"
     with pytest.raises(ValueError):
-        _parse_image(image_data=image_dict, module_context=module_context)
+        _parse_image(image_data=image_dict, module_name_str=module_context)
 
 
 @pytest.fixture
@@ -158,3 +165,114 @@ def test_source_path_parse_invalid_raises(raw):
 
 def test_source_path_leaf_keeps_yaml_spelling():
     assert SourcePath.parse("metadata.location-file").leaf == "location-file"
+
+
+def test_module_properties_return_correct():
+    schema = make_schema()
+
+    input_paths_obj = ModuleInputPaths(
+        input_dir="/input",
+        module_specific_input_dir="/module_spec_input",
+        shared_input_dir="/shared",
+    )
+
+    output_paths_obj = ModuleOutputPaths(output_dir="/out", output_type="local")
+
+    container_image = ModuleContainerImage(image_url="test.url", image_tag="latest")
+    components = ModuleServiceSpecComponents(
+        module_name="test-module",
+        options={},
+        fingerprint_params={},
+        inputs={},
+        outputs={},
+        input_paths=input_paths_obj,
+        output_paths=output_paths_obj,
+        image=container_image,
+        top_level_params=TopLevelParams(
+            pipeline_id="abc123",
+            scenario="ssp126",
+            baseyear=2005,
+            pyear_end=2150,
+            pyear_start=2020,
+            pyear_step=10,
+            nsamps=50,
+            location_file="location.lst",
+        ),
+    )
+    module_service_spec = ModuleServiceSpec(
+        components=components, module_definition=schema
+    )
+    assert module_service_spec.module_name == "test-module"
+    assert module_service_spec.image == container_image
+    assert module_service_spec.input_paths == input_paths_obj
+    assert module_service_spec.output_paths == output_paths_obj
+
+
+@pytest.fixture
+def output_spec(tmp_path):
+    """A ModuleServiceSpec with one output file on the shared output volume."""
+    module_name = "tlm-sterodynamics"
+    output_dir = tmp_path / "output" / module_name
+
+    schema = ModuleSchema.from_dict(
+        {
+            "module_name": module_name,
+            "container_image": "test/image:latest",
+            "arguments": {
+                "outputs": {
+                    "files": [
+                        {
+                            "name": "output-gslr-file",
+                            "type": "file",
+                            "source": "module_inputs.outputs.output_gslr_file",
+                            "filename": "gslr.nc",
+                            "output_type": "global",
+                            "mount": {
+                                "volume": "output",
+                                "container_path": "/mnt/out",
+                                "transform": "filename",
+                            },
+                        }
+                    ]
+                }
+            },
+            "volumes": {
+                "output": {
+                    "host_path": "module_inputs.output_paths.output_dir",
+                    "container_path": "/mnt/out",
+                }
+            },
+        }
+    )
+
+    components = ModuleServiceSpecComponents(
+        module_name=module_name,
+        options={},
+        fingerprint_params={},
+        inputs={},
+        # Resolved host path, as _resolve_module_outputs_dict produces it
+        outputs={"output_gslr_file": str(output_dir / "gslr.nc")},
+        input_paths=ModuleInputPaths(
+            input_dir="/input",
+            module_specific_input_dir="/module_specific_input",
+            shared_input_dir="/shared",
+        ),
+        output_paths=ModuleOutputPaths(
+            output_dir=str(output_dir), output_type="global"
+        ),
+        image=ModuleContainerImage(image_url="img", image_tag="tag"),
+        output_container_base=None,  # non-facts-total module
+        top_level_params=TopLevelParams.from_config({"pipeline-id": "12345"}),
+    )
+    return ModuleServiceSpec(components=components, module_definition=schema)
+
+
+def test_output_file_arg_includes_module_subdir(output_spec):
+    service = output_spec.generate_compose_service()
+    assert "--output-gslr-file=/mnt/out/tlm-sterodynamics/gslr.nc" in service["command"]
+
+
+def test_output_volume_mounts_shared_output_root(output_spec):
+    service = output_spec.generate_compose_service()
+    host_output_root = str(output_spec.output_paths.output_dir).rsplit("/", 1)[0]
+    assert any(v.startswith(f"{host_output_root}:/mnt/out") for v in service["volumes"])

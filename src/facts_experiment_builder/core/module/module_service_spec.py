@@ -46,13 +46,25 @@ def _transform_of(arg_spec: BaseArgSpec) -> str | None:
     """Return an arg spec's `transform`, or None if its spec type has no such field.
 
     `transform` is only declared on TopLevelArgSpec and FingerprintParamSpec, but
-    `_process_argument()` and `_host_path_to_container()` handle specs from every
-    section (typed as BaseArgSpec), so `arg_spec.transform` would raise
-    AttributeError for option and input specs. Adding `transform` to BaseArgSpec
-    instead would make module YAMLs that set it on options/inputs pass validation,
-    which `extra="forbid"` currently rejects.
+    `_to_input_container_path()` and `_host_path_to_container()` handle specs from every
+    section (typed as BaseArgSpec), so `arg_spec.transform` would raise AttributeError
+    for option and input specs. Adding `transform` to BaseArgSpec instead would make
+    module YAMLs that set it on options/inputs pass validation, which `extra="forbid"`
+    currently rejects.
     """
     return getattr(arg_spec, "transform", None)
+
+
+def _format_arg(name: str, value: Any) -> list[str]:
+    """Format one argument as CLI flags; a list becomes one flag per item (ie.
+
+    a click arg w/ multiple=True)
+    """
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return [f"--{name}={v}" for v in value]
+    return [f"--{name}={value}"]
 
 
 @dataclass(frozen=True)
@@ -116,7 +128,6 @@ class ModuleServiceSpec:
         self.components = components
         self.module_definition = module_definition
 
-    # old classmethod from_yaml (was cls)
     @property
     def module_name(self) -> str:
         """Return the module name."""
@@ -152,58 +163,47 @@ class ModuleServiceSpec:
         command_args = []
 
         # Check if a specific command is specified (e.g., "glaciers" or "icesheets")
-        command = self.module_definition.command or ""
-        if command:
-            command_args.append(command)  # Add command name first
+        if self.module_definition.command:
+            command_args.append(
+                self.module_definition.command
+            )  # Add command name first
 
         arguments_config = self.module_definition.arguments
 
         # Process top-level arguments
         for arg_spec in arguments_config.top_level:
-            value = self._process_argument(arg_spec)
-            if value is not None:
-                command_args.append(f"--{arg_spec.name}={value}")
+            command_args.extend(
+                _format_arg(arg_spec.name, self._process_argument(arg_spec))
+            )
 
         if not self.module_definition.extra.get("skip_fingerprint_params"):
             # Process fingerprint params
             for arg_spec in arguments_config.fingerprint_params:
-                value = self._process_argument(arg_spec)
-                if value is not None:
-                    command_args.append(f"--{arg_spec.name}={value}")
+                command_args.extend(
+                    _format_arg(arg_spec.name, self._process_argument(arg_spec))
+                )
         # Process options
         for arg_spec in arguments_config.options:
-            value = self._process_argument(arg_spec)
-            if value is not None:
-                if isinstance(value, list):
-                    for v in value:
-                        command_args.append(f"--{arg_spec.name}={v}")
-                else:
-                    command_args.append(f"--{arg_spec.name}={value}")
+            command_args.extend(
+                _format_arg(arg_spec.name, self._process_argument(arg_spec))
+            )
 
         # Process inputs (skip args that are handled via environment variable)
         for arg_spec in arguments_config.inputs:
             if arg_spec.envvar:
                 continue
-            value = self._process_argument(arg_spec)
-
-            if value is not None:
-                # Handle multiple inputs (e.g., --item can be specified multiple times)
-                if arg_spec.multiple:
-                    if isinstance(value, list):
-                        for v in value:
-                            command_args.append(f"--{arg_spec.name}={v}")
-                    else:
-                        command_args.append(f"--{arg_spec.name}={value}")
-                else:
-                    command_args.append(f"--{arg_spec.name}={value}")
+            # value = self._process_argument(arg_spec)
+            command_args.extend(
+                _format_arg(arg_spec.name, self._process_argument(arg_spec))
+            )
 
         # Process outputs
         for arg_spec in self.module_definition.get_outputs_list(
             suppress_output_types=suppress_output_types
         ):
-            value = self._process_output_argument(arg_spec)
-            if value is not None:
-                command_args.append(f"--{arg_spec.name}={value}")
+            command_args.extend(
+                _format_arg(arg_spec.name, self._process_argument(arg_spec))
+            )
 
         return command_args
 
@@ -231,34 +231,102 @@ class ModuleServiceSpec:
             else Path(container_path) / value_path.parent / value_path.name
         )
 
-    def _process_argument(
-        self,
-        arg_spec: BaseArgSpec,
-    ) -> Any:
-        """Process a single argument specification.
+    def _resolve_with_alternatives(self, arg_spec: BaseArgSpec) -> Any:
+        """Resolve an arg's value from its source, falling back to alternatives.
 
-        Args:
-            arg_spec: Argument specification from YAML
-
-        Returns:
-            Processed value or None if optional and not present
+        Returns None if nothing resolves, or if the primary source is missing and the
+        arg is optional.
         """
-        # Resolve the value
         value = self._resolve_value(arg_spec.source)
-        # Handle optional arguments
         if value is None and arg_spec.optional:
             return None
-
         if value is None:
-            # Try to get from alternative source paths
             for alt_source in arg_spec.alternatives:
                 value = self._resolve_value(alt_source)
                 if value is not None:
                     break
+        return value
 
+    def _process_argument(
+        self,
+        arg_spec: BaseArgSpec,
+    ) -> Any:
+        """Resolve an argument's value and map it to its container form.
+
+        Output specs (OutputFileSpec, OtherOutputSpec) are routed to
+        `_to_output_container_path`; all other specs (top-level, fingerprint params,
+        options, inputs) to `_to_input_container_path`.
+
+        Args:
+            arg_spec: Argument specification from the module YAML
+
+        Returns:
+            The value to pass to the container, or None if no value resolved
+        """
+        value = self._resolve_with_alternatives(arg_spec)
         if value is None:
             return None
 
+        if isinstance(arg_spec, (OutputFileSpec, OtherOutputSpec)):
+            return self._to_output_container_path(value, arg_spec)
+        return self._to_input_container_path(value, arg_spec)
+
+    def _to_output_container_path(
+        self,
+        value: Any,
+        arg_spec: BaseArgSpec,
+    ) -> Any:
+        """Map a resolved output value to its container path.
+
+        For outputs on the shared output volume the path is
+        <container_path>/<module_name>/<filename>, or <output_container_base>/<filename>
+        when output_container_base is set (facts-total workflow services).
+
+        Args:
+            value: Resolved output value (host path or filename)
+            arg_spec: Output argument specification from the module YAML
+
+        Returns:
+            Container path string (e.g. /mnt/out/fair-temperature/gsat.nc), or the
+            value unchanged if it has no mount, is not a path, or is on another volume.
+        """
+        mount = arg_spec.mount
+        if not mount or not isinstance(value, (str, Path)):
+            return value
+
+        container_path = mount.container_path.rstrip("/")
+        volume = mount.volume
+        filename = Path(value).name
+        if volume == self.module_definition.output_volume_key() and container_path:
+            output_container_base = (
+                getattr(self.components, "output_container_base", None) or None
+            )
+            if output_container_base:
+                base = (output_container_base or "").rstrip("/")
+                return f"{base}/{filename}"
+            base = f"{container_path}/{self.components.module_name}"
+            # If value is already a path ending in module_name (e.g. output-dir), avoid duplicating it
+            if filename == self.components.module_name:
+                return base
+            return f"{base}/{filename}"
+        return value
+
+    def _to_input_container_path(self, value, arg_spec):
+        """Apply transforms to a resolved non-output value and map it to its container
+        path.
+
+        Used for top-level, fingerprint param, option and input specs. Applies the
+        spec's `transform` (scenario_name, scenario_name_ssp_landwaterstorage,
+        filename), then maps mounted TypedPaths and str/Path values to container paths.
+
+        Args:
+            value: Resolved value from the arg's source (or an alternative)
+            arg_spec: Argument specification from the module YAML
+
+        Returns:
+            The transformed value; a container path string (or list of them) for
+            mounted paths, otherwise the value unchanged.
+        """
         # Apply transform if specified
         transform = _transform_of(arg_spec)
         mount = arg_spec.mount
@@ -295,7 +363,7 @@ class ModuleServiceSpec:
                     return [tp.path for tp in value]
                 return [self._host_path_to_container(tp.path, arg_spec) for tp in value]
 
-        # Handle mount transformations for file paths (legacy str/Path; outputs use _process_output_argument).
+        # Handle mount transformations for file paths.
         if mount and isinstance(value, (str, Path)):
             container_path = mount.container_path.rstrip("/")
             if (
@@ -334,47 +402,6 @@ class ModuleServiceSpec:
                             else Path(container_path) / value_path.name
                         )
 
-        return value
-
-    def _process_output_argument(
-        self, arg_spec: OutputFileSpec | OtherOutputSpec
-    ) -> Any:
-        """Process a single output argument: resolve value from module_inputs.outputs.*
-        and build container path as <container_path>/<module_name>/<filename>.
-
-        Returns:
-            Container path string (e.g. /mnt/out/fair-temperature/gsat.nc) or None.
-        """
-        value = self._resolve_value(arg_spec.source)
-        if value is None and arg_spec.optional:
-            return None
-        if value is None:
-            for alt_source in arg_spec.alternatives:
-                value = self._resolve_value(alt_source)
-                if value is not None:
-                    break
-        if value is None:
-            return None
-
-        mount = arg_spec.mount
-        if not mount or not isinstance(value, (str, Path)):
-            return value
-
-        container_path = mount.container_path.rstrip("/")
-        volume = mount.volume
-        filename = Path(value).name
-        if volume == self.module_definition.output_volume_key() and container_path:
-            output_container_base = (
-                getattr(self.components, "output_container_base", None) or None
-            )
-            if output_container_base:
-                base = (output_container_base or "").rstrip("/")
-                return f"{base}/{filename}"
-            base = f"{container_path}/{self.components.module_name}"
-            # If value is already a path ending in module_name (e.g. output-dir), avoid duplicating it
-            if filename == self.components.module_name:
-                return base
-            return f"{base}/{filename}"
         return value
 
     def _build_volumes(self) -> list[str]:
@@ -540,7 +567,7 @@ class ModuleServiceSpec:
 
 def _resolve_module_inputs_dict(
     module_definition: ModuleSchema,
-    module_context: str,
+    module_name_str: str,
     module_inputs_section: dict,
     shared_input_data: str,
     module_specific_input_data: str,
@@ -604,14 +631,14 @@ def _resolve_module_inputs_dict(
                             shared_input_data=shared_input_data,
                             module_specific_input_data=module_specific_input_data,
                             module_name=module_name,
-                            context=module_context,
+                            context=module_name_str,
                         )
                     )
                 except (ValueError, KeyError, TypeError) as e:
                     error_msg = str(e)
                     if "None" in error_msg or "NoneType" in error_msg:
                         raise ValueError(
-                            f"Input field '{name}' in {module_context} has None value or None in path resolution. "
+                            f"Input field '{name}' in {module_name_str} has None value or None in path resolution. "
                             f"Original error: {error_msg}. "
                             f"Check that '{name}' has a valid value in metadata.{module_name}.inputs"
                         ) from e
@@ -655,7 +682,7 @@ def _resolve_module_inputs_dict(
                     shared_input_data=shared_input_data,
                     module_specific_input_data=module_specific_input_data,
                     module_name=module_name,
-                    context=module_context,
+                    context=module_name_str,
                 )
                 inputs_dict[key] = (
                     HostDirPath(resolved_path) if is_dir else HostPath(resolved_path)
@@ -664,7 +691,7 @@ def _resolve_module_inputs_dict(
                 error_msg = str(e)
                 if "None" in error_msg or "NoneType" in error_msg:
                     raise ValueError(
-                        f"Input field '{name}' in {module_context} has None value or None in path resolution. "
+                        f"Input field '{name}' in {module_name_str} has None value or None in path resolution. "
                         f"Original error: {error_msg}. "
                         f"Check that '{name}' has a valid value in metadata.{module_name}.inputs"
                     ) from e
@@ -681,7 +708,7 @@ def _resolve_module_inputs_dict(
 def _resolve_module_outputs_dict(
     module_definition: ModuleSchema,
     module_outputs: dict | list,
-    module_context: str,
+    module_name_str: str,
     module_name: str,
     output_data_location,
 ) -> dict:
@@ -694,13 +721,13 @@ def _resolve_module_outputs_dict(
             key = output_spec.source.leaf
             if not output_name or output_name not in module_outputs:
                 raise KeyError(
-                    f"Output '{output_name}' not found in metadata for {module_context}. "
+                    f"Output '{output_name}' not found in metadata for {module_name_str}. "
                     f"Expected one of: {list(module_outputs.keys())}"
                 )
             output_value = module_outputs[output_name]
             try:
                 resolved_path = resolve_output_path(
-                    output_value, output_data_location, module_context
+                    output_value, output_data_location, module_name_str
                 )
                 outputs_dict[key] = resolved_path
             except ValueError:
@@ -710,12 +737,12 @@ def _resolve_module_outputs_dict(
 
     else:
         raise ValueError(
-            f"{module_name}.outputs must be a list or dictionary in {module_context}"
+            f"{module_name}.outputs must be a list or dictionary in {module_name_str}"
         )
     return outputs_dict
 
 
-def _parse_image(image_data, module_context) -> ModuleContainerImage:
+def _parse_image(image_data, module_name_str) -> ModuleContainerImage:
     if isinstance(image_data, str):
         if ":" in image_data:
             image_url, image_tag = image_data.rsplit(":", 1)
@@ -726,7 +753,7 @@ def _parse_image(image_data, module_context) -> ModuleContainerImage:
 
     else:
         raise ValueError(
-            f"invalid image format in {module_context}, received: {image_data}."
+            f"invalid image format in {module_name_str}, received: {image_data}."
             f"Expected image_data to be a string, received: {type(image_data)}"
         )
     image = ModuleContainerImage(image_url=image_url, image_tag=image_tag)
@@ -770,15 +797,15 @@ def build_module_service_spec(
     Returns:
         ModuleServiceSpec instance
     """
-    module_context = f"{module_name} module"
+    module_name_str = f"{module_name} module"
 
-    module_metadata = get_required_field(metadata, module_name, module_context)
+    module_metadata = get_required_field(metadata, module_name, module_name_str)
 
     # scenario_name = get_required_field(metadata, "scenario", module_context)
 
     resolved_paths = resolve_experiment_paths(
         metadata=metadata,
-        module_context=module_context,
+        module_name_str=module_name_str,
         known_module_names=known_module_names,
         module_name=module_name,
         module_definition=module_definition,
@@ -796,7 +823,7 @@ def build_module_service_spec(
     )
 
     module_inputs_section = get_required_field(
-        module_metadata, "inputs", module_context
+        module_metadata, "inputs", module_name_str
     )
 
     # `options_dict` is the internal resolution dict: keyed by each option arg-spec's own
@@ -814,7 +841,7 @@ def build_module_service_spec(
 
     inputs_dict = _resolve_module_inputs_dict(
         module_definition=module_definition,
-        module_context=module_context,
+        module_name_str=module_name_str,
         module_name=module_name,
         module_inputs_section=module_inputs_section,
         shared_input_data=resolved_paths.shared_input_data,
@@ -838,18 +865,18 @@ def build_module_service_spec(
         elif key not in options_dict and key in inputs_dict:
             options_dict[key] = inputs_dict[key]
 
-    module_outputs = get_required_field(module_metadata, "outputs", module_context)
+    module_outputs = get_required_field(module_metadata, "outputs", module_name_str)
 
     outputs_dict = _resolve_module_outputs_dict(
         module_definition=module_definition,
         module_outputs=module_outputs,
-        module_context=module_context,
+        module_name_str=module_name_str,
         module_name=module_name,
         output_data_location=resolved_paths.output_data_location,
     )
 
-    image_data = get_required_field(module_metadata, "image", module_context)
-    image = _parse_image(image_data, module_context)
+    image_data = get_required_field(module_metadata, "image", module_name_str)
+    image = _parse_image(image_data, module_name_str)
 
     top_level_params = TopLevelParams.from_config(metadata)
     location_file = top_level_params.location_file
