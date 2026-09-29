@@ -5,6 +5,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from facts_experiment_builder.core.components.top_level_params import TopLevelParams
+from facts_experiment_builder.core.module.arg_specs import (
+    BaseArgSpec,
+    OtherOutputSpec,
+    OutputFileSpec,
+)
 from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
     ModuleOutputPaths,
@@ -22,6 +28,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
     resolve_output_path,
 )
 
+from facts_experiment_builder.core.module.source_path import SourcePath
 from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
 
 # ---------------------- Core imports ----------------------------
@@ -35,55 +42,27 @@ from facts_experiment_builder.core.typed_path import (
 )
 
 
-def resolve_source_value(source: str, context: dict[str, Any]) -> Any:
-    """Resolve a value from a source path like 'metadata.pipeline-id' or
-    'module_inputs.inputs.rcmip_fname'.
+def _transform_of(arg_spec: BaseArgSpec) -> str | None:
+    """Return an arg spec's `transform`, or None if its spec type has no such field.
 
-    The context dict is all of the information about a module needed to create a Docker Compose service. Information is taken from experiment-config.yaml
-    The context dict typically has keys 'metadata' (experiment metadata) and 'module_inputs'
-    (ModuleServiceSpecComponents or similar), so that source strings in module YAML can
-    reference e.g. metadata.pipeline-id or module_inputs.outputs.foo.
-
-    Args:
-        source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location-file")
-        context: dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
-
-    Returns:
-        Resolved value, or None if any segment is missing
+    `transform` is only declared on TopLevelArgSpec and FingerprintParamSpec, but
+    `_process_argument()` and `_host_path_to_container()` handle specs from every
+    section (typed as BaseArgSpec), so `arg_spec.transform` would raise
+    AttributeError for option and input specs. Adding `transform` to BaseArgSpec
+    instead would make module YAMLs that set it on options/inputs pass validation,
+    which `extra="forbid"` currently rejects.
     """
-    if not source:
-        return None
-    parts = source.split(".")
-    obj = context
-
-    for part in parts:
-        if obj is None:
-            return None
-        if isinstance(obj, dict):
-            if part not in obj:
-                snake_case = part.replace("-", "_")
-                if snake_case in obj:
-                    part = snake_case
-                else:
-                    obj = obj.get(part)
-                    continue
-            obj = obj.get(part)
-        elif hasattr(obj, part):
-            obj = getattr(obj, part)
-        else:
-            snake_case = part.replace("-", "_")
-            if hasattr(obj, snake_case):
-                obj = getattr(obj, snake_case)
-            else:
-                return None
-
-    return obj
+    return getattr(arg_spec, "transform", None)
 
 
 @dataclass(frozen=True)
 class ModuleServiceSpecComponents:
     """Dataclass holding all inputs required for a ModuleServiceSpec (experiment-
-    specific paths, values, image, metadata)."""
+    specific paths, values, image, top-level params).
+
+    Module YAML `source:` strings address these fields: `metadata.<param>` reads
+    `top_level_params`, and `module_inputs.<attr>[.<key>]` reads the other fields.
+    """
 
     module_name: str
     options: dict[str, Any]
@@ -93,8 +72,27 @@ class ModuleServiceSpecComponents:
     inputs: dict[str, PathValue | Any]
     outputs: dict[str, Any]
     image: ModuleContainerImage
-    metadata: dict[str, Any]
+    top_level_params: TopLevelParams
     output_container_base: str | None = None
+
+    def resolve(self, source: SourcePath) -> Any:
+        """Return the value a module YAML source path points at.
+
+        Returns None when the addressed key is absent (e.g. an optional input that was
+        not provided), so callers can fall back to `alternatives`.
+        """
+        if source.root == "metadata":
+            return getattr(self.top_level_params, source.attr)
+        value = getattr(self, source.attr)
+        if source.key is None:
+            return value
+        if isinstance(value, dict):
+            if source.key in value:
+                return value[source.key]
+            # TODO: confirm whether any of these dicts is keyed by the snake_case
+            # form of a kebab-case source key; if not, this fallback can go.
+            return value.get(source.key.replace("-", "_"))
+        return getattr(value, source.key.replace("-", "_"), None)
 
 
 class ModuleServiceSpec:
@@ -139,13 +137,9 @@ class ModuleServiceSpec:
         """Return output paths."""
         return self.components.output_paths
 
-    def _resolve_value(self, source: str) -> Any:
-        """Resolve a value from a source path using the shared SourceResolver."""
-        context = {
-            "metadata": self.components.metadata,
-            "module_inputs": self.components,
-        }
-        return resolve_source_value(source, context)
+    def _resolve_value(self, source: SourcePath) -> Any:
+        """Resolve a module YAML source path against this module's components."""
+        return self.components.resolve(source)
 
     def _build_command_args(
         self, suppress_output_types: set | None = None
@@ -165,43 +159,43 @@ class ModuleServiceSpec:
         arguments_config = self.module_definition.arguments
 
         # Process top-level arguments
-        for arg_spec in arguments_config.get("top_level", []):
+        for arg_spec in arguments_config.top_level:
             value = self._process_argument(arg_spec)
             if value is not None:
-                command_args.append(f"--{arg_spec['name']}={value}")
+                command_args.append(f"--{arg_spec.name}={value}")
 
         if not self.module_definition.extra.get("skip_fingerprint_params"):
             # Process fingerprint params
-            for arg_spec in arguments_config.get("fingerprint_params", []):
+            for arg_spec in arguments_config.fingerprint_params:
                 value = self._process_argument(arg_spec)
                 if value is not None:
-                    command_args.append(f"--{arg_spec['name']}={value}")
+                    command_args.append(f"--{arg_spec.name}={value}")
         # Process options
-        for arg_spec in arguments_config.get("options", []):
+        for arg_spec in arguments_config.options:
             value = self._process_argument(arg_spec)
             if value is not None:
                 if isinstance(value, list):
                     for v in value:
-                        command_args.append(f"--{arg_spec['name']}={v}")
+                        command_args.append(f"--{arg_spec.name}={v}")
                 else:
-                    command_args.append(f"--{arg_spec['name']}={value}")
+                    command_args.append(f"--{arg_spec.name}={value}")
 
         # Process inputs (skip args that are handled via environment variable)
-        for arg_spec in arguments_config.get("inputs", []):
-            if arg_spec.get("envvar"):
+        for arg_spec in arguments_config.inputs:
+            if arg_spec.envvar:
                 continue
             value = self._process_argument(arg_spec)
 
             if value is not None:
                 # Handle multiple inputs (e.g., --item can be specified multiple times)
-                if arg_spec.get("multiple", False):
+                if arg_spec.multiple:
                     if isinstance(value, list):
                         for v in value:
-                            command_args.append(f"--{arg_spec['name']}={v}")
+                            command_args.append(f"--{arg_spec.name}={v}")
                     else:
-                        command_args.append(f"--{arg_spec['name']}={value}")
+                        command_args.append(f"--{arg_spec.name}={value}")
                 else:
-                    command_args.append(f"--{arg_spec['name']}={value}")
+                    command_args.append(f"--{arg_spec.name}={value}")
 
         # Process outputs
         for arg_spec in self.module_definition.get_outputs_list(
@@ -209,16 +203,16 @@ class ModuleServiceSpec:
         ):
             value = self._process_output_argument(arg_spec)
             if value is not None:
-                command_args.append(f"--{arg_spec['name']}={value}")
+                command_args.append(f"--{arg_spec.name}={value}")
 
         return command_args
 
-    def _host_path_to_container(self, path_str: str, arg_spec: dict[str, Any]) -> str:
+    def _host_path_to_container(self, path_str: str, arg_spec: BaseArgSpec) -> str:
         """Transform a host path to container path using mount and transform from
         arg_spec."""
-        mount = arg_spec.get("mount", {})
-        transform = arg_spec.get("transform")
-        container_path = (mount.get("container_path") or "").rstrip("/")
+        mount = arg_spec.mount
+        transform = _transform_of(arg_spec)
+        container_path = (mount.container_path if mount else "").rstrip("/")
         if not container_path:
             return path_str
         value_path = Path(path_str)
@@ -239,7 +233,7 @@ class ModuleServiceSpec:
 
     def _process_argument(
         self,
-        arg_spec: dict[str, Any],
+        arg_spec: BaseArgSpec,
     ) -> Any:
         """Process a single argument specification.
 
@@ -249,20 +243,15 @@ class ModuleServiceSpec:
         Returns:
             Processed value or None if optional and not present
         """
-        source = arg_spec.get("source", "")
-        if not source:
-            return None
-
         # Resolve the value
-        value = self._resolve_value(source)
+        value = self._resolve_value(arg_spec.source)
         # Handle optional arguments
-        if value is None and arg_spec.get("optional", False):
+        if value is None and arg_spec.optional:
             return None
 
         if value is None:
             # Try to get from alternative source paths
-            alt_sources = arg_spec.get("alternatives", [])
-            for alt_source in alt_sources:
+            for alt_source in arg_spec.alternatives:
                 value = self._resolve_value(alt_source)
                 if value is not None:
                     break
@@ -271,8 +260,9 @@ class ModuleServiceSpec:
             return None
 
         # Apply transform if specified
-        transform = arg_spec.get("transform")
-        mount = arg_spec.get("mount", {})
+        transform = _transform_of(arg_spec)
+        mount = arg_spec.mount
+        mount_volume = mount.volume if mount else None
         if transform == "scenario_name":
             if hasattr(value, "scenario_name"):
                 value = value.scenario_name
@@ -284,7 +274,7 @@ class ModuleServiceSpec:
         elif transform == "filename":
             # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
             if isinstance(value, (str, Path)) and not (
-                mount.get("volume") == self.module_definition.output_volume_key()
+                mount_volume == self.module_definition.output_volume_key()
                 and "/" in str(value)
             ):
                 value = Path(value).name
@@ -307,10 +297,10 @@ class ModuleServiceSpec:
 
         # Handle mount transformations for file paths (legacy str/Path; outputs use _process_output_argument).
         if mount and isinstance(value, (str, Path)):
-            container_path = (mount.get("container_path") or "").rstrip("/")
+            container_path = mount.container_path.rstrip("/")
             if (
                 container_path
-                and mount.get("volume") == self.module_definition.output_volume_key()
+                and mount_volume == self.module_definition.output_volume_key()
                 and "/" in str(value)
                 and not Path(value).is_absolute()
             ):
@@ -346,34 +336,32 @@ class ModuleServiceSpec:
 
         return value
 
-    def _process_output_argument(self, arg_spec: dict[str, Any]) -> Any:
+    def _process_output_argument(
+        self, arg_spec: OutputFileSpec | OtherOutputSpec
+    ) -> Any:
         """Process a single output argument: resolve value from module_inputs.outputs.*
         and build container path as <container_path>/<module_name>/<filename>.
 
         Returns:
             Container path string (e.g. /mnt/out/fair-temperature/gsat.nc) or None.
         """
-        source = arg_spec.get("source", "")
-        if not source:
-            return None
-
-        value = self._resolve_value(source)
-        if value is None and arg_spec.get("optional", False):
+        value = self._resolve_value(arg_spec.source)
+        if value is None and arg_spec.optional:
             return None
         if value is None:
-            for alt_source in arg_spec.get("alternatives", []):
+            for alt_source in arg_spec.alternatives:
                 value = self._resolve_value(alt_source)
                 if value is not None:
                     break
         if value is None:
             return None
 
-        mount = arg_spec.get("mount", {})
+        mount = arg_spec.mount
         if not mount or not isinstance(value, (str, Path)):
             return value
 
-        container_path = (mount.get("container_path") or "").rstrip("/")
-        volume = mount.get("volume", "")
+        container_path = mount.container_path.rstrip("/")
+        volume = mount.volume
         filename = Path(value).name
         if volume == self.module_definition.output_volume_key() and container_path:
             output_container_base = (
@@ -408,9 +396,11 @@ class ModuleServiceSpec:
                 continue
             if host_path_source.startswith("external."):
                 continue  # External volumes are not supported; skip
+            if not host_path_source:
+                continue
 
             # Resolve host path from module_inputs
-            host_path = self._resolve_value(host_path_source)
+            host_path = self._resolve_value(SourcePath.parse(host_path_source))
             if host_path is None:
                 continue
             host_path = str(Path(host_path).resolve())
@@ -493,13 +483,12 @@ class ModuleServiceSpec:
         environment handle them.
         """
         environment: dict[str, str] = {}
-        for arg_spec in self.module_definition.arguments.get("inputs", []):
-            envvar = arg_spec.get("envvar")
-            if not envvar:
+        for arg_spec in self.module_definition.arguments.inputs:
+            if not arg_spec.envvar:
                 continue
             value = self._process_argument(arg_spec)
             if value is not None:
-                environment[envvar] = str(value)
+                environment[arg_spec.envvar] = str(value)
         return environment
 
     def generate_compose_service(
@@ -549,51 +538,6 @@ class ModuleServiceSpec:
         # }
 
 
-def resolve_value(source: str, context: dict[str, Any]) -> Any:
-    """Resolve a value from a source path like 'metadata.pipeline-id' or
-    'module_inputs.inputs.rcmip_fname'.
-
-    The context dict typically has keys 'metadata' (experiment metadata) and 'module_inputs'
-    (ModuleServiceSpecComponents or similar), so that source strings in module YAML can
-    reference e.g. metadata.pipeline-id or module_inputs.outputs.foo.
-
-    Args:
-        source: Dot-separated path to the value (e.g. "metadata.pipeline-id", "module_inputs.inputs.location-file")
-        context: dict with at least 'metadata' and 'module_inputs' (or equivalent keys used in source strings)
-
-    Returns:
-        Resolved value, or None if any segment is missing
-    """
-    if not source or not isinstance(context, dict):
-        return None
-
-    parts = source.split(".")
-    obj = context
-
-    for part in parts:
-        if obj is None:
-            return None
-        if isinstance(obj, dict):
-            if part not in obj:
-                snake_case = part.replace("-", "_")
-                if snake_case in obj:
-                    part = snake_case
-                else:
-                    obj = obj.get(part)
-                    continue
-            obj = obj.get(part)
-        elif hasattr(obj, part):
-            obj = getattr(obj, part)
-        else:
-            snake_case = part.replace("-", "_")
-            if hasattr(obj, snake_case):
-                obj = getattr(obj, snake_case)
-            else:
-                return None
-
-    return obj
-
-
 def _resolve_module_inputs_dict(
     module_definition: ModuleSchema,
     module_context: str,
@@ -610,24 +554,23 @@ def _resolve_module_inputs_dict(
     output_root_relative_inputs = module_definition.get_output_volume_input_keys()
 
     inputs_dict = {}
-    for arg_spec in module_definition.arguments.get("inputs", []):
-        name = arg_spec.get("name", "")
+    for arg_spec in module_definition.arguments.inputs:
+        name = arg_spec.name
         if not name or name not in module_inputs_section:
             continue
         value = module_inputs_section[name]
 
         # `key` is the internal resolution key: the arg-spec's own `source` suffix (e.g.
         # "module_inputs.inputs.climate_data_file" -> "climate_data_file"), which is what
-        # `resolve_value()`/other arg-specs' `source` fields address this value by. It is
-        # NOT necessarily the same string as `name`.
-        source = arg_spec.get("source", "")
-        key = source.split(".")[-1] if "." in source else name
+        # `ModuleServiceSpecComponents.resolve()`/other arg-specs' `source` fields
+        # address this value by. It is NOT necessarily the same string as `name`.
+        key = arg_spec.source.leaf
 
-        mount = arg_spec.get("mount")
-        is_multiple = arg_spec.get("multiple", False) and (
-            mount or arg_spec.get("type") == "file"
+        mount = arg_spec.mount
+        is_multiple = arg_spec.multiple and (
+            mount is not None or arg_spec.type == "file"
         )
-        is_dir = arg_spec.get("type") == "dir"
+        is_dir = arg_spec.type == "dir"
 
         if is_multiple:
             # List of already container paths (e.g. facts-total item from generate_compose): do not resolve.
@@ -747,9 +690,8 @@ def _resolve_module_outputs_dict(
 
     if isinstance(module_outputs, dict):
         for output_spec in outputs_config:
-            output_name = output_spec.get("name", "")
-            source = output_spec.get("source", "")
-            key = source.split(".")[-1] if "." in source else output_name
+            output_name = output_spec.name
+            key = output_spec.source.leaf
             if not output_name or output_name not in module_outputs:
                 raise KeyError(
                     f"Output '{output_name}' not found in metadata for {module_context}. "
@@ -798,17 +740,15 @@ def _assemble_fingerprint_params(module_definition, module_fp_section, location_
     fingerprint_params = {"location_file": location_file}
 
     if isinstance(module_fp_section, dict):
-        for fp_spec in module_definition.arguments.get("fingerprint_params", []):
-            name = fp_spec.get("name", "")
+        for fp_spec in module_definition.arguments.fingerprint_params:
+            name = fp_spec.name
             if not name or name not in module_fp_section:
                 continue
             v = module_fp_section[name]
             actual = v.get("value", v) if isinstance(v, dict) else v
             if actual is None:
                 continue
-            source = fp_spec.get("source", "")
-            key = source.split(".")[-1] if "." in source else name
-            fingerprint_params[key] = actual
+            fingerprint_params[fp_spec.source.leaf] = actual
     return fingerprint_params
 
 
@@ -866,13 +806,11 @@ def build_module_service_spec(
     options_dict = {}
     options_section = module_metadata.get("options", {})
     if isinstance(options_section, dict):
-        for opt_spec in module_definition.arguments.get("options", []):
-            name = opt_spec.get("name", "")
+        for opt_spec in module_definition.arguments.options:
+            name = opt_spec.name
             if not name or name not in options_section:
                 continue
-            source = opt_spec.get("source", "")
-            key = source.split(".")[-1] if "." in source else name
-            options_dict[key] = options_section[name]
+            options_dict[opt_spec.source.leaf] = options_section[name]
 
     inputs_dict = _resolve_module_inputs_dict(
         module_definition=module_definition,
@@ -887,13 +825,12 @@ def build_module_service_spec(
     # module_inputs.inputs.<suffix>); if such a value wasn't already resolved as an
     # input, pull it in from options_dict, and vice versa. Both dicts are keyed by the
     # same internal (source-suffix) key space, so `key` is consistent both directions.
-    for opt_spec in module_definition.arguments.get("options", []):
-        source = opt_spec.get("source", "")
-        key = source.split(".")[-1] if "." in source else opt_spec.get("name", "")
-        if not key:
-            continue
+    for opt_spec in module_definition.arguments.options:
+        source = opt_spec.source
+        key = source.leaf
         if (
-            "module_inputs.inputs." in source
+            source.root == "module_inputs"
+            and source.attr == "inputs"
             and key not in inputs_dict
             and key in options_dict
         ):
@@ -914,7 +851,8 @@ def build_module_service_spec(
     image_data = get_required_field(module_metadata, "image", module_context)
     image = _parse_image(image_data, module_context)
 
-    location_file = metadata.get("location-file")
+    top_level_params = TopLevelParams.from_config(metadata)
+    location_file = top_level_params.location_file
     # Merge module-specific fingerprint params (e.g. fprint_gis_file for emulandice-gris)
     module_fp_section = module_metadata.get("fingerprint_params") or {}
     fingerprint_params = _assemble_fingerprint_params(
@@ -932,7 +870,7 @@ def build_module_service_spec(
         inputs=inputs_dict,
         outputs=outputs_dict,
         image=image,
-        metadata=metadata,
+        top_level_params=top_level_params,
         output_container_base=resolved_paths.output_container_base,
     )
 

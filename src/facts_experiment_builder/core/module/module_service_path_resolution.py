@@ -9,10 +9,11 @@ from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
     _SHARED_CONTAINER_PATH,
 )
+from facts_experiment_builder.core.module.arg_specs import MountSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
-def is_shared_input(mount: dict | None) -> bool:
+def is_shared_input(mount: MountSpec | None) -> bool:
     """Determine if an input field is a shared input (shared across modules).
 
     Shared inputs include location files and fingerprint directories.
@@ -24,12 +25,10 @@ def is_shared_input(mount: dict | None) -> bool:
     Returns:
         True if field is a shared input, False if module-specific
     """
-    if not isinstance(mount, dict):
-        raise ValueError(
-            f"Expected mount to be a dict with 'container_path', got {type(mount)}"
-        )
+    if mount is None:
+        raise ValueError("Expected a mount with 'container_path', got None")
 
-    container_path = mount.get("container_path")
+    container_path = mount.container_path
     if container_path == _SHARED_CONTAINER_PATH:
         return True
     elif container_path == _MODULE_SPECIFIC_CONTAINER_PATH:
@@ -44,7 +43,7 @@ def is_shared_input(mount: dict | None) -> bool:
 def resolve_input_path(
     field_name: str,
     field_value: Any,
-    mount: dict | None,
+    mount: MountSpec | None,
     shared_input_data: str,
     module_specific_input_data: str,
     module_name: str = "",

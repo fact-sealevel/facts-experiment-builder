@@ -8,7 +8,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 # ---------------------- Core imports ----------------------------
-from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
+from facts_experiment_builder.core.module.arg_specs import (
+    ArgumentsSpec,
+    BaseArgSpec,
+    OtherOutputSpec,
+    OutputFileSpec,
+)
 
 # TODO this would need to change if the module schema yaml structure changes.
 # should add an abstraction to separate these domain objects from the module schema
@@ -29,7 +34,7 @@ class ModuleSchema:
 
     module_name: str
     container_image: str
-    arguments: dict[str, Any]  # top_level, options, inputs, outputs
+    arguments: ArgumentsSpec
     volumes: dict[str, dict[str, Any]]
     depends_on: list[dict[str, Any]] | None = None
     command: str = ""
@@ -40,7 +45,7 @@ class ModuleSchema:
 
     def __post_init__(self) -> None:
         if self.arguments is None:
-            self.arguments = {}
+            self.arguments = ArgumentsSpec()
         if self.volumes is None:
             self.volumes = {}
 
@@ -48,31 +53,17 @@ class ModuleSchema:
     def input_dir_name(self) -> str:
         return self.extra.get("input_dir_name") or self.module_name
 
-    def get_file_outputs(self) -> list[dict[str, Any]]:
+    def get_file_outputs(self) -> list[OutputFileSpec]:
         """File outputs (have filename + output_type)."""
-        outputs = self.arguments.get("outputs", {})
-        if not isinstance(outputs, dict):
-            raise ValueError(
-                f"Module '{self.module_name}': 'arguments.outputs' must be a dict "
-                f" with 'files'/'other' keys, but got {type(outputs).__name__}. "
-                f" Check the module YAML for '{self.module_name}' and ensure it has correct structure."
-            )
-        return list(outputs.get("files") or [])
+        return list(self.arguments.outputs.files)
 
-    def get_other_outputs(self) -> list[dict[str, Any]]:
+    def get_other_outputs(self) -> list[OtherOutputSpec]:
         """Non-file outputs (directories, string paths, etc.)."""
-        outputs = self.arguments.get("outputs") or {}
-        if not isinstance(outputs, dict):
-            raise ValueError(
-                f"Module '{self.module_name}': 'arguments.outputs' must be a dict "
-                f" with 'files'/'other' keys, but got {type(outputs).__name__}. "
-                f" Check the module YAML for '{self.module_name}' and ensure it has correct structure."
-            )
-        return list(outputs.get("other") or [])
+        return list(self.arguments.outputs.other)
 
     def get_outputs_list(
         self, suppress_output_types: set | None = None
-    ) -> list[dict[str, Any]]:
+    ) -> list[OutputFileSpec | OtherOutputSpec]:
         """All outputs as a flat list (file and other combined).
 
         Args:
@@ -85,7 +76,7 @@ class ModuleSchema:
         return [
             spec
             for spec in all_outputs
-            if spec.get("output_type") not in suppress_output_types
+            if getattr(spec, "output_type", None) not in suppress_output_types
         ]
 
     def output_volume_key(self) -> str | None:
@@ -106,12 +97,9 @@ class ModuleSchema:
         if not output_vol:
             return set()
         keys = set()
-        for input_spec in self.arguments.get("inputs", []):
-            mount = input_spec.get("mount", {})
-            if isinstance(mount, dict) and mount.get("volume") == output_vol:
-                name = input_spec.get("name", "")
-                if name:
-                    keys.add(name)
+        for input_spec in self.arguments.inputs:
+            if input_spec.mount is not None and input_spec.mount.volume == output_vol:
+                keys.add(input_spec.name)
         return keys
 
     def get_climate_output_type(self) -> str | None:
@@ -121,18 +109,21 @@ class ModuleSchema:
         Reads climate_step_output from the input entry named 'climate-data-file' or
         'input-data-file'. Returns None if this module has no such input.
         """
-        for input_spec in self.arguments.get("inputs", []):
-            if input_spec.get("name") in ("climate-data-file", "input-data-file"):
-                return input_spec.get("climate_step_output")
+        for input_spec in self.arguments.inputs:
+            if input_spec.name in ("climate-data-file", "input-data-file"):
+                return input_spec.climate_step_output
         return None
 
     @classmethod
     def from_dict(cls, data: dict) -> "ModuleSchema":
-        arguments = data.get("arguments", {})
-        if not isinstance(arguments, dict):
-            arguments = {}
+        raw_arguments = data.get("arguments") or {}
+        if not isinstance(raw_arguments, dict):
+            raise ValueError(
+                f"Module '{data.get('module_name', '')}': 'arguments' must be a dict, "
+                f"got {type(raw_arguments).__name__}."
+            )
+        arguments = ArgumentsSpec.model_validate(raw_arguments)
 
-        ArgumentsSpec(**arguments)
         volumes = data.get("volumes", {})
         if not isinstance(volumes, dict):
             volumes = {}
@@ -168,7 +159,9 @@ class ModuleSchema:
         data: dict[str, Any] = {
             "module_name": self.module_name,
             "container_image": self.container_image,
-            "arguments": dict(self.arguments),
+            # exclude_unset: only write fields present in the module YAML, not every
+            # model default, so the frozen schema matches the registry file.
+            "arguments": self.arguments.model_dump(exclude_unset=True),
             "volumes": dict(self.volumes),
             "command": self.command,
             "uses_climate_file": self.uses_climate_file,
@@ -221,10 +214,15 @@ def collect_metadata_param_keys(
     """
     result: dict[str, str] = {}
     for schema in schemas:
-        for arg_spec in schema.arguments.get(section, []):
-            source = arg_spec.get("source", "")
-            if source.startswith("metadata."):
-                key_name = source[len("metadata.") :]
+        arg_specs: list[BaseArgSpec] = getattr(schema.arguments, section)
+        for arg_spec in arg_specs:
+            if arg_spec.source.root == "metadata":
+                # Keep the YAML spelling (e.g. "pipeline-id"): it is the config key.
+                key_name = arg_spec.source.leaf
                 if key_name not in result:
-                    result[key_name] = arg_spec.get("help", f"Enter {key_name}")
+                    result[key_name] = (
+                        arg_spec.help
+                        if arg_spec.help is not None
+                        else f"Enter {key_name}"
+                    )
     return result
