@@ -48,6 +48,14 @@ class ModuleSchema:
             self.arguments = ArgumentsSpec()
         if self.volumes is None:
             self.volumes = {}
+        if self.command is None:
+            self.command = ""
+        elif not isinstance(self.command, str):
+            raise ValueError(
+                f"Module '{self.module_name}': 'command' must be a string,"
+                f"got {type(self.command).__name__}."
+            )
+        self.command = self.command.strip()
 
     @property
     def input_dir_name(self) -> str:
