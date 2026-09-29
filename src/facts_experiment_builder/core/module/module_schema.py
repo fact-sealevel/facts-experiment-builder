@@ -29,7 +29,7 @@ class ModuleSchema:
 
     module_name: str
     container_image: str
-    arguments: dict[str, list[dict[str, Any]]]  # top_level, options, inputs, outputs
+    arguments: dict[str, Any]  # top_level, options, inputs, outputs
     volumes: dict[str, dict[str, Any]]
     depends_on: list[dict[str, Any]] | None = None
     command: str = ""

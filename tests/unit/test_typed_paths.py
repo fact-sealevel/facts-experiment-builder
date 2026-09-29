@@ -10,9 +10,7 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
 )
-from facts_experiment_builder.core.module.service_spec_utils import (
-    _dir_input_keys,
-)
+
 from facts_experiment_builder.core.typed_path import (
     ContainerPath,
     HostDirPath,
@@ -228,48 +226,6 @@ def test_generate_compose_service_includes_environment():
     service = spec.generate_compose_service()
     assert "environment" in service
     assert "EMULANDICE_FORCING_HEAD_PATH" in service["environment"]
-
-
-def test_dir_input_keys_returns_keys_with_type_dir():
-    """_dir_input_keys returns field names for inputs declared type: 'dir'."""
-    module_def = ModuleSchema(
-        module_name="test-mod",
-        container_image="img:tag",
-        arguments={
-            "top_level": [],
-            "options": [],
-            "fingerprint_params": [],
-            "inputs": [
-                {
-                    "name": "zosdir",
-                    "type": "dir",
-                    "source": "module_inputs.inputs.zosdir",
-                    "mount": {
-                        "volume": "module_specific_in",
-                        "container_path": "/mnt/module_specific_in",
-                    },
-                },
-                {
-                    "name": "expansion-coefficients-file",
-                    "type": "file",
-                    "source": "module_inputs.inputs.expansion_coefficients_file",
-                    "mount": {
-                        "volume": "input",
-                        "container_path": "/mnt/module_specific_in",
-                    },
-                },
-                {
-                    "name": "seed",
-                    "type": "int",
-                    "source": "module_inputs.options.seed",
-                },
-            ],
-            "outputs": {},
-        },
-        volumes={},
-    )
-    keys = _dir_input_keys(module_def)
-    assert keys == {"zosdir"}
 
 
 def test_host_dir_path_gets_trailing_slash_in_command():

@@ -91,7 +91,7 @@ class PlannedCheck:
             )
 
 
-def resolve_input_paths(
+def resolve_validate_input_paths(
     data_dir: Path,
     module_specific_input_data: Path | None,
     shared_input_data: Path | None,
@@ -288,16 +288,14 @@ def check_shared_data(
     discovered_module_names: list[str],
     shared_input_dir: Path,
     schemas: dict[str, ModuleSchema],
-    # registry: ModuleRegistry,
 ) -> list[InputFileCheck]:
     """Check shared input files required by the discovered modules.
 
-    Collects all unique shared inputs across all discovered modules from two
-    argument sections:
-    - inputs: entries where is_shared_input(field_name) is True
-    - fingerprint_params: entries where mount.container_path is /mnt/shared_in
-
-    Deduplicates by filename so each shared file is reported once.
+    Args:
+        discovered_module_names: List of module names discovered in the module-specific
+            input data directory.
+        shared_input_dir: Path to the shared input data directory.
+        schemas: Dict of module schemas keyed by module name.
     """
     seen: set = set()
     checks: list[InputFileCheck] = []

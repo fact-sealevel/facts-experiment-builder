@@ -1,75 +1,15 @@
+"""Resolve experiment-level and module-level host paths from experiment metadata."""
+
 import os
+from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from facts_experiment_builder.core.typed_path import (
     _MODULE_SPECIFIC_CONTAINER_PATH,
     _SHARED_CONTAINER_PATH,
 )
-
-
-def _input_spec_by_key(module_definition: Any) -> dict[str, dict]:
-    result = {}
-    for arg_spec in module_definition.arguments.get("inputs", []):
-        source = arg_spec.get("source", "")
-        if "." in source:
-            result[source.split(".")[-1]] = arg_spec
-    return result
-
-
-def declares_input(module_definition: Any, field_name: str) -> bool:
-    """Return True if the module's schema declares an input sourced from
-    module_inputs.inputs.<field_name>."""
-    return field_name in _input_spec_by_key(module_definition)
-
-
-def _dir_input_keys(module_definition: Any) -> set[str]:
-    """Return set of input field names declared as directory paths (type: 'dir') in the
-    module YAML."""
-    keys: set[str] = set()
-    for arg_spec in module_definition.arguments.get("inputs", []):
-        if arg_spec.get("type") != "dir":
-            continue
-        source = arg_spec.get("source", "")
-        if "." in source:
-            keys.add(source.split(".")[-1])
-    return keys
-
-
-def expand_path(path_str: Any, context: str = "") -> str:
-    """Expand environment variables and ~ in path strings, then resolve to an absolute
-    path.
-
-    Resolving to absolute ensures all downstream path operations (volume mounts,
-    container path computation) work correctly regardless of the working directory
-    FEB is invoked from. Users can provide either absolute paths or paths relative
-    to their working directory in the experiment config.
-
-    Args:
-        path_str: Path string to expand (or list with first element used)
-        context: Optional context for error messages
-
-    Returns:
-        Absolute path string
-
-    Raises:
-        ValueError: If path_str is None or invalid type
-    """
-    if path_str is None:
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(f"Path string is None{context_msg}. Cannot expand None value.")
-    if isinstance(path_str, list):
-        path_str = path_str[0] if path_str else ""
-        if not path_str:
-            context_msg = f" in {context}" if context else ""
-            raise ValueError(
-                f"Path string is empty list{context_msg}. Cannot expand empty path."
-            )
-    if not isinstance(path_str, str):
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Path string has invalid type: expected str, got {type(path_str)}{context_msg}"
-        )
-    return os.path.abspath(os.path.expandvars(os.path.expanduser(path_str)))
+from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
 def is_shared_input(mount: dict | None) -> bool:
@@ -371,3 +311,127 @@ def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[st
         "module_specific_input_data": module_specific_input_data,
         "output_data_location": output_data_location,
     }
+
+
+@dataclass
+class ResolvedPaths:
+    shared_input_data: str
+    module_specific_input_data: str
+    experiment_specific_input_data: str | None
+    output_data_location: str
+    output_container_base: str | None = None
+
+
+def expand_path(path_str: Any, context: str = "") -> str:
+    """Expand environment variables and ~ in path strings, then resolve to an absolute
+    path.
+
+    Resolving to absolute ensures all downstream path operations (volume mounts,
+    container path computation) work correctly regardless of the working directory
+    FEB is invoked from. Users can provide either absolute paths or paths relative
+    to their working directory in the experiment config.
+
+    Args:
+        path_str: Path string to expand (or list with first element used)
+        context: Optional context for error messages
+
+    Returns:
+        Absolute path string
+
+    Raises:
+        ValueError: If path_str is None or invalid type
+    """
+    if path_str is None:
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(f"Path string is None{context_msg}. Cannot expand None value.")
+    if isinstance(path_str, list):
+        path_str = path_str[0] if path_str else ""
+        if not path_str:
+            context_msg = f" in {context}" if context else ""
+            raise ValueError(
+                f"Path string is empty list{context_msg}. Cannot expand empty path."
+            )
+    if not isinstance(path_str, str):
+        context_msg = f" in {context}" if context else ""
+        raise ValueError(
+            f"Path string has invalid type: expected str, got {type(path_str)}{context_msg}"
+        )
+    return os.path.abspath(os.path.expandvars(os.path.expanduser(path_str)))
+
+
+def resolve_experiment_paths(
+    metadata: dict[str, Any],
+    module_context: str,
+    known_module_names: list,
+    module_name: str,
+    module_definition: ModuleSchema,
+) -> ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
+    # module_name = module_definition.module_name
+    experiment_paths = get_experiment_paths(metadata, module_context)
+    module_metadata = get_required_field(metadata, module_name, module_context)
+
+    raw_exp_specific = metadata.get("experiment-specific-input-data")
+    if isinstance(raw_exp_specific, dict):
+        raw_exp_specific = raw_exp_specific.get("value")
+    experiment_specific_input = (
+        expand_path(
+            raw_exp_specific, f"{module_context} (experiment-specific-input-data)"
+        )
+        if raw_exp_specific
+        else None
+    )
+
+    shared_input_data = expand_path(
+        experiment_paths["shared_input_data"],
+        f"{module_context} (shared-input-data)",
+    )
+
+    module_specific_input_base = expand_path(
+        experiment_paths["module_specific_input_data"],
+        f"{module_context} (module-specific-input-data)",
+    )
+    # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
+    # so volume host path is always base + current module's suffix only (never another module's name).
+    if (
+        Path(module_specific_input_base).name in known_module_names
+    ):  # registry.module_names():
+        module_specific_input_base = str(Path(module_specific_input_base).parent)
+    # Module-specific input dir: driven by input_dir_name in module YAML (e.g. "ipccar5" for both
+    # ipccar5-glaciers and ipccar5-icesheets). Falls back to module_definition.module_name so that
+    # per-workflow service names (e.g. extremesealevel-pointsoverthreshold-wf1) resolve to the base
+    # module's dir automatically.
+    module_specific_input_path_suffix = module_definition.input_dir_name  # ()
+    module_specific_input_data = (
+        module_specific_input_base + "/" + module_specific_input_path_suffix
+    )
+
+    output_data_partial = expand_path(
+        experiment_paths["output_data_location"],
+        f"{module_context} (output-data-location)",
+    )
+    # Only facts-total workflow services (names like facts-total-wf1) use a shared output
+    # subdir and optional container base. Other modules are unchanged.
+    is_facts_total_workflow = module_name.startswith("facts-total-")
+    if is_facts_total_workflow:
+        output_data_location = output_data_partial + "/facts-total"
+        if not Path(output_data_location).exists():
+            os.makedirs(output_data_location, exist_ok=True)
+
+        output_container_base = (
+            module_metadata.get("_output_container_base")
+            or "/mnt/total_out/facts-total"
+        )
+    else:
+        output_data_location = output_data_partial + "/" + module_name
+        if not Path(output_data_location).exists():
+            os.makedirs(output_data_location, exist_ok=True)
+        output_container_base = None
+
+    resolved_paths = ResolvedPaths(
+        shared_input_data=shared_input_data,
+        module_specific_input_data=module_specific_input_data,
+        output_data_location=output_data_location,
+        experiment_specific_input_data=experiment_specific_input,
+        output_container_base=output_container_base,
+    )
+    return resolved_paths

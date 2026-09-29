@@ -1,6 +1,6 @@
 import pytest
 
-from facts_experiment_builder.core.module.module_service_spec import (
+from facts_experiment_builder.core.module.module_service_path_resolution import (
     resolve_input_path,
 )
 

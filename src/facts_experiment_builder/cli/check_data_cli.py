@@ -7,7 +7,7 @@ import click
 # ---------------- Application imports ---------------
 from facts_experiment_builder.application.check_data import (
     check_data,
-    resolve_input_paths,
+    resolve_validate_input_paths,
 )
 
 # ---------------- CLI imports ---------------
@@ -22,10 +22,10 @@ def check_provided_paths(
     module_specific_input_data: Path | None,
     shared_input_data: Path | None,
 ) -> tuple[Path, Path]:
-    """Call resolve_input_paths on paths provided by user and raise click usage error if
-    expected directories not found at provided paths."""
+    """Call resolve_validate_input_paths on paths provided by user and raise click usage
+    error if expected directories not found at provided paths."""
     try:
-        return resolve_input_paths(
+        return resolve_validate_input_paths(
             data_dir, module_specific_input_data, shared_input_data
         )
     except ValueError as e:
