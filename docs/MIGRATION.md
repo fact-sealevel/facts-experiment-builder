@@ -1,6 +1,6 @@
 # Migrating to the new `experiment-config.yaml` format
 
-**Applies to:** FEB versions after 0.5.0 ([PR #115](https://github.com/fact-sealevel/facts-experiment-builder/pull/115))
+**Applies to:** FEB versions 0.6.0 and greater ([PR #115](https://github.com/fact-sealevel/facts-experiment-builder/pull/115))
 
 ## What changed
 
