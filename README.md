@@ -5,6 +5,12 @@
 > [!CAUTION]
 > 🚧🚧 This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases. This repo, including documentation, is still in draft form. If you encounter any issuse or have questions, feel free to raise an issue or email emarshall@rhg.com. 🚧🚧
 
+> [!WARNING]
+> **Breaking change in v0.6.0.** `feb generate-compose` now reads module schemas from `experiment-config.yaml` instead of the module registry, and the `--module-registry` flag has been removed. Experiment configs created with earlier versions must be regenerated with `feb setup-experiment`. See the [migration guide](docs/MIGRATION.md) and [CHANGELOG](CHANGELOG.md#060---2026-09-30) for details.
+>
+> If you installed FEB before v0.6.0, upgrade with `uv tool upgrade facts-experiment-builder` (see [Updating](#updating)), then re-run `feb setup-experiment` for any existing experiments before running `feb generate-compose`.
+<!-- TODO: remove this notice at v0.7.0 -->
+
 
 
 ## Overview
@@ -74,6 +80,29 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 ```
 
 The examples in this README use the full `uvx` form so they work without any prior installation. Once FEB is installed, replace `uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main` with just `feb`.
+
+### Updating
+
+Installing FEB does not update it automatically. To update to the latest version on `main`:
+
+```shell
+# with uv
+uv tool upgrade facts-experiment-builder
+
+# with pipx
+pipx upgrade facts-experiment-builder
+
+# with pip
+pip install --upgrade --force-reinstall git+https://github.com/fact-sealevel/facts-experiment-builder@main
+```
+
+With uv, you can check your installed version with `uv tool list`. See the [CHANGELOG](CHANGELOG.md) for what has changed between releases.
+
+If you run FEB with `uvx` instead of installing it, add `--refresh` once after a new release to make sure you get the latest version rather than a cached one:
+
+```shell
+uvx --refresh --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb <command>
+```
 
 ---
 
