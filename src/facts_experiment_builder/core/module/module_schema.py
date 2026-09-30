@@ -114,11 +114,12 @@ class ModuleSchema:
         """Return the climate output name this module needs, derived from its climate
         input spec.
 
-        Reads climate_step_output from the input entry named 'climate-data-file' or
-        'input-data-file'. Returns None if this module has no such input.
+        The climate input is the input entry that sets climate_step_output, whatever its
+        CLI flag name (e.g. 'climate-data-file' or 'input-data-file'). Returns None if
+        this module has no such input.
         """
         for input_spec in self.arguments.inputs:
-            if input_spec.name in ("climate-data-file", "input-data-file"):
+            if input_spec.climate_step_output:
                 return input_spec.climate_step_output
         return None
 

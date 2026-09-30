@@ -91,7 +91,7 @@ class ModuleServiceSpecComponents:
         """Return the value a module YAML source path points at.
 
         Returns None when the addressed key is absent (e.g. an optional input that was
-        not provided), so callers can fall back to `alternatives`.
+        not provided), so the argument is left off the command.
         """
         if source.root == "metadata":
             return getattr(self.top_level_params, source.attr)
@@ -231,22 +231,6 @@ class ModuleServiceSpec:
             else Path(container_path) / value_path.parent / value_path.name
         )
 
-    def _resolve_with_alternatives(self, arg_spec: BaseArgSpec) -> Any:
-        """Resolve an arg's value from its source, falling back to alternatives.
-
-        Returns None if nothing resolves, or if the primary source is missing and the
-        arg is optional.
-        """
-        value = self._resolve_value(arg_spec.source)
-        if value is None and arg_spec.optional:
-            return None
-        if value is None:
-            for alt_source in arg_spec.alternatives:
-                value = self._resolve_value(alt_source)
-                if value is not None:
-                    break
-        return value
-
     def _process_argument(
         self,
         arg_spec: BaseArgSpec,
@@ -263,7 +247,7 @@ class ModuleServiceSpec:
         Returns:
             The value to pass to the container, or None if no value resolved
         """
-        value = self._resolve_with_alternatives(arg_spec)
+        value = self._resolve_value(arg_spec.source)
         if value is None:
             return None
 

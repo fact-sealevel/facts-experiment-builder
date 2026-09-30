@@ -14,7 +14,6 @@ from pydantic import (
     Field,
     InstanceOf,
     PlainSerializer,
-    model_validator,
 )
 
 from facts_experiment_builder.core.module.source_path import SourcePath
@@ -24,7 +23,7 @@ def _parse_source(value: Any) -> Any:
     return SourcePath.parse(value) if isinstance(value, str) else value
 
 
-# A `source:`/`alternatives:` entry: parsed from its YAML string on load, and dumped
+# A `source:` entry: parsed from its YAML string on load, and dumped
 # back to that same string (so ModuleSchema.to_dict() round-trips).
 SourceField = Annotated[
     InstanceOf[SourcePath],
@@ -52,7 +51,6 @@ class BaseArgSpec(BaseModel):
     help: str | None = None
     optional: bool = False
     mount: MountSpec | None = None
-    alternatives: list[SourceField] = Field(default_factory=list)
 
 
 class TopLevelArgSpec(BaseArgSpec):
@@ -72,21 +70,10 @@ class InputArgSpec(BaseArgSpec):
     default_value: Any | None = None
     multiple: bool = False
     external_volume: bool = False
+    # Set only on a sea-level module's climate input (whatever its CLI flag `name`,
+    # e.g. climate-data-file or input-data-file): the climate step output it consumes.
     climate_step_output: str | None = None
     envvar: str | None = None
-
-    @model_validator(mode="after")
-    def climate_step_output_required_for_climate_inputs_to_sealevel_modules(
-        self,
-    ) -> "InputArgSpec":
-        if (
-            self.name == "climate-data-file" or self.name == "input-data-file"
-        ):  # TODO need to fix this
-            if not self.climate_step_output:
-                raise ValueError(
-                    "climate_step_output is required for this type of input entry"
-                )
-        return self
 
 
 class OutputFileSpec(BaseArgSpec):

@@ -290,6 +290,32 @@ def test_get_climate_output_type_reads_from_input_data_file_input():
     assert mod.get_climate_output_type() == "output-gsat-file"
 
 
+def test_get_climate_output_type_does_not_depend_on_input_name():
+    mod = ModuleSchema(
+        module_name="sealevel-module",
+        container_image="img:tag",
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "location-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.location_file",
+                    },
+                    {
+                        "name": "temperature-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.temperature_file",
+                        "climate_step_output": "output-gsat-file",
+                    },
+                ]
+            }
+        ),
+        volumes={},
+    )
+    assert mod.get_climate_output_type() == "output-gsat-file"
+
+
 def test_get_climate_output_type_returns_none_for_non_climate_inputs():
     mod = ModuleSchema(
         module_name="sealevel-module",

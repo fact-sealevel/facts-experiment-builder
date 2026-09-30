@@ -56,7 +56,16 @@ def test_top_level_arg_spec_required_fields():
     spec = TopLevelArgSpec(name="scenario", type="str", source="metadata.scenario")
     assert spec.optional is False
     assert spec.mount is None
-    assert spec.alternatives == []
+
+
+def test_arg_spec_rejects_alternatives_field():
+    with pytest.raises(ValidationError):
+        TopLevelArgSpec(
+            name="scenario",
+            type="str",
+            source="metadata.scenario",
+            alternatives=["metadata.pipeline-id"],
+        )
 
 
 def test_top_level_arg_spec_with_mount(mount_spec_shared_in):

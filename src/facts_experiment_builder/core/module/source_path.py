@@ -1,6 +1,6 @@
 """Typed form of the dotted source strings used in module YAMLs.
 
-`source:`, `alternatives:` and volume `host_path:` entries say where a value comes from
+`source:` and volume `host_path:` entries say where a value comes from
 when building a compose service. Every one has one of these shapes:
 
 metadata.<top-level param>            e.g. metadata.pipeline-id
