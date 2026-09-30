@@ -5,6 +5,10 @@
 > [!CAUTION]
 > 🚧🚧 This is a prototype. It is likely to change in breaking ways, please don't rely on it in production and check back regularly for updates and new releases. This repo, including documentation, is still in draft form. If you encounter any issuse or have questions, feel free to raise an issue or email emarshall@rhg.com. 🚧🚧
 
+> [!WARNING]
+> **Breaking change in v0.6.0.** `feb generate-compose` now reads module schemas from `experiment-config.yaml` instead of the module registry, and the `--module-registry` flag has been removed. Experiment configs created with earlier versions must be regenerated with `feb setup-experiment`. See the [migration guide](docs/MIGRATION.md) and [CHANGELOG](CHANGELOG.md#060---2026-09-30) for details.
+<!-- TODO: remove this notice at v0.7.0 -->
+
 
 
 ## Overview
@@ -16,6 +20,8 @@
 - `feb list-modules` to see all available modules in your registry. 
 
 An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) or [Apptainer](https://apptainer.org/) implementation that should be more suitable for HPC systems.
+
+For more information on FACTS, see [https://fact-sealevel.github.io/](https://fact-sealevel.github.io/).
 
 >[!IMPORTANT]
 > Experiment configuration files are not executable files. They only specify an experiment, while implementation files such as `experiment-compose.yaml` created by `generate-compose` function as execution scripts. 
