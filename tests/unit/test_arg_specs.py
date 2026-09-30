@@ -56,7 +56,16 @@ def test_top_level_arg_spec_required_fields():
     spec = TopLevelArgSpec(name="scenario", type="str", source="metadata.scenario")
     assert spec.optional is False
     assert spec.mount is None
-    assert spec.alternatives == []
+
+
+def test_arg_spec_rejects_alternatives_field():
+    with pytest.raises(ValidationError):
+        TopLevelArgSpec(
+            name="scenario",
+            type="str",
+            source="metadata.scenario",
+            alternatives=["metadata.pipeline-id"],
+        )
 
 
 def test_top_level_arg_spec_with_mount(mount_spec_shared_in):
@@ -74,7 +83,7 @@ def test_top_level_arg_spec_with_mount(mount_spec_shared_in):
 
 def test_top_level_arg_spec_rejects_unknown_field():
     with pytest.raises(ValidationError):
-        TopLevelArgSpec(name="x", type="str", source="metadata.x", bogus=True)
+        TopLevelArgSpec(name="x", type="str", source="metadata.scenario", bogus=True)
 
 
 # ---------------------------------------------------------------------------
@@ -98,7 +107,9 @@ def test_option_arg_spec_with_default_value():
 
 def test_option_arg_spec_rejects_unknown_field():
     with pytest.raises(ValidationError):
-        OptionArgSpec(name="x", type="int", source="s", extra_field="bad")
+        OptionArgSpec(
+            name="x", type="int", source="module_inputs.options.x", extra_field="bad"
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +130,7 @@ def test_module_specific_input_has_source_module_inputs(
 ):
     spec = random_module_specific_inputs_arg_spec
 
-    assert spec.source.startswith("module_inputs.inputs")
+    assert spec.source.raw.startswith("module_inputs.inputs")
 
 
 def test_input_arg_spec_climate_step_output(climate_data_file_arg_spec):
@@ -135,7 +146,9 @@ def test_input_arg_spec_with_mount(mount_spec_module_specific_in):
 
 def test_input_arg_spec_rejects_unknown_field():
     with pytest.raises(ValidationError):
-        InputArgSpec(name="x", type="file", source="s", unknown="y")
+        InputArgSpec(
+            name="x", type="file", source="module_inputs.inputs.x", unknown="y"
+        )
 
 
 def test_input_arg_spec_for_dir_has_correct_type(non_file_input_arg_spec):
@@ -174,7 +187,11 @@ def test_output_file_spec_pass_to_total():
 def test_output_file_spec_rejects_unknown_field():
     with pytest.raises(ValidationError):
         OutputFileSpec(
-            name="x", type="file", source="s", output_type="global", bad_field=1
+            name="x",
+            type="file",
+            source="module_inputs.outputs.x",
+            output_type="global",
+            bad_field=1,
         )
 
 
@@ -280,7 +297,7 @@ def test_from_dict_validates_arguments():
                         {
                             "name": "x",
                             "type": "file",
-                            "source": "s",
+                            "source": "module_inputs.inputs.x",
                             "not_a_real_field": True,
                         }
                     ]

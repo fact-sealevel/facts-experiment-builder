@@ -1,13 +1,35 @@
 """Pydantic models for module YAML argument spec components.
 
-These models validate the structure of dicts inside ModuleSchema.arguments — catching
-unknown fields, wrong types, and missing required keys at YAML load time (in
+These models are the typed form of ModuleSchema.arguments. They catch unknown fields,
+wrong types, missing required keys and malformed `source:` strings at YAML load time (in
 ModuleSchema.from_dict).
 """
 
-from typing import Any
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    InstanceOf,
+    PlainSerializer,
+)
+
+from facts_experiment_builder.core.module.source_path import SourcePath
+
+
+def _parse_source(value: Any) -> Any:
+    return SourcePath.parse(value) if isinstance(value, str) else value
+
+
+# A `source:` entry: parsed from its YAML string on load, and dumped
+# back to that same string (so ModuleSchema.to_dict() round-trips).
+SourceField = Annotated[
+    InstanceOf[SourcePath],
+    BeforeValidator(_parse_source),
+    PlainSerializer(lambda s: s.raw, return_type=str),
+]
 
 
 class MountSpec(BaseModel):
@@ -18,93 +40,51 @@ class MountSpec(BaseModel):
     transform: str | None = None
 
 
-class TopLevelArgSpec(BaseModel):
+class BaseArgSpec(BaseModel):
+    """Fields shared by every argument spec, in every section."""
+
     model_config = ConfigDict(extra="forbid")
 
     name: str
     type: str
-    source: str
-    optional: bool = False
+    source: SourceField
     help: str | None = None
-    transform: str | None = None
+    optional: bool = False
     mount: MountSpec | None = None
-    alternatives: list[str] = Field(default_factory=list)
 
 
-class OptionArgSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+class TopLevelArgSpec(BaseArgSpec):
+    transform: str | None = None
 
-    name: str
-    type: str
-    source: str
-    optional: bool = False
-    help: str | None = None
+
+class OptionArgSpec(BaseArgSpec):
     default_value: Any | None = None
     multiple: bool = False
     envvar: str | None = None
-    alternatives: list[str] = Field(default_factory=list)
     allowed_values: list | None = None
-    mount: MountSpec | None = None  # needed for extremesealevel-pointsoverthreshold
 
 
-class InputArgSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str
-    type: str
-    source: str
-    help: str | None = None
-    filename: str | list = None
+class InputArgSpec(BaseArgSpec):
+    filename: str | list | None = None
     filename_map: dict[str, Any] | None = None
     default_value: Any | None = None
-    optional: bool = False
     multiple: bool = False
     external_volume: bool = False
-    mount: MountSpec | None = None
-    alternatives: list[str] = Field(default_factory=list)
+    # Set only on a sea-level module's climate input (whatever its CLI flag `name`,
+    # e.g. climate-data-file or input-data-file): the climate step output it consumes.
     climate_step_output: str | None = None
     envvar: str | None = None
 
-    @model_validator(mode="after")
-    def climate_step_output_required_for_climate_inputs_to_sealevel_modules(
-        self,
-    ) -> "InputArgSpec":
-        if (
-            self.name == "climate-data-file" or self.name == "input-data-file"
-        ):  # TODO need to fix this
-            if not self.climate_step_output:
-                raise ValueError(
-                    "climate_step_output is required for this type of input entry"
-                )
-        return self
 
-
-class OutputFileSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str
-    type: str
-    source: str
-    help: str | None = None
+class OutputFileSpec(BaseArgSpec):
     filename: str | None = None
     filename_map: dict[str, Any] | None = None
     output_type: str
-    optional: bool = False
-    mount: MountSpec | None = None
-    alternatives: list[str] = Field(default_factory=list)
     pass_to_total: bool = True
 
 
-class OtherOutputSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str
-    type: str
-    source: str
-    help: str | None = None
-    optional: bool = False
-    mount: MountSpec | None = None
-    alternatives: list[str] = Field(default_factory=list)
+class OtherOutputSpec(BaseArgSpec):
+    pass
 
 
 class OutputsSpec(BaseModel):
@@ -114,19 +94,10 @@ class OutputsSpec(BaseModel):
     other: list[OtherOutputSpec] = Field(default_factory=list)
 
 
-class FingerprintParamSpec(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str
-    type: str
-    source: str
-    optional: bool = False
-    help: str | None = None
+class FingerprintParamSpec(BaseArgSpec):
     filename: str | None = None
     default_value: str | None = None
     transform: str | None = None
-    mount: MountSpec | None = None
-    alternatives: list[str] = Field(default_factory=list)
 
 
 class ArgumentsSpec(BaseModel):
@@ -137,3 +108,8 @@ class ArgumentsSpec(BaseModel):
     inputs: list[InputArgSpec] = Field(default_factory=list)
     outputs: OutputsSpec = Field(default_factory=OutputsSpec)
     fingerprint_params: list[FingerprintParamSpec] = Field(default_factory=list)
+
+
+# Arg specs that can have a filename / filename_map (used when building the
+# experiment-config.yaml section for a module).
+FileArgSpec = InputArgSpec | FingerprintParamSpec | OutputFileSpec

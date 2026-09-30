@@ -2,6 +2,7 @@
 
 import pytest
 
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 
@@ -10,22 +11,28 @@ def _climate_schema(module_name: str) -> ModuleSchema:
     return ModuleSchema(
         module_name=module_name,
         container_image="img:tag",
-        arguments={
-            "outputs": {
-                "files": [
-                    {
-                        "name": "output-climate-file",
-                        "filename": "climate.nc",
-                        "output_type": "global",
-                    },
-                    {
-                        "name": "output-gsat-file",
-                        "filename": "gsat.nc",
-                        "output_type": "global",
-                    },
-                ]
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "outputs": {
+                    "files": [
+                        {
+                            "name": "output-climate-file",
+                            "type": "file",
+                            "source": "module_inputs.outputs.output_climate_file",
+                            "filename": "climate.nc",
+                            "output_type": "global",
+                        },
+                        {
+                            "name": "output-gsat-file",
+                            "type": "file",
+                            "source": "module_inputs.outputs.output_gsat_file",
+                            "filename": "gsat.nc",
+                            "output_type": "global",
+                        },
+                    ]
+                }
             }
-        },
+        ),
         volumes={},
     )
 

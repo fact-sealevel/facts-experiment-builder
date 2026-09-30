@@ -5,6 +5,7 @@ import pytest
 from facts_experiment_builder.core.module.module_experiment_spec import (
     ModuleExperimentSpec,
 )
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 # ---------------------------------------------------------------------------
@@ -42,7 +43,9 @@ def _schema(outputs):
     return ModuleSchema(
         module_name="test-module",
         container_image="img:tag",
-        arguments={"inputs": [], "options": [], "outputs": outputs},
+        arguments=ArgumentsSpec.model_validate(
+            {"inputs": [], "options": [], "outputs": outputs}
+        ),
         volumes={},
     )
 
@@ -56,7 +59,7 @@ def test_get_file_outputs_returns_files_section():
     schema = _schema({"files": [FILE_OUTPUT_SPEC], "other": [OTHER_OUTPUT_SPEC]})
     result = schema.get_file_outputs()
     assert len(result) == 1
-    assert result[0]["name"] == "output-gslr-file"
+    assert result[0].name == "output-gslr-file"
 
 
 def test_get_file_outputs_missing_files_key():
@@ -78,7 +81,7 @@ def test_get_other_outputs_returns_other_section():
     schema = _schema({"files": [FILE_OUTPUT_SPEC], "other": [OTHER_OUTPUT_SPEC]})
     result = schema.get_other_outputs()
     assert len(result) == 1
-    assert result[0]["name"] == "output-glacier-dir"
+    assert result[0].name == "output-glacier-dir"
 
 
 def test_get_other_outputs_missing_other_key():
@@ -95,7 +98,7 @@ def test_get_outputs_list_returns_all():
     schema = _schema({"files": [FILE_OUTPUT_SPEC], "other": [OTHER_OUTPUT_SPEC]})
     result = schema.get_outputs_list()
     assert len(result) == 2
-    names = {o["name"] for o in result}
+    names = {o.name for o in result}
     assert names == {"output-gslr-file", "output-glacier-dir"}
 
 
@@ -108,7 +111,7 @@ def test_get_outputs_list_suppresses_local_output_type():
     schema = _schema({"files": [FILE_OUTPUT_SPEC, LOCAL_FILE_OUTPUT_SPEC]})
     result = schema.get_outputs_list(suppress_output_types={"local"})
     assert len(result) == 1
-    assert result[0]["name"] == "output-gslr-file"
+    assert result[0].name == "output-gslr-file"
 
 
 def test_get_outputs_list_unchanged_when_suppress_empty_set():
@@ -128,7 +131,7 @@ def test_get_outputs_list_other_outputs_unaffected_by_suppress():
     schema = _schema({"files": [LOCAL_FILE_OUTPUT_SPEC], "other": [OTHER_OUTPUT_SPEC]})
     result = schema.get_outputs_list(suppress_output_types={"local"})
     assert len(result) == 1
-    assert result[0]["name"] == "output-glacier-dir"
+    assert result[0].name == "output-glacier-dir"
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +160,9 @@ def _schema_with_inputs(inputs, volumes=None):
     return ModuleSchema(
         module_name="test-module",
         container_image="img:tag",
-        arguments={"inputs": inputs, "options": [], "outputs": {}},
+        arguments=ArgumentsSpec.model_validate(
+            {"inputs": inputs, "options": [], "outputs": {}}
+        ),
         volumes=volumes if volumes is not None else {**OUTPUT_VOLUME, **OTHER_VOLUMES},
     )
 
@@ -182,7 +187,9 @@ def test_get_output_volume_input_keys_returns_name():
     inputs = [
         {
             "name": "input-data-file",
+            "type": "file",
             "source": "module_inputs.inputs.input_data_file",
+            "climate_step_output": "output-gsat-file",
             "mount": {"volume": "output", "container_path": "/mnt/out"},
         }
     ]
@@ -195,6 +202,7 @@ def test_get_output_volume_input_keys_excludes_non_output_volume_inputs():
     inputs = [
         {
             "name": "some-file",
+            "type": "file",
             "source": "module_inputs.inputs.some_file",
             "mount": {
                 "volume": "module_specific_input",
@@ -211,11 +219,14 @@ def test_get_output_volume_input_keys_handles_multiple_inputs():
     inputs = [
         {
             "name": "climate-data-file",
+            "type": "file",
             "source": "module_inputs.inputs.climate_data_file",
+            "climate_step_output": "output-climate-file",
             "mount": {"volume": "output", "container_path": "/mnt/out"},
         },
         {
             "name": "location-file",
+            "type": "file",
             "source": "module_inputs.inputs.location_file",
             "mount": {"volume": "shared_input", "container_path": "/mnt/shared_in"},
         },
@@ -231,7 +242,9 @@ def test_get_output_volume_input_keys_empty_when_no_output_volume():
     inputs = [
         {
             "name": "input-data-file",
+            "type": "file",
             "source": "module_inputs.inputs.input_data_file",
+            "climate_step_output": "output-gsat-file",
             "mount": {"volume": "output", "container_path": "/mnt/out"},
         }
     ]
@@ -277,9 +290,8 @@ def test_from_module_schema_raises_for_file_output_missing_output_type():
     """A file output without 'output_type' should raise ValueError."""
     bad_spec = {**FILE_OUTPUT_SPEC}
     del bad_spec["output_type"]
-    schema = _schema({"files": [bad_spec]})
     with pytest.raises(ValueError, match="output_type"):
-        ModuleExperimentSpec.from_module_schema(schema)
+        _schema({"files": [bad_spec]})
 
 
 # ---------------------------------------------------------------------------
@@ -307,12 +319,14 @@ def _schema_with_fp(fingerprint_params):
     return ModuleSchema(
         module_name="test-module",
         container_image="img:tag",
-        arguments={
-            "inputs": [],
-            "options": [],
-            "outputs": {"files": [FILE_OUTPUT_SPEC]},
-            "fingerprint_params": fingerprint_params,
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [],
+                "options": [],
+                "outputs": {"files": [FILE_OUTPUT_SPEC]},
+                "fingerprint_params": fingerprint_params,
+            }
+        ),
         volumes={},
     )
 

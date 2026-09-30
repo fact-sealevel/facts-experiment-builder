@@ -5,6 +5,9 @@ from datetime import datetime
 from typing import Any
 
 from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
+from facts_experiment_builder.core.components.top_level_params import (  # noqa: F401 (re-export)
+    TopLevelParams,
+)
 from facts_experiment_builder.core.steps import (
     ClimateStep,
     ExperimentStep,
@@ -18,18 +21,6 @@ from facts_experiment_builder.core.steps import (
 from facts_experiment_builder.core.workflow import (
     Workflow,
 )
-
-
-@dataclass
-class TopLevelParams:
-    pipeline_id: str
-    scenario: str
-    baseyear: int
-    pyear_start: int
-    pyear_end: int
-    pyear_step: int
-    nsamps: int
-    location_file: str
 
 
 @dataclass

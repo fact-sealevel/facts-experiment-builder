@@ -1,5 +1,6 @@
 """Tests for SealevelStep."""
 
+from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.steps.sealevel_step import SealevelStep
 
@@ -9,17 +10,20 @@ def _sealevel_schema(module_name: str, uses_climate_file: bool = True) -> Module
         module_name=module_name,
         container_image="img:tag",
         uses_climate_file=uses_climate_file,
-        arguments={
-            "inputs": [
-                {
-                    "name": "climate-data-file",
-                    "type": "str",
-                    "source": "module_inputs.inputs.climate_data_file",
-                    "mount": {"volume": "output", "container_path": "/mnt/out"},
-                }
-            ],
-            "outputs": {},
-        },
+        arguments=ArgumentsSpec.model_validate(
+            {
+                "inputs": [
+                    {
+                        "name": "climate-data-file",
+                        "type": "str",
+                        "source": "module_inputs.inputs.climate_data_file",
+                        "climate_step_output": "output-climate-file",
+                        "mount": {"volume": "output", "container_path": "/mnt/out"},
+                    }
+                ],
+                "outputs": {},
+            }
+        ),
         volumes={
             "output": {
                 "host_path": "module_inputs.output_paths.output_dir",

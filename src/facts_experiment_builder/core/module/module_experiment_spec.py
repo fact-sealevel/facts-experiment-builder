@@ -8,6 +8,13 @@ from typing import Any
 from facts_experiment_builder.core.components.metadata_bundle import (
     create_metadata_bundle,
 )
+from facts_experiment_builder.core.module.arg_specs import (
+    BaseArgSpec,
+    FileArgSpec,
+    OptionArgSpec,
+    OtherOutputSpec,
+    OutputFileSpec,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 logger = logging.getLogger(__name__)
@@ -31,7 +38,9 @@ def _map_get(mapping: dict[str, Any], val: Any) -> Any:
     return result
 
 
-def _multi_key_miss(arg_spec: dict, key: str, val: Any, parent: Any) -> str | None:
+def _multi_key_miss(
+    arg_spec: FileArgSpec, key: str, val: Any, parent: Any
+) -> str | list | None:
     """Called when a multi-key filename_map lookup fails to find an entry.
 
     ``parent`` is the map node that was searched (before the failed step), so its keys
@@ -41,20 +50,22 @@ def _multi_key_miss(arg_spec: dict, key: str, val: Any, parent: Any) -> str | No
     invalid key/value and the valid choices. If a fallback exists, returns it silently
     (backward-compatible).
     """
-    fallback = arg_spec.get("filename")
+    fallback = arg_spec.filename
     if fallback is None:
         valid = (
             sorted(str(k) for k in parent.keys()) if isinstance(parent, dict) else []
         )
         valid_str = f" Valid values for '{key}': {valid}." if valid else ""
         raise ValueError(
-            f"Could not resolve filename for '{arg_spec.get('name', '?')}': "
+            f"Could not resolve filename for '{arg_spec.name}': "
             f"no entry for {key}={val!r} in filename_map.{valid_str}"
         )
     return fallback
 
 
-def _resolve_filename(arg_spec: dict, options_context: dict[str, Any]) -> Any | None:
+def _resolve_filename(
+    arg_spec: FileArgSpec, options_context: dict[str, Any]
+) -> Any | None:
     """Return filename for an arg spec, preferring filename_map over filename.
 
     Supports two filename_map formats:
@@ -79,9 +90,10 @@ def _resolve_filename(arg_spec: dict, options_context: dict[str, Any]) -> Any | 
     For multi-key format without a ``filename`` fallback, raises ValueError on
     a miss so the user sees which values are valid.
     """
-    filename_map = arg_spec.get("filename_map")
+    # FingerprintParamSpec has no filename_map.
+    filename_map = getattr(arg_spec, "filename_map", None)
     if not filename_map or not isinstance(filename_map, dict):
-        return arg_spec.get("filename")
+        return arg_spec.filename
 
     # --- Multi-key format ---
     if "keys" in filename_map:
@@ -89,7 +101,7 @@ def _resolve_filename(arg_spec: dict, options_context: dict[str, Any]) -> Any | 
         for key in filename_map["keys"]:
             val = options_context.get(key) or options_context.get(key.replace("-", "_"))
             if val is None:
-                return arg_spec.get("filename")
+                return arg_spec.filename
             if isinstance(val, list):
                 # Iterate over list values and collect one filename per element.
                 results = []
@@ -106,7 +118,7 @@ def _resolve_filename(arg_spec: dict, options_context: dict[str, Any]) -> Any | 
                 return _multi_key_miss(arg_spec, key, val, parent)
             if not isinstance(current, dict):
                 return current
-        return arg_spec.get("filename")
+        return arg_spec.filename
 
     # --- Single-key format ---
     for option_name, value_map in filename_map.items():
@@ -120,10 +132,12 @@ def _resolve_filename(arg_spec: dict, options_context: dict[str, Any]) -> Any | 
             continue
         if option_value is not None and option_value in value_map:
             return value_map[option_value]
-    return arg_spec.get("filename")
+    return arg_spec.filename
 
 
-def _options_defaults_from_schema(options_specs: list[dict]) -> dict[str, Any]:
+def _options_defaults_from_schema(
+    options_specs: list[OptionArgSpec],
+) -> dict[str, Any]:
     """Extract {option-name: default_value} from the schema's options specs.
 
     Both kebab-case and snake_case keys are included so filename_map lookups work
@@ -131,10 +145,11 @@ def _options_defaults_from_schema(options_specs: list[dict]) -> dict[str, Any]:
     """
     context: dict[str, Any] = {}
     for opt_spec in options_specs:
-        name = opt_spec.get("name", "")
-        if name and "default_value" in opt_spec:
-            context[name] = opt_spec["default_value"]
-            context[name.replace("-", "_")] = opt_spec["default_value"]
+        name = opt_spec.name
+        # model_fields_set: only defaults written in the YAML (even an explicit null).
+        if name and "default_value" in opt_spec.model_fields_set:
+            context[name] = opt_spec.default_value
+            context[name.replace("-", "_")] = opt_spec.default_value
     return context
 
 
@@ -157,8 +172,8 @@ def _build_options_context(
 
 
 def _build_outputs(
-    file_outputs: list[dict],
-    other_outputs: list[dict],
+    file_outputs: list[OutputFileSpec],
+    other_outputs: list[OtherOutputSpec],
     module_name: str,
     options_context: dict[str, Any],
 ) -> dict[str, Any]:
@@ -168,7 +183,7 @@ def _build_outputs(
     """
     outputs: dict[str, Any] = {}
     for arg_spec in file_outputs:
-        arg_name = arg_spec.get("name", "")
+        arg_name = arg_spec.name
         if not arg_name:
             continue
         filename = _resolve_filename(arg_spec, options_context)
@@ -177,7 +192,7 @@ def _build_outputs(
                 f"Module {module_name} output '{arg_name}' is missing "
                 "a 'filename' or 'filename_map' key in module YAML (arguments.outputs)."
             )
-        output_type = arg_spec.get("output_type", "")
+        output_type = arg_spec.output_type
         if not output_type:
             raise ValueError(
                 f"Module {module_name} output '{arg_name}' is missing "
@@ -194,7 +209,7 @@ def _build_outputs(
                 "output_type": output_type,
             }
     for arg_spec in other_outputs:
-        arg_name = arg_spec.get("name", "")
+        arg_name = arg_spec.name
         if not arg_name:
             continue
         outputs[arg_name] = {"value": module_name}
@@ -202,7 +217,7 @@ def _build_outputs(
 
 
 def _build_section_from_fields(
-    fields: list[dict],
+    fields: list[BaseArgSpec],
     include_filename: bool = False,
     prefilled_values: dict[str, str] | None = None,
     options_context: dict[str, Any] | None = None,
@@ -212,25 +227,27 @@ def _build_section_from_fields(
     result = {}
 
     for field_spec in fields:
-        name = field_spec.get("name", "")
+        name = field_spec.name
         if not name:
             continue
-        clue = field_spec.get("help", f"Add your {name} here.")
+        clue = (
+            field_spec.help if field_spec.help is not None else f"Add your {name} here."
+        )
         bundle = create_metadata_bundle(clue, prefilled_values.get(name))
-        default_value = field_spec.get("default_value")
+        default_value = getattr(field_spec, "default_value", None)
         if default_value:
             bundle["default_value"] = default_value
             if bundle.get("value") is None:
                 bundle["value"] = default_value
             logger.info("default: %s", default_value)
 
-        if include_filename:
+        if include_filename and isinstance(field_spec, FileArgSpec):
             filename = _resolve_filename(field_spec, options_context)
             if filename:
                 bundle["filename"] = filename
                 if (
                     isinstance(filename, list)
-                    and field_spec.get("multiple", False)
+                    and getattr(field_spec, "multiple", False)
                     and bundle.get("value") is None
                 ):
                     bundle["value"] = filename
@@ -292,36 +309,32 @@ class ModuleExperimentSpec:
 
         options_context = _build_options_context(
             schema_defaults=_options_defaults_from_schema(
-                module_schema.arguments.get("options", [])
+                module_schema.arguments.options
             ),
             prefilled_options=prefilled_options,
             top_level_context=top_level_context or {},
         )
 
         module_inputs = _build_section_from_fields(
-            module_schema.arguments.get("inputs", []),
+            module_schema.arguments.inputs,
             include_filename=True,
             prefilled_values=prefilled_inputs,
             options_context=options_context,
         )
         options: dict[str, Any] = {}
-        top_level_names = [
-            arg.get("name", "") for arg in module_schema.arguments.get("top_level", [])
-        ]
+        top_level_names = [arg.name for arg in module_schema.arguments.top_level]
         if top_level_names:
             options[
                 f"# Options inherited from top-level metadata: {', '.join(top_level_names)}"
             ] = None
-        options.update(
-            _build_section_from_fields(module_schema.arguments.get("options", []))
-        )
+        options.update(_build_section_from_fields(module_schema.arguments.options))
         # Overwrite clue/value bundles with pre-supplied plain values where provided.
         for k, v in prefilled_options.items():
             if k in options:
                 options[k] = v
 
         fingerprint_params = _build_section_from_fields(
-            module_schema.arguments.get("fingerprint_params", []),
+            module_schema.arguments.fingerprint_params,
             include_filename=True,
             options_context=options_context,
         )
