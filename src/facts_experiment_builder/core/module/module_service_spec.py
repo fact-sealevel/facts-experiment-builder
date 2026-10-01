@@ -435,52 +435,69 @@ class ModuleServiceSpec:
 
         return volumes
 
-    def _build_depends_on(
+    def _get_dependency_names(
+        self, temperature_service_name: str | None = None
+    ) -> list[str]:
+        """Return resolved service names this module depends on.
+
+        Format-agnostic: returns names only, without condition metadata.
+        Useful for dependency-graph calculations where only the names matter
+        (e.g. stage grouping for Apptainer). For the Docker Compose depends_on
+        dict, use _build_compose_depends_on() instead.
+        """
+        names: list[str] = []
+
+        if self.module_definition.uses_climate_file and temperature_service_name:
+            names.append(temperature_service_name)
+
+        for dep_spec in self.module_definition.depends_on or []:
+            if isinstance(dep_spec, dict):
+                service_name = dep_spec.get("service", "")
+                if service_name:
+                    if service_name == "fair" and temperature_service_name:
+                        service_name = temperature_service_name
+                    names.append(service_name)
+            elif isinstance(dep_spec, str):
+                mapped = dep_spec
+                if dep_spec == "fair" and temperature_service_name:
+                    mapped = temperature_service_name
+                names.append(mapped)
+
+        return names
+
+    def _build_compose_depends_on(
         self, temperature_service_name: str | None = None
     ) -> dict[str, Any]:
-        """Build depends_on dictionary from YAML configuration.
+        """Build the Docker Compose depends_on dict from dependency configuration.
 
-        If uses_climate_file is True, automatically adds dependency on temperature service.
-        Also processes any explicit depends_on entries from YAML (for backward compatibility).
+        Compose-specific: wraps each dependency name with a condition dict.
+        If uses_climate_file is True, automatically adds dependency on the
+        temperature service. Also processes explicit depends_on entries from YAML.
 
-        Args:
-            temperature_service_name: Optional name of the temperature service to map "fair" to
-
-        Returns:
-            Dictionary mapping service names to dependency conditions
+        For format-agnostic dependency names only, use _get_dependency_names().
         """
-        depends_on = {}
+        depends_on: dict[str, Any] = {}
 
-        # Check if this module uses climate files - if so, add dependency on temperature service
-        uses_climate_file = self.module_definition.uses_climate_file
-        if uses_climate_file and temperature_service_name:
+        if self.module_definition.uses_climate_file and temperature_service_name:
             depends_on[temperature_service_name] = {
                 "condition": "service_completed_successfully"
             }
 
-        # Also process explicit depends_on entries from YAML (for backward compatibility)
-        depends_on_config = self.module_definition.depends_on or []
-
-        if depends_on_config:
-            for dep_spec in depends_on_config:
-                if isinstance(dep_spec, dict):
-                    service_name = dep_spec.get("service", "")
-                    condition = dep_spec.get(
-                        "condition", "service_completed_successfully"
-                    )
-                    if service_name:
-                        # Map "fair" to the actual temperature service name if provided
-                        if service_name == "fair" and temperature_service_name:
-                            service_name = temperature_service_name
-                        depends_on[service_name] = {"condition": condition}
-                elif isinstance(dep_spec, str):
-                    # Simple string format
-                    mapped_name = dep_spec
-                    if dep_spec == "fair" and temperature_service_name:
-                        mapped_name = temperature_service_name
-                    depends_on[mapped_name] = {
-                        "condition": "service_completed_successfully"
-                    }
+        for dep_spec in self.module_definition.depends_on or []:
+            if isinstance(dep_spec, dict):
+                service_name = dep_spec.get("service", "")
+                condition = dep_spec.get(
+                    "condition", "service_completed_successfully"
+                )
+                if service_name:
+                    if service_name == "fair" and temperature_service_name:
+                        service_name = temperature_service_name
+                    depends_on[service_name] = {"condition": condition}
+            elif isinstance(dep_spec, str):
+                mapped = dep_spec
+                if dep_spec == "fair" and temperature_service_name:
+                    mapped = temperature_service_name
+                depends_on[mapped] = {"condition": "service_completed_successfully"}
 
         return depends_on
 
@@ -520,7 +537,7 @@ class ModuleServiceSpec:
         )
         command = self._build_command_args(suppress_output_types=suppress_output_types)
         volumes = self._build_volumes()
-        depends_on = self._build_depends_on(
+        depends_on = self._build_compose_depends_on(
             temperature_service_name=temperature_service_name
         )
         environment = self._build_environment()
