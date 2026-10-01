@@ -227,32 +227,6 @@ def _populate_section_with_local_outputs(
     section["inputs"]["item"].extend(paths)
 
 
-def _create_facts_total_compose_service(
-    section: dict[str, Any],
-    service_name: str,
-    wf: Workflow,
-    metadata: dict[str, Any],
-    experiment_dir: Path,
-    known_module_names: list,
-    schema: ModuleSchema,
-) -> dict[str, Any]:
-    """Build the compose service dict for a facts-total workflow from its synthetic
-    section."""
-    metadata_copy = dict(metadata)
-    metadata_copy[service_name] = section
-    wf_module = build_module_service_spec(
-        metadata=metadata_copy,
-        module_name=service_name,
-        known_module_names=known_module_names,
-        module_definition=schema,
-    )
-    compose_service = wf_module.generate_compose_service()
-    compose_service["depends_on"] = {
-        mod: {"condition": "service_completed_successfully"} for mod in wf.module_names
-    }
-    return compose_service
-
-
 def check_metadata_has_required_fields(metadata_obj, required_fields):
     """This function accepts a list of required fields and a metadata object and subsets
     the metadata to required fields."""
@@ -394,22 +368,27 @@ def _build_module_specs(
     return specs
 
 
-def _create_esl_workflow_services(
+def _build_esl_specs_for_workflows(
     esl_module_names: list[str],
     workflows: dict[str, Workflow],
     metadata: dict[str, Any],
-    experiment_dir: Path,
     projection_scale: str | None,
     schemas: dict[str, ModuleSchema],
-) -> dict[str, Any]:
-    """Build one ESL compose service per workflow, keyed by service name."""
-    services: dict[str, Any] = {}
+) -> dict[str, tuple[ModuleServiceSpec, str]]:
+    """Build a ModuleServiceSpec for each ESL module × workflow combination.
+
+    Returns a dict mapping service_name to (spec, depends_on_service_name). The
+    depends_on_service_name is the facts-total-local service that must complete before
+    this ESL service runs.
+    """
+    specs: dict[str, tuple[ModuleServiceSpec, str]] = {}
     known_module_names = list(schemas.keys())
+
     if not esl_module_names:
-        return services
+        return specs
     if projection_scale == "global":
         logger.info("Skipping per-workflow ESL services (projection_scale=global)")
-        return services
+        return specs
 
     for module_name in esl_module_names:
         schema = schemas[module_name]
@@ -438,20 +417,41 @@ def _create_esl_workflow_services(
             metadata_copy = dict(metadata)
             metadata_copy[service_name] = synthetic_section
 
-            esl_module = build_module_service_spec(
+            esl_spec = build_module_service_spec(
                 metadata=metadata_copy,
                 module_name=service_name,
                 known_module_names=known_module_names,
                 module_definition=schema,
             )
-            compose_svc = esl_module.generate_compose_service()
-            compose_svc["depends_on"] = {
-                wf.facts_total_service_name_for_type("local"): {
-                    "condition": "service_completed_successfully"
-                }
-            }
-            services[service_name] = compose_svc
-            _log_success("Created %s ESL workflow service", service_name)
+            depends_on_service = wf.facts_total_service_name_for_type("local")
+            specs[service_name] = (esl_spec, depends_on_service)
+    return specs
+
+
+def _create_esl_workflow_services(
+    esl_module_names: list[str],
+    workflows: dict[str, Workflow],
+    metadata: dict[str, Any],
+    experiment_dir: Path,
+    projection_scale: str | None,
+    schemas: dict[str, ModuleSchema],
+) -> dict[str, Any]:
+    """Build one ESL compose service per workflow, keyed by service name."""
+    services: dict[str, Any] = {}
+    esl_specs = _build_esl_specs_for_workflows(
+        esl_module_names=esl_module_names,
+        workflows=workflows,
+        metadata=metadata,
+        projection_scale=projection_scale,
+        schemas=schemas,
+    )
+    for service_name, (spec, depends_on_service) in esl_specs.items():
+        compose_svc = spec.generate_compose_service()
+        compose_svc["depends_on"] = {
+            depends_on_service: {"condition": "service_completed_successfully"}
+        }
+        services[service_name] = compose_svc
+        _log_success("Created %s ESL workflow service", service_name)
     return services
 
 
@@ -479,8 +479,19 @@ def _build_standard_services(specs: _ModuleSpecs, plan: _ExperimentPlan) -> dict
     return services
 
 
-def _build_per_workflow_services(plan, metadata, experiment_dir, schemas):
-    services = {}
+def _build_facts_total_specs_for_workflows(
+    plan: _ExperimentPlan,
+    metadata: dict[str, Any],
+    schemas: dict[str, ModuleSchema],
+) -> dict[str, tuple[ModuleServiceSpec, Workflow]]:
+    """Build a ModuleServiceSpec for each facts-total workflow × output_type
+    combination.
+
+    Returns a dict mapping service_name to (spec, workflow). The workflow is included so
+    callers can construct depends_on without re-deriving it.
+    """
+    specs: dict[str, tuple[ModuleServiceSpec, Workflow]] = {}
+    known_module_names = list(schemas.keys())
 
     facts_total_name = next(
         (m for m in plan.framework_module_names if schemas[m].per_workflow),
@@ -509,17 +520,34 @@ def _build_per_workflow_services(plan, metadata, experiment_dir, schemas):
                     section, metadata, wf, schemas=schemas
                 )
             service_name = wf.facts_total_service_name_for_type(output_type)
-            compose_svc = _create_facts_total_compose_service(
-                section=section,
-                service_name=service_name,
-                wf=wf,
-                metadata=metadata,
-                schema=facts_total_schema,
-                experiment_dir=experiment_dir,
-                known_module_names=list(schemas.keys()),
+            metadata_copy = dict(metadata)
+            metadata_copy[service_name] = section
+            spec = build_module_service_spec(
+                metadata=metadata_copy,
+                module_name=service_name,
+                known_module_names=known_module_names,
+                module_definition=facts_total_schema,
             )
-            services[service_name] = compose_svc
-            _log_success("Created %s workflow service", service_name)
+            specs[service_name] = (spec, wf)
+    return specs
+
+
+def _build_per_workflow_services(plan, metadata, experiment_dir, schemas):
+    services = {}
+
+    facts_total_specs = _build_facts_total_specs_for_workflows(
+        plan=plan,
+        metadata=metadata,
+        schemas=schemas,
+    )
+    for service_name, (spec, wf) in facts_total_specs.items():
+        compose_svc = spec.generate_compose_service()
+        compose_svc["depends_on"] = {
+            mod: {"condition": "service_completed_successfully"}
+            for mod in wf.module_names
+        }
+        services[service_name] = compose_svc
+        _log_success("Created %s workflow service", service_name)
 
     services.update(
         _create_esl_workflow_services(
