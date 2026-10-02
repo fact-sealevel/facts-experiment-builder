@@ -7,6 +7,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from facts_experiment_builder.application.execution_plan import (
+    _ModuleSpecs,
+    _build_esl_specs_for_workflows,
+    _collect_workflow_output_paths_by_type,  # noqa: F401 — re-exported for tests
+    build_experiment_execution_plan,
+)
 from facts_experiment_builder.application.storage import (
     ExperimentRepository,
 )
@@ -51,17 +57,6 @@ _REQUIRED_FIELDS = [
 class PrepareComposeOutput:
     compose_dict: dict
     compose_path: Path
-
-
-@dataclass(frozen=True)
-class _ModuleSpecs:
-    """Result of phase 2: all created ModuleServiceSpec instances."""
-
-    temperature_module: ModuleServiceSpec | None
-    sealevel_modules: dict[str, ModuleServiceSpec]
-    framework_modules: dict[str, ModuleServiceSpec]
-    esl_modules: dict[str, ModuleServiceSpec]
-    # TODO do not want these categories to be so rigid in the future
 
 
 def _log_success(msg: str, *args: object) -> None:
@@ -127,130 +122,6 @@ def _validate_climate_file_inputs(
             f"Please provide the climate file input (e.g. 'climate_data_file' or the module-specific "
             f"input key) in the inputs section for each sealevel module."
         )
-
-
-def _collect_workflow_output_paths_by_type(
-    metadata: dict[str, Any],
-    wf: Workflow,
-    output_type: str,
-    schemas: dict[str, "ModuleSchema"],
-    *,
-    container_prefix: str = "/mnt/total_out",
-) -> list[str]:
-    """Collect container paths for workflow module outputs that match the given
-    output_type and have pass_to_total=True in their module schema.
-
-    For each module in the workflow, reads metadata[mod].outputs; each value must be a
-    dict with "value" and "output_type". If a module schema is present in `schemas`,
-    only outputs whose OutputFileSpec has pass_to_total=True are included. Outputs from
-    modules not found in `schemas` are included for backward compatibility.
-    """
-    paths: list[str] = []
-    prefix = container_prefix.rstrip("/")
-
-    for mod in wf.module_names:
-        out_section = metadata.get(mod, {}) or {}
-        if not isinstance(out_section, dict):
-            continue
-        outputs = out_section.get("outputs") or {}
-        if not isinstance(outputs, dict):
-            continue
-
-        schema = schemas.get(mod)
-        pass_to_total_by_name: dict[str, bool] = {}
-        if schema is not None:
-            pass_to_total_by_name = {
-                o.name: o.pass_to_total for o in schema.get_file_outputs()
-            }
-
-        for key, v in outputs.items():
-            if isinstance(v, dict) and "value" in v:
-                p = v.get("value") or ""
-                ot = v.get("output_type", "")
-            else:
-                continue
-
-            if not (p and isinstance(p, str) and ot == output_type):
-                continue
-
-            if pass_to_total_by_name and not pass_to_total_by_name.get(key, True):
-                logger.info(
-                    "%s output '%s': pass_to_total=false, skipping.",
-                    mod,
-                    key,
-                )
-                continue
-
-            paths.append(f"{prefix}/{p.strip()}")
-    return paths
-
-
-def _build_facts_total_section_for_workflow(
-    wf: Workflow,
-    facts_total_image: str,
-    output_type: str,
-) -> dict[str, Any]:
-    """Build the synthetic metadata section for a facts-total workflow service with
-    empty inputs.item and type-specific output-path."""
-    return {
-        "inputs": {"item": []},
-        "outputs": {"output-path": wf.total_output_filename_for_type(output_type)},
-        "options": {},
-        "fingerprint_params": {},
-        "image": facts_total_image,
-        "_output_subdir": "facts-total",
-        "_output_container_base": "/mnt/total_out/facts-total",
-    }
-
-
-def _populate_section_with_global_outputs(
-    section: dict[str, Any],
-    metadata: dict[str, Any],
-    wf: Workflow,
-    schemas: dict[str, "ModuleSchema"],
-) -> None:
-    """Extend section["inputs"]["item"] with container paths for outputs with
-    output_type "global"."""
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global", schemas)
-    section["inputs"]["item"].extend(paths)
-
-
-def _populate_section_with_local_outputs(
-    section: dict[str, Any],
-    metadata: dict[str, Any],
-    wf: Workflow,
-    schemas: dict[str, "ModuleSchema"],
-) -> None:
-    """Extend section["inputs"]["item"] with container paths for outputs with
-    output_type "local"."""
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "local", schemas)
-    section["inputs"]["item"].extend(paths)
-
-
-def _create_facts_total_compose_service(
-    section: dict[str, Any],
-    service_name: str,
-    wf: Workflow,
-    metadata: dict[str, Any],
-    experiment_dir: Path,
-    known_module_names: list,
-    schema: ModuleSchema,
-) -> dict[str, Any]:
-    """Build the compose service dict for a facts-total workflow from its synthetic
-    section."""
-    metadata_copy = dict(metadata)
-    metadata_copy[service_name] = section
-    wf_module = build_module_service_spec(
-        metadata=metadata_copy,
-        module_name=service_name,
-        known_module_names=known_module_names,
-        module_definition=schema,
-    )
-    compose_service = wf_module.generate_compose_service()
-    compose_service["depends_on"] = {
-        mod: {"condition": "service_completed_successfully"} for mod in wf.module_names
-    }
-    return compose_service
 
 
 def check_metadata_has_required_fields(metadata_obj, required_fields):
@@ -404,133 +275,20 @@ def _create_esl_workflow_services(
 ) -> dict[str, Any]:
     """Build one ESL compose service per workflow, keyed by service name."""
     services: dict[str, Any] = {}
-    known_module_names = list(schemas.keys())
-    if not esl_module_names:
-        return services
-    if projection_scale == "global":
-        logger.info("Skipping per-workflow ESL services (projection_scale=global)")
-        return services
-
-    for module_name in esl_module_names:
-        schema = schemas[module_name]
-        total_localsl_keys = schema.get_output_volume_input_keys()
-        if not total_localsl_keys:
-            raise ValueError(
-                f"ESL module '{module_name}' has no input mounted from the shared "
-                "output volume, so it cannot receive the totaling step's output. "
-                "Check the module's YAML for an `inputs` entry with `mount.volume: output`."
-            )
-
-        base_section = metadata.get(module_name) or {}
-        if not isinstance(base_section, dict):
-            base_section = {}
-        for _wf_name, wf in workflows.items():
-            service_name = f"{module_name}-{wf.name}"
-            base_inputs = dict(base_section.get("inputs") or {})
-            for key in total_localsl_keys:
-                base_inputs[key] = wf.total_localsl_path_under_output
-            base_outputs = base_section.get("outputs") or {}
-            synthetic_section = {
-                **base_section,
-                "inputs": base_inputs,
-                "outputs": {**base_outputs, "output-dir": "."},
-            }
-            metadata_copy = dict(metadata)
-            metadata_copy[service_name] = synthetic_section
-
-            esl_module = build_module_service_spec(
-                metadata=metadata_copy,
-                module_name=service_name,
-                known_module_names=known_module_names,
-                module_definition=schema,
-            )
-            compose_svc = esl_module.generate_compose_service()
-            compose_svc["depends_on"] = {
-                wf.facts_total_service_name_for_type("local"): {
-                    "condition": "service_completed_successfully"
-                }
-            }
-            services[service_name] = compose_svc
-            _log_success("Created %s ESL workflow service", service_name)
-    return services
-
-
-def _build_standard_services(specs: _ModuleSpecs, plan: _ExperimentPlan) -> dict:
-    """Given a _ModuleSpecs and _ExperimentPlan obj, build dict of compose services
-    for climate and sealevel steps (where 1 module = 1 service).
-
-    Return"""
-    services = {}
-
-    temperature_service_name = (
-        specs.temperature_module.module_name if specs.temperature_module else None
+    esl_specs = _build_esl_specs_for_workflows(
+        esl_module_names=esl_module_names,
+        workflows=workflows,
+        metadata=metadata,
+        projection_scale=projection_scale,
+        schemas=schemas,
     )
-    if specs.temperature_module:
-        services[temperature_service_name] = (
-            specs.temperature_module.generate_compose_service()
-        )
-
-    for _module_name, module in specs.sealevel_modules.items():
-        service_name = module.module_name
-        services[service_name] = module.generate_compose_service(
-            temperature_service_name=temperature_service_name,
-            suppress_output_types=plan.suppress_output_types,
-        )
-    return services
-
-
-def _build_per_workflow_services(plan, metadata, experiment_dir, schemas):
-    services = {}
-
-    facts_total_name = next(
-        (m for m in plan.framework_module_names if schemas[m].per_workflow),
-        "facts-total",
-    )
-    facts_total_schema = schemas[facts_total_name]
-    facts_total_container_image = facts_total_schema.container_image
-
-    for wf_name, wf in plan.workflows.items():
-        for output_type in facts_total_schema.output_types:
-            if output_type == "local" and plan.experiment.projection_scale == "global":
-                logger.info(
-                    "Skipping local facts-total for %s (projection_scale=global)",
-                    wf_name,
-                )
-                continue
-            section = _build_facts_total_section_for_workflow(
-                wf, facts_total_container_image, output_type
-            )
-            if output_type == "global":
-                _populate_section_with_global_outputs(
-                    section, metadata, wf, schemas=schemas
-                )
-            else:
-                _populate_section_with_local_outputs(
-                    section, metadata, wf, schemas=schemas
-                )
-            service_name = wf.facts_total_service_name_for_type(output_type)
-            compose_svc = _create_facts_total_compose_service(
-                section=section,
-                service_name=service_name,
-                wf=wf,
-                metadata=metadata,
-                schema=facts_total_schema,
-                experiment_dir=experiment_dir,
-                known_module_names=list(schemas.keys()),
-            )
-            services[service_name] = compose_svc
-            _log_success("Created %s workflow service", service_name)
-
-    services.update(
-        _create_esl_workflow_services(
-            esl_module_names=plan.esl_module_names,
-            workflows=plan.workflows,
-            metadata=metadata,
-            experiment_dir=experiment_dir,
-            projection_scale=plan.experiment.projection_scale,
-            schemas=schemas,
-        )
-    )
+    for service_name, (spec, depends_on_service) in esl_specs.items():
+        compose_svc = spec.generate_compose_service()
+        compose_svc["depends_on"] = {
+            depends_on_service: {"condition": "service_completed_successfully"}
+        }
+        services[service_name] = compose_svc
+        _log_success("Created %s ESL workflow service", service_name)
     return services
 
 
@@ -542,19 +300,37 @@ def _build_compose_services(
     schemas: dict[str, ModuleSchema],
 ) -> dict[str, Any]:
     """Phase 3: Render ModuleServiceSpecs into Docker Compose service dicts."""
-    services = {}
+    execution_plan = build_experiment_execution_plan(
+        specs=specs, plan=plan, metadata=metadata, schemas=schemas
+    )
+    services: dict[str, Any] = {}
 
-    services.update(_build_standard_services(specs, plan))
-    if plan.workflows:
-        services.update(
-            _build_per_workflow_services(plan, metadata, experiment_dir, schemas)
+    for service_name, spec in execution_plan.standard_specs.items():
+        services[service_name] = spec.generate_compose_service(
+            temperature_service_name=execution_plan.temperature_service_name,
+            suppress_output_types=execution_plan.suppress_output_types,
         )
 
-    if not plan.workflows and plan.experiment.projection_scale != "global":
-        for _esl_name, esl_module in specs.esl_modules.items():
-            service_name = esl_module.module_name
-            services[service_name] = esl_module.generate_compose_service()
-            _log_success("Created %s module", service_name)
+    for service_name, (spec, wf) in execution_plan.facts_total_specs.items():
+        compose_svc = spec.generate_compose_service()
+        compose_svc["depends_on"] = {
+            mod: {"condition": "service_completed_successfully"}
+            for mod in wf.module_names
+        }
+        services[service_name] = compose_svc
+        _log_success("Created %s workflow service", service_name)
+
+    for service_name, (spec, depends_on_service) in execution_plan.esl_specs.items():
+        compose_svc = spec.generate_compose_service()
+        compose_svc["depends_on"] = {
+            depends_on_service: {"condition": "service_completed_successfully"}
+        }
+        services[service_name] = compose_svc
+        _log_success("Created %s ESL workflow service", service_name)
+
+    for service_name, spec in execution_plan.standalone_esl_specs.items():
+        services[service_name] = spec.generate_compose_service()
+        _log_success("Created %s module", service_name)
 
     return services
 

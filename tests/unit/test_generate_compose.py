@@ -2,6 +2,7 @@
 
 import pytest
 
+from facts_experiment_builder.application import execution_plan as execution_plan_module
 from facts_experiment_builder.application import generate_compose
 from facts_experiment_builder.application.generate_compose import (
     _validate_climate_file_inputs,
@@ -309,7 +310,8 @@ def _patch_build_module_service_spec(monkeypatch, captured):
 
         return _Stub()
 
-    monkeypatch.setattr(generate_compose, "build_module_service_spec", fake_build)
+    # _build_esl_specs_for_workflows is defined in execution_plan, so patch there.
+    monkeypatch.setattr(execution_plan_module, "build_module_service_spec", fake_build)
 
 
 def test_create_esl_workflow_services_does_not_synthesize_missing_inputs(monkeypatch):
