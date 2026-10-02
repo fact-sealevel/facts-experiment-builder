@@ -486,9 +486,7 @@ class ModuleServiceSpec:
         for dep_spec in self.module_definition.depends_on or []:
             if isinstance(dep_spec, dict):
                 service_name = dep_spec.get("service", "")
-                condition = dep_spec.get(
-                    "condition", "service_completed_successfully"
-                )
+                condition = dep_spec.get("condition", "service_completed_successfully")
                 if service_name:
                     if service_name == "fair" and temperature_service_name:
                         service_name = temperature_service_name
