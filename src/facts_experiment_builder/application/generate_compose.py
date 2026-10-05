@@ -265,11 +265,10 @@ def _build_module_specs(
     return specs
 
 
-def _create_esl_workflow_services(
+def _build_esl_specs_for_workflows(
     esl_module_names: list[str],
     workflows: dict[str, Workflow],
     metadata: dict[str, Any],
-    experiment_dir: Path,
     projection_scale: str | None,
     schemas: dict[str, ModuleSchema],
 ) -> dict[str, Any]:
