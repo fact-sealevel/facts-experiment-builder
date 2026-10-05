@@ -9,7 +9,6 @@ from typing import Any
 
 from facts_experiment_builder.application.execution_plan import (
     _ModuleSpecs,
-    _build_esl_specs_for_workflows,
     _collect_workflow_output_paths_by_type,  # noqa: F401 — re-exported for tests
     build_experiment_execution_plan,
 )
@@ -24,12 +23,11 @@ from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
 )
-from facts_experiment_builder.core.module.module_service_spec import (
-    ModuleServiceSpec,
+from facts_experiment_builder.application.module_service_spec_factory import (
     build_module_service_spec,
 )
-from facts_experiment_builder.core.workflow import (
-    Workflow,
+from facts_experiment_builder.core.module.module_service_spec import (
+    ModuleServiceSpec,
 )
 from facts_experiment_builder.io.paths import ExperimentPaths
 
@@ -66,9 +64,9 @@ def _log_success(msg: str, *args: object) -> None:
 def _extract_all_module_names_from_manifest(metadata: dict[str, Any]) -> list[str]:
     """Extract a flat list of all module names from the experiment manifest keys."""
     names: list[str] = []
-    temp = metadata.get("climate_module")
-    if temp and str(temp).upper() != "NONE":
-        names.append(str(temp))
+    climate_mod = metadata.get("climate_module")
+    if climate_mod and str(climate_mod).upper() != "NONE":
+        names.append(str(climate_mod))
     for m in metadata.get("sealevel_modules") or []:
         if isinstance(m, str):
             names.append(m)
@@ -86,8 +84,8 @@ def _validate_climate_file_inputs(
     sealevel_modules: list[str],
     schemas: dict[str, ModuleSchema],
 ) -> None:
-    """Validate that sealevel modules have climate file inputs when no temperature
-    module is specified.
+    """Validate that sealevel modules have climate file inputs when no climate module is
+    specified.
 
     Pure logic — accepts pre-loaded schemas. Raises ValueError listing any modules that
     require a climate file but have no value provided in metadata.
@@ -117,7 +115,7 @@ def _validate_climate_file_inputs(
 
     if missing_climate_files:
         raise ValueError(
-            f"No temperature module specified, but the following sealevel modules are missing "
+            f"No climate module specified, but the following sealevel modules are missing "
             f"climate file inputs: {', '.join(missing_climate_files)}. "
             f"Please provide the climate file input (e.g. 'climate_data_file' or the module-specific "
             f"input key) in the inputs section for each sealevel module."
@@ -174,23 +172,23 @@ def _build_module_specs(
 
     All filesystem I/O for module YAML loading is isolated here.
     """
-    temperature_module: ModuleServiceSpec | None = None
+    climate_module: ModuleServiceSpec | None = None
     sealevel_modules: dict[str, ModuleServiceSpec] = {}
     framework_modules: dict[str, ModuleServiceSpec] = {}
     esl_modules: dict[str, ModuleServiceSpec] = {}
 
-    temp_module_definition = schemas[plan.climate_module_name]
+    climate_module_definition = schemas[plan.climate_module_name]
     if plan.climate_module_name.upper() != "NONE":
-        temp_module_name = plan.climate_module_name
-        temperature_module = build_module_service_spec(
+        climate_module_name = plan.climate_module_name
+        climate_module = build_module_service_spec(
             metadata=metadata,
-            module_name=temp_module_name,
+            module_name=climate_module_name,
             known_module_names=known_module_names,
-            module_definition=temp_module_definition,
+            module_definition=climate_module_definition,
         )
         _log_success("Created %s module", plan.climate_module_name)
     else:
-        logger.info("No temperature module specified (NONE)")
+        logger.info("No climate module specified (NONE)")
 
         _validate_climate_file_inputs(
             metadata=metadata, sealevel_modules=sealevel_modules, schemas=schemas
@@ -235,7 +233,7 @@ def _build_module_specs(
     # This is what's returned by _build_module_specs
     # and used by _build_compose_servies()
     specs = _ModuleSpecs(
-        temperature_module=temperature_module,
+        climate_module=climate_module,
         sealevel_modules=sealevel_modules,
         framework_modules=framework_modules,
         esl_modules=esl_modules,
@@ -243,7 +241,7 @@ def _build_module_specs(
 
     if not any(
         [
-            specs.temperature_module,
+            specs.climate_module,
             specs.sealevel_modules,
             specs.framework_modules,
             specs.esl_modules,
@@ -265,32 +263,6 @@ def _build_module_specs(
     return specs
 
 
-def _build_esl_specs_for_workflows(
-    esl_module_names: list[str],
-    workflows: dict[str, Workflow],
-    metadata: dict[str, Any],
-    projection_scale: str | None,
-    schemas: dict[str, ModuleSchema],
-) -> dict[str, Any]:
-    """Build one ESL compose service per workflow, keyed by service name."""
-    services: dict[str, Any] = {}
-    esl_specs = _build_esl_specs_for_workflows(
-        esl_module_names=esl_module_names,
-        workflows=workflows,
-        metadata=metadata,
-        projection_scale=projection_scale,
-        schemas=schemas,
-    )
-    for service_name, (spec, depends_on_service) in esl_specs.items():
-        compose_svc = spec.generate_compose_service()
-        compose_svc["depends_on"] = {
-            depends_on_service: {"condition": "service_completed_successfully"}
-        }
-        services[service_name] = compose_svc
-        _log_success("Created %s ESL workflow service", service_name)
-    return services
-
-
 def _build_compose_services(
     specs: _ModuleSpecs,
     plan: _ExperimentPlan,
@@ -306,7 +278,7 @@ def _build_compose_services(
 
     for service_name, spec in execution_plan.standard_specs.items():
         services[service_name] = spec.generate_compose_service(
-            temperature_service_name=execution_plan.temperature_service_name,
+            climate_service_name=execution_plan.climate_service_name,
             suppress_output_types=execution_plan.suppress_output_types,
         )
 
@@ -407,7 +379,7 @@ def generate_compose(
     )
     if not any(
         [
-            specs.temperature_module,
+            specs.climate_module,
             specs.sealevel_modules,
             specs.framework_modules,
             specs.esl_modules,
