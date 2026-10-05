@@ -13,9 +13,11 @@ from typing import Any
 
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.application.module_service_spec_factory import (
+    build_module_service_spec,
+)
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
-    build_module_service_spec,
 )
 from facts_experiment_builder.core.workflow import Workflow
 
@@ -26,7 +28,7 @@ logger = logging.getLogger(__name__)
 class _ModuleSpecs:
     """Resolved ModuleServiceSpec objects grouped by experiment step category."""
 
-    temperature_module: ModuleServiceSpec | None
+    climate_module: ModuleServiceSpec | None
     sealevel_modules: dict[str, ModuleServiceSpec]
     framework_modules: dict[str, ModuleServiceSpec]
     esl_modules: dict[str, ModuleServiceSpec]
@@ -42,7 +44,7 @@ class _ExecutionPlan:
     Both Docker Compose and Apptainer renderers consume this as their input.
 
     standard_specs: climate module + all sealevel modules. Compose passes
-        temperature_service_name to generate_compose_service(); _build_compose_depends_on()
+        climate_service_name to generate_compose_service(); _build_compose_depends_on()
         handles whether to actually add a depends_on entry. Apptainer checks
         spec.module_definition.uses_climate_file to split into Stage 1 (independent)
         and Stage 2 (climate-dependent).
@@ -61,7 +63,7 @@ class _ExecutionPlan:
     facts_total_specs: dict[str, tuple[ModuleServiceSpec, Workflow]]
     esl_specs: dict[str, tuple[ModuleServiceSpec, str]]
     standalone_esl_specs: dict[str, ModuleServiceSpec]
-    temperature_service_name: str | None
+    climate_service_name: str | None
     suppress_output_types: set[str]
 
 
@@ -288,13 +290,13 @@ def build_experiment_execution_plan(
     facts-total and ESL specs. Both compose and apptainer renderers call this and then
     render the result in their own format.
     """
-    temperature_service_name = (
-        specs.temperature_module.module_name if specs.temperature_module else None
+    climate_service_name = (
+        specs.climate_module.module_name if specs.climate_module else None
     )
 
     standard_specs: dict[str, ModuleServiceSpec] = {}
-    if specs.temperature_module:
-        standard_specs[temperature_service_name] = specs.temperature_module
+    if specs.climate_module:
+        standard_specs[climate_service_name] = specs.climate_module
     for module_name, spec in specs.sealevel_modules.items():
         standard_specs[module_name] = spec
 
@@ -322,6 +324,6 @@ def build_experiment_execution_plan(
         facts_total_specs=facts_total_specs,
         esl_specs=esl_specs,
         standalone_esl_specs=standalone_esl_specs,
-        temperature_service_name=temperature_service_name,
+        climate_service_name=climate_service_name,
         suppress_output_types=plan.suppress_output_types,
     )
