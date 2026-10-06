@@ -413,17 +413,12 @@ def resolve_experiment_paths(
     is_facts_total_workflow = module_name.startswith("facts-total-")
     if is_facts_total_workflow:
         output_data_location = output_data_partial + "/facts-total"
-        if not Path(output_data_location).exists():
-            os.makedirs(output_data_location, exist_ok=True)
-
         output_container_base = (
             module_metadata.get("_output_container_base")
             or "/mnt/total_out/facts-total"
         )
     else:
         output_data_location = output_data_partial + "/" + module_name
-        if not Path(output_data_location).exists():
-            os.makedirs(output_data_location, exist_ok=True)
         output_container_base = None
 
     resolved_paths = ResolvedPaths(
