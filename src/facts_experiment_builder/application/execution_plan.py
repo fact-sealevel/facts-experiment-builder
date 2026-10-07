@@ -16,6 +16,9 @@ from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.application.module_service_spec_factory import (
     build_module_service_spec,
 )
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    ExperimentDataPaths,
+)
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
 )
@@ -169,6 +172,7 @@ def _build_facts_total_specs_for_workflows(
     plan: _ExperimentPlan,
     metadata: dict[str, Any],
     schemas: dict[str, ModuleSchema],
+    data_paths: ExperimentDataPaths,
 ) -> dict[str, tuple[ModuleServiceSpec, Workflow]]:
     """Build a ModuleServiceSpec for each facts-total workflow × output_type
     combination.
@@ -213,6 +217,7 @@ def _build_facts_total_specs_for_workflows(
                 module_name=service_name,
                 known_module_names=known_module_names,
                 module_definition=facts_total_schema,
+                data_paths=data_paths,
             )
             specs[service_name] = (spec, wf)
     return specs
@@ -224,6 +229,7 @@ def _build_esl_specs_for_workflows(
     metadata: dict[str, Any],
     projection_scale: str | None,
     schemas: dict[str, ModuleSchema],
+    data_paths: ExperimentDataPaths,
 ) -> dict[str, tuple[ModuleServiceSpec, str]]:
     """Build a ModuleServiceSpec for each ESL module × workflow combination.
 
@@ -272,6 +278,7 @@ def _build_esl_specs_for_workflows(
                 module_name=service_name,
                 known_module_names=known_module_names,
                 module_definition=schema,
+                data_paths=data_paths,
             )
             depends_on_service = wf.facts_total_service_name_for_type("local")
             specs[service_name] = (esl_spec, depends_on_service)
@@ -283,6 +290,7 @@ def build_experiment_execution_plan(
     plan: _ExperimentPlan,
     metadata: dict[str, Any],
     schemas: dict[str, ModuleSchema],
+    data_paths: ExperimentDataPaths,
 ) -> _ExecutionPlan:
     """Build a format-agnostic execution plan from module specs and experiment plan.
 
@@ -303,7 +311,7 @@ def build_experiment_execution_plan(
     facts_total_specs: dict[str, tuple[ModuleServiceSpec, Workflow]] = {}
     if plan.workflows:
         facts_total_specs = _build_facts_total_specs_for_workflows(
-            plan=plan, metadata=metadata, schemas=schemas
+            plan=plan, metadata=metadata, schemas=schemas, data_paths=data_paths
         )
 
     esl_specs: dict[str, tuple[ModuleServiceSpec, str]] = {}
@@ -315,6 +323,7 @@ def build_experiment_execution_plan(
             metadata=metadata,
             projection_scale=plan.experiment.projection_scale,
             schemas=schemas,
+            data_paths=data_paths,
         )
     elif plan.experiment.projection_scale != "global":
         standalone_esl_specs = dict(specs.esl_modules)
