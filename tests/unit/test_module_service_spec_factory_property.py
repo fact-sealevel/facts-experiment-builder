@@ -10,6 +10,9 @@ from facts_experiment_builder.application.module_service_spec_factory import (
 )
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    resolve_experiment_data_paths,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -46,14 +49,16 @@ def _metadata(module_name: str, image: str = "repo/img:latest") -> dict:
 
 def _build(module_name: str, image: str = "repo/img:latest") -> tuple:
     schema = _schema(module_name)
+    metadata = _metadata(module_name, image=image)
     with patch(
         "facts_experiment_builder.application.module_service_spec_factory.ensure_module_output_dir"
     ):
         result = build_module_service_spec(
-            metadata=_metadata(module_name, image=image),
+            metadata=metadata,
             module_name=module_name,
             known_module_names=[module_name],
             module_definition=schema,
+            data_paths=resolve_experiment_data_paths(metadata),
         )
     return result, schema
 

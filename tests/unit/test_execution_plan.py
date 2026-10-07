@@ -6,7 +6,17 @@ from facts_experiment_builder.application.execution_plan import (
 )
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    ExperimentDataPaths,
+)
 from facts_experiment_builder.core.workflow import Workflow
+
+_DATA_PATHS = ExperimentDataPaths(
+    shared_input_data="/in/shared",
+    module_specific_input_base="/in/module",
+    output_data_location="/out",
+    experiment_specific_input_data=None,
+)
 
 
 def _make_workflow_metadata(mod: str = "tlm-sterodynamics") -> dict:
@@ -72,7 +82,9 @@ def _patch_build_module_service_spec(monkeypatch, captured):
     _build_esl_specs_for_workflows' own input-building logic, not the full
     (filesystem-touching) service-spec build pipeline."""
 
-    def fake_build(metadata, module_name, known_module_names, module_definition):
+    def fake_build(
+        metadata, module_name, known_module_names, module_definition, data_paths
+    ):
         captured["inputs"] = dict(metadata[module_name]["inputs"])
 
         class _Stub:
@@ -186,6 +198,7 @@ def test_build_esl_specs_does_not_synthesize_missing_inputs(monkeypatch):
         metadata=metadata,
         projection_scale=None,
         schemas={module_name: schema},
+        data_paths=_DATA_PATHS,
     )
 
     assert "gesla-dir" not in captured["inputs"]
@@ -213,6 +226,7 @@ def test_build_esl_specs_passes_through_provided_inputs(monkeypatch):
         metadata=metadata,
         projection_scale=None,
         schemas={module_name: schema},
+        data_paths=_DATA_PATHS,
     )
 
     assert (
