@@ -14,7 +14,7 @@ class ExperimentParentNotFoundError(ExperimentSetupError):
         super().__init__(
             f"Cannot create experiment '{experiment_name}': parent directory "
             f"'{experiment_name.parent}' does not exist under workspace "
-            f"'{workspace_dir}'. Create it first or choose a different name."
+            f"'{workspace_dir}'. Create it first or choose a different parent directory to hold the experiment."
         )
 
 
