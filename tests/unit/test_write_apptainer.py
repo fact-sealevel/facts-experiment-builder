@@ -32,6 +32,7 @@ def _make_apptainer_spec(
     run_in_background: bool = False,
     pid_var: str | None = None,
     registry: str = "ghcr.io/fact-sealevel",
+    env: dict[str, str] | None = None,
 ) -> ApptainerServiceSpec:
     return ApptainerServiceSpec(
         service_name=service_name,
@@ -45,6 +46,7 @@ def _make_apptainer_spec(
         output_dir=f"/workspace/output/{service_name}",
         registry=registry,
         host_outputs={},
+        env=env or {},
     )
 
 
@@ -139,6 +141,37 @@ def test_stage1_module_appears_in_output():
     result = _render(stages=stages)
     assert "fair-temperature" in result
     assert "--pipeline-id=abc" in result
+
+
+def test_run_service_starts_container_in_root_dir():
+    assert "--pwd /" in _render()
+
+
+def test_service_without_env_emits_no_env_block():
+    result = _render(stages=_make_stages(stage1=[_make_apptainer_spec()]))
+    assert "--env=" not in result
+    assert result.count("ENV_ARGS=()") == 1  # only the global initialisation
+
+
+def test_service_env_is_set_before_run_and_reset_after():
+    spec = _make_apptainer_spec(
+        "emulandice-gris",
+        image_name="emulandice",
+        env={"EMULANDICE_FORCING_HEAD_PATH": "/mnt/module_specific_in/forcing"},
+    )
+    result = _render(stages=_make_stages(stage1=[spec]))
+    env_line = '"--env=EMULANDICE_FORCING_HEAD_PATH=/mnt/module_specific_in/forcing"'
+    block = result.split("# --- emulandice-gris ---")[1]
+    assert block.index(env_line) < block.index('run_service "emulandice-gris-')
+    assert block.index('run_service "emulandice-gris-') < block.index("ENV_ARGS=()")
+
+
+def test_env_applies_only_to_its_own_service():
+    with_env = _make_apptainer_spec("a", image_name="a", env={"X": "1"})
+    without_env = _make_apptainer_spec("b", image_name="b")
+    result = _render(stages=_make_stages(stage1=[with_env, without_env]))
+    block_b = result.split("# --- b ---")[1]
+    assert "--env=" not in block_b
 
 
 def test_stage3_nonempty_contains_background_operator():
