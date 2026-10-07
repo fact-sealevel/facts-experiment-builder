@@ -28,9 +28,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
 )
 
 from facts_experiment_builder.core.module.source_path import SourcePath
-from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
 
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.typed_path import (
     ContainerPath,
     ExperimentSpecificInputPath,
@@ -39,6 +37,7 @@ from facts_experiment_builder.core.typed_path import (
     PathValue,
     TypedPath,
 )
+from facts_experiment_builder.core.transforms import scenario_name_ssp_landwaterstorage
 
 
 def _transform_of(arg_spec: BaseArgSpec) -> str | None:
