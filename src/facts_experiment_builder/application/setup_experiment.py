@@ -22,7 +22,12 @@ from facts_experiment_builder.core.experiment.skeleton import (
     experiment_skeleton_to_facts_experiment,
     parse_module_regions,
 )
-from facts_experiment_builder.io.paths import ExperimentPaths, make_output_dir
+from facts_experiment_builder.io.paths import (
+    ExperimentPaths,
+    check_experiment_does_not_exist,
+    check_experiment_location,
+    create_experiment_dir,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +52,7 @@ def prepare_experiment_setup(
 ) -> PrepareExperimentOutput:
     """Performs first stage of experiment setup and creates ExperimentSkeleton.
 
-    Parses requested experiment name and resolves experiment's directory layout. Calls io.make_output_dir() to create direcotories. Parses module regions, if applicable and builds an :class:`ExperimentSkeleton` from supplied step configuration. Execution stops before workflows are assembled (this step requires user input). Returned paths and skeleton are passed to :func:`finalize_experiment_setup`.
+    Parses requested experiment name and resolves experiment's directory layout. Raises ExperimentParentNotFoundError if the experiment's parent directory does not exist (parents are never created), ExperimentOutsideWorkspaceError if the experiment would resolve outside the workspace, and ExperimentAlreadyExistsError if its experiment-config.yaml already exists; no directories are created at this stage. Parses module regions, if applicable and builds an :class:`ExperimentSkeleton` from supplied step configuration. Execution stops before workflows are assembled (this step requires user input). Returned paths and skeleton are passed to :func:`finalize_experiment_setup`.
 
     Parameters
     ----------
@@ -81,8 +86,10 @@ def prepare_experiment_setup(
     experiment_path_obj = ExperimentPaths(
         workspace_dir=workspace_dir, experiment_name=experiment_name_obj
     )
-    # Make direcotries related to this experiment
-    make_output_dir(experiment_paths=experiment_path_obj)
+    # Fail early, before any user prompts, if the experiment can't be created here
+    # (parent dir missing or outside workspace) or already exists
+    check_experiment_location(experiment_paths=experiment_path_obj)
+    check_experiment_does_not_exist(experiment_paths=experiment_path_obj)
 
     parsed_module_regions = parse_module_regions(module_regions)
     # Create experiment skeleton
@@ -208,7 +215,7 @@ def finalize_experiment_setup(
         experiment_name=experiment_name,
         skeleton=skeleton_with_workflows,
         top_level_params=top_level_params,
-        experiment_path=experiment_paths.experiment_dir,
+        output_data_location=experiment_paths.output_dir,
         module_specific_input_data=module_specific_input_data,
         experiment_specific_input_data=experiment_spec_data,  # supplied_climate_step_data,
         shared_input_data=shared_input_data,
@@ -218,6 +225,9 @@ def finalize_experiment_setup(
     # make config path
     config_path = experiment_paths.config_path
 
+    # Re-check in case the config was created since prepare_experiment_setup()
+    check_experiment_does_not_exist(experiment_paths=experiment_paths)
+    create_experiment_dir(experiment_paths=experiment_paths)
     experiment_repo.add(
         experiment=experiment_obj,
         config_path=config_path,

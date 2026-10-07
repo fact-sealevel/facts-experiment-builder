@@ -25,6 +25,9 @@ from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
 )
+from facts_experiment_builder.core.experiment.exceptions import (
+    ExperimentSetupError,
+)
 from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
 )
@@ -198,7 +201,7 @@ def main(
     """Set up a new experiment with setup-experiment CLI command.
 
     This function includes a number of steps: \n
-        - Creates a sub-directory in experiments/ for this experiment. Raises error if one already exists \n
+        - Creates a sub-directory in experiments/ for this experiment. Raises error if it already contains an experiment-config.yaml \n
         - Check that all required arguments were received \n
         - If facts-total passed, collects workflows with user prompts
     """
@@ -237,16 +240,20 @@ def main(
         console.print(
             "[muted]Note: Totaling step is being skipped because --supplied-totaled-sealevel-step-data was provided.[/muted]"
         )
-    prepared_experiment = prepare_experiment_setup(
-        workspace_dir=workspace_dir,
-        experiment_name=experiment_name,
-        module_regions=module_regions,
-        climate_step=climate_step,
-        supplied_climate_step_data=supplied_climate_step_data,
-        sealevel_step=sealevel_step,
-        supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
-        extremesealevel_step=extremesealevel_step,
-    )
+    try:
+        prepared_experiment = prepare_experiment_setup(
+            workspace_dir=workspace_dir,
+            experiment_name=experiment_name,
+            module_regions=module_regions,
+            climate_step=climate_step,
+            supplied_climate_step_data=supplied_climate_step_data,
+            sealevel_step=sealevel_step,
+            supplied_totaled_sealevel_step_data=supplied_totaled_sealevel_step_data,
+            extremesealevel_step=extremesealevel_step,
+        )
+    except ExperimentSetupError as e:
+        console.print(f"[red]✗ Failed to set up experiment:[/red] {e}")
+        raise SystemExit(1)
     skeleton = prepared_experiment.experiment_skeleton
     path_obj = prepared_experiment.experiment_paths
     assert isinstance(path_obj, ExperimentPaths), (
@@ -279,27 +286,31 @@ def main(
             f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
         ) from e
 
-    metadata_path = finalize_experiment_setup(
-        experiment_name=experiment_name,
-        experiment_paths=path_obj,
-        experiment_skeleton=skeleton,
-        workflows_dict=workflow_dict,
-        pipeline_id=pipeline_id,
-        scenario=scenario,
-        baseyear=baseyear,
-        pyear_end=pyear_end,
-        pyear_start=pyear_start,
-        pyear_step=pyear_step,
-        nsamps=nsamps,
-        location_file=location_file,
-        module_specific_input_data=module_specific_input_data,
-        shared_input_data=shared_input_data,
-        projection_scale=projection_scale,
-        module_registry=registry,  # registry passed as protocol
-        experiment_repo=experiment_repository,
-    )
+    try:
+        metadata_path = finalize_experiment_setup(
+            experiment_name=experiment_name,
+            experiment_paths=path_obj,
+            experiment_skeleton=skeleton,
+            workflows_dict=workflow_dict,
+            pipeline_id=pipeline_id,
+            scenario=scenario,
+            baseyear=baseyear,
+            pyear_end=pyear_end,
+            pyear_start=pyear_start,
+            pyear_step=pyear_step,
+            nsamps=nsamps,
+            location_file=location_file,
+            module_specific_input_data=module_specific_input_data,
+            shared_input_data=shared_input_data,
+            projection_scale=projection_scale,
+            module_registry=registry,  # registry passed as protocol
+            experiment_repo=experiment_repository,
+        )
+    except ExperimentSetupError as e:
+        console.print(f"[red]✗ Failed to set up experiment:[/red] {e}")
+        raise SystemExit(1)
 
-    print_experiment_directory_created(experiment_name, path_obj)
+    print_experiment_directory_created(experiment_name, path_obj.experiment_dir)
 
     print_experiment_modules(experiment_skeleton=skeleton)
     print_experiment_workflows(experiment_skeleton=skeleton)
@@ -339,9 +350,7 @@ def main(
 
 
 def print_experiment_directory_created(experiment_name: str, experiment_path: "Path"):
-    console.print(
-        "[primary]Step 2:[/primary] Creating experiment directory and sub-directories..."
-    )
+    console.print("[primary]Step 2:[/primary] Creating experiment directory...")
     console.print(
         f"[bold]  Experiment name:[/bold] [secondary]{experiment_name}[/secondary]"
     )
