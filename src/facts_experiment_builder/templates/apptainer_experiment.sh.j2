@@ -45,15 +45,22 @@ pull_image() {
     fi
 }
 
+# Per-service --env flags; set before a service that needs them and reset after.
+ENV_ARGS=()
+
 run_service() {
     local name="$1"
     local sif="${SIF_DIR}/${name}.sif"
     shift
     log "Running service: ${name}"
+    # --pwd /: the home dir is hidden by --containall/--no-home, so don't start there.
+    # ${ENV_ARGS[@]+...}: expands to nothing for an empty array under `set -u`.
     apptainer run \
         --no-home \
         --containall \
+        --pwd / \
         "${BINDS[@]}" \
+        ${ENV_ARGS[@]+"${ENV_ARGS[@]}"} \
         "$sif" \
         "$@"
     log "Completed: ${name}"
@@ -101,11 +108,21 @@ BINDS=(
     "--bind={{ bind }}"
 {% endfor %}
 )
+{% if spec.env %}
+ENV_ARGS=(
+{% for name, value in spec.env.items() %}
+    "--env={{ name }}={{ value }}"
+{% endfor %}
+)
+{% endif %}
 run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
 {% for arg in spec.args[:-1] %}
     "{{ arg }}" \
 {% endfor %}
     "{{ spec.args[-1] }}"
+{% if spec.env %}
+ENV_ARGS=()
+{% endif %}
 {% endfor %}
 
 {% if stage2 %}
@@ -124,11 +141,21 @@ BINDS=(
     "--bind={{ bind }}"
 {% endfor %}
 )
+{% if spec.env %}
+ENV_ARGS=(
+{% for name, value in spec.env.items() %}
+    "--env={{ name }}={{ value }}"
+{% endfor %}
+)
+{% endif %}
 run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
 {% for arg in spec.args[:-1] %}
     "{{ arg }}" \
 {% endfor %}
     "{{ spec.args[-1] }}"
+{% if spec.env %}
+ENV_ARGS=()
+{% endif %}
 {% endfor %}
 
 {% endif %}
@@ -144,12 +171,22 @@ BINDS=(
 {% endfor %}
 )
 {% for spec in stage3 %}
+{% if spec.env %}
+ENV_ARGS=(
+{% for name, value in spec.env.items() %}
+    "--env={{ name }}={{ value }}"
+{% endfor %}
+)
+{% endif %}
 run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
 {% for arg in spec.args[:-1] %}
     "{{ arg }}" \
 {% endfor %}
     "{{ spec.args[-1] }}" &
 {{ spec.pid_var }}=$!
+{% if spec.env %}
+ENV_ARGS=()
+{% endif %}
 
 {% endfor %}
 {% for spec in stage3 %}
@@ -170,11 +207,21 @@ BINDS=(
     "--bind={{ bind }}"
 {% endfor %}
 )
+{% if spec.env %}
+ENV_ARGS=(
+{% for name, value in spec.env.items() %}
+    "--env={{ name }}={{ value }}"
+{% endfor %}
+)
+{% endif %}
 run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
 {% for arg in spec.args[:-1] %}
     "{{ arg }}" \
 {% endfor %}
     "{{ spec.args[-1] }}"
+{% if spec.env %}
+ENV_ARGS=()
+{% endif %}
 {% endfor %}
 
 {% endif %}
