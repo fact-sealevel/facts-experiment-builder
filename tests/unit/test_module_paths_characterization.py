@@ -151,6 +151,7 @@ def test_module_specific_base_ending_in_unknown_name_is_kept():
     [
         ("/exp/data", "/exp/data"),
         ({"value": "/exp/data"}, "/exp/data"),
+        (["/exp/data", "/exp/other"], "/exp/data"),
         ([], None),
         ("", None),
         (None, None),
@@ -209,39 +210,30 @@ def test_relative_paths_resolve_against_cwd(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Alternative key spellings
+# Only the template's key names are accepted
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "primary, alternative, attr, expected",
+    "primary, alternative",
     [
-        ("shared-input-data", "shared_input_data", "shared_input_data", "/alt"),
-        (
-            "module-specific-input-data",
-            "module_specific_input_data",
-            "module_specific_input_data",
-            "/alt/m",
-        ),
-        (
-            "output-data-location",
-            "output_data_location",
-            "output_data_location",
-            "/alt/m",
-        ),
-        ("output-data-location", "output-path", "output_data_location", "/alt/m"),
-        ("output-data-location", "output_path", "output_data_location", "/alt/m"),
+        ("shared-input-data", "shared_input_data"),
+        ("module-specific-input-data", "module_specific_input_data"),
+        ("output-data-location", "output_data_location"),
+        ("output-data-location", "output-path"),
+        ("output-data-location", "output_path"),
     ],
 )
-def test_alternative_key_spellings(primary, alternative, attr, expected):
+def test_alternative_key_spelling_counts_as_missing(primary, alternative):
+    """Formerly accepted alternative spellings are no longer read."""
     metadata = _metadata("m")
     del metadata[primary]
     metadata[alternative] = "/alt"
-    resolved = _resolve(metadata, "m", _schema("m"))
-    assert getattr(resolved, attr) == expected
+    with pytest.raises(KeyError, match=primary):
+        _resolve(metadata, "m", _schema("m"))
 
 
-def test_primary_key_wins_over_alternative():
+def test_alternative_key_spelling_is_ignored_when_primary_present():
     metadata = _metadata("m", output_path="/alt")
     resolved = _resolve(metadata, "m", _schema("m"))
     assert resolved.output_data_location == "/out/m"
@@ -270,17 +262,11 @@ def test_none_required_key_raises_value_error(key):
         _resolve(_metadata("m", **{key: None}), "m", _schema("m"))
 
 
-def test_none_primary_key_does_not_fall_back_to_alternative():
-    """Current behavior: presence of the primary key wins even if its value is None."""
-    metadata = _metadata("m", output_path="/alt", **{"output-data-location": None})
-    with pytest.raises(ValueError, match="output-data-location"):
-        _resolve(metadata, "m", _schema("m"))
-
-
 @pytest.mark.parametrize(
     "key", ["shared-input-data", "module-specific-input-data", "output-data-location"]
 )
 def test_value_dict_for_required_key_raises_value_error(key):
-    """Current behavior: {"value": ...} is not unwrapped for the three required keys."""
+    """{"value": ...} is not unwrapped for the three required keys (only for the
+    optional experiment-specific-input-data)."""
     with pytest.raises(ValueError, match=key):
         _resolve(_metadata("m", **{key: {"value": "/x"}}), "m", _schema("m"))
