@@ -34,6 +34,7 @@ def _make_apptainer_spec(
     registry: str = "ghcr.io/fact-sealevel",
     env: dict[str, str] | None = None,
 ) -> ApptainerServiceSpec:
+    """Helper function to make an ApptainerServiceSpec with default values for testing."""
     return ApptainerServiceSpec(
         service_name=service_name,
         image_name=image_name,
@@ -56,6 +57,7 @@ def _make_stages(
     stage3: list | None = None,
     stage4: list | None = None,
 ) -> _ApptainerStages:
+    """Helper function to make an _ApptainerStages object with empty values for testing."""
     s1 = stage1 or []
     s2 = stage2 or []
     s3 = stage3 or []
@@ -70,6 +72,7 @@ def _make_stages(
 
 
 def _make_execution_plan(climate_service_name: str | None = None) -> _ExecutionPlan:
+    """Helper function to make an _ExecutionPlan object with empty values for testing."""
     return _ExecutionPlan(
         standard_specs={},
         facts_total_specs={},
