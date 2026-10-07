@@ -14,10 +14,10 @@ def steps_from_metadata(
     module_sections: dict[str, Any],
 ) -> tuple[ClimateStep, SealevelStep, TotalingStep, ExtremeSealevelStep]:
     """Build all four step objects from a parsed manifest and module_sections dict."""
-    temp_module_name = manifest.get("temperature_module")
-    if temp_module_name and str(temp_module_name).upper() != "NONE":
+    climate_module_name = manifest.get("climate_module")
+    if climate_module_name and str(climate_module_name).upper() != "NONE":
         climate_step = ClimateStep.from_dict(
-            temp_module_name, module_sections.get(temp_module_name) or {}
+            climate_module_name, module_sections.get(climate_module_name) or {}
         )
     else:
         climate_step = ClimateStep()
