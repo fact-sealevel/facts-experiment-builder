@@ -249,7 +249,7 @@ def experiment_skeleton_to_facts_experiment(
     skeleton: ExperimentSkeleton,
     top_level_params: "TopLevelParams",
     schemas: dict[str, ModuleSchema],
-    experiment_path: Path,
+    output_data_location: Path,
     module_specific_input_data: str | None = None,
     experiment_specific_input_data: list | None = None,
     shared_input_data: str | None = None,
@@ -263,13 +263,15 @@ def experiment_skeleton_to_facts_experiment(
     Parameters
     ----------
     experiment_name: str
-        Name of experiment, used to derive output data path
+        Name of experiment
     skeleton: ExperimentSkeleton
         The experiment skeleton describing which modules or supplied data to use for each step along with workflows and module regions specified by user.
     top_level_params: TopLevelParams
         Values for top-level parameters specified by user via CLI (includes pipeline_id, scenario, baseyear, pyear_start, pyear_end, pyear_step, nsamps, location-file). Used to populate `cli_values` and the top-level and fingerprint parameter bundles used in experiment-config.ymal.
     schemas: dict of {str: ModuleSchemas}
         Mapping from module name to its loaded schema. Used to hydrate experiment steps and to collect top-level/fingerprint param keys across all modules.
+    output_data_location: Path
+        Default output path written to `output-data-location` in experiment-config.yaml (ExperimentPaths.output_dir). Not created on disk here.
     module_specific_input_data: str, optional
         Path to module-specific input data, Default is None
     experiment_specific_input_data: str, optional
@@ -342,7 +344,7 @@ def experiment_skeleton_to_facts_experiment(
         ),
         "output-data-location": create_metadata_bundle(
             "Output path",
-            Path(experiment_path, "output").as_posix(),
+            Path(output_data_location).as_posix(),
         ),
         **(
             {

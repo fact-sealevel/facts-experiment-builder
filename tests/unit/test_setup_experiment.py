@@ -51,6 +51,7 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
     experiment_name = "fake_experiment_location/experiment_name"
     workspace_dir = Path(tmp_path / "fake_experiment_location")
     workspace_dir.mkdir()
+    (workspace_dir / "fake_experiment_location").mkdir()  # parent dir must exist
 
     repo = StorageExperimentRepository()
     definitions = InMemoryModuleDefinitions(
@@ -113,6 +114,7 @@ def test_finalize_experiment_setup_writes_metadata_config(tmp_path):
 def test_prepare_experiment_setup_returns_correct_output_type(tmp_path):
     workspace_dir = Path(tmp_path / "fake_experiment_location")
     workspace_dir.mkdir()
+    (workspace_dir / "fake_experiment_location").mkdir()  # parent dir must exist
     output = prepare_experiment_setup(
         experiment_name="fake_experiment_location/experiment_name",
         module_regions=None,
