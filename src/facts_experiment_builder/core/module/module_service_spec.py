@@ -157,15 +157,15 @@ class ModuleServiceSpec:
         """Build command arguments from YAML configuration.
 
         Returns:
-            List of command-line arguments (with command name first if specified)
+            List of command-line arguments, starting with the subcommand when the module
+            YAML specifies one (e.g. "glaciers" or "icesheets"). `command: main` means
+            the image's default command, so no subcommand argument is added for it.
         """
         command_args = []
 
-        # Check if a specific command is specified (e.g., "glaciers" or "icesheets")
-        if self.module_definition.command:
-            command_args.append(
-                self.module_definition.command
-            )  # Add command name first
+        command = self.module_definition.command
+        if command and command != "main":
+            command_args.append(command)
 
         arguments_config = self.module_definition.arguments
 
@@ -636,6 +636,7 @@ class ModuleServiceSpec:
             # All outputs, not filtered by suppress_output_types: other services may
             # wait on outputs this one writes regardless of what is passed downstream.
             host_outputs=self.host_output_paths(),
+            env=self._build_environment(),
         )
 
 
@@ -872,9 +873,6 @@ def build_compose_service_dict(
     Returns:
         Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
     """
-    # TODO: better fix for this but should work for now
-    if command and command[0] == "main":
-        command = command[1:]
     service = {
         "image": image_str,
         "command": command,
