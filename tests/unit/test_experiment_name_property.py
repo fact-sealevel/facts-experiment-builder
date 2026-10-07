@@ -32,6 +32,13 @@ _bad_char = st.characters(
 )
 
 
+def _reason(exc_info: pytest.ExceptionInfo[InvalidExperimentNameError]) -> str:
+    """The error's reason, which must be set for every validation failure."""
+    reason = exc_info.value.reason
+    assert reason is not None
+    return reason
+
+
 def _expected_parent(parts: list[str]) -> Path | None:
     return Path(*parts[:-1]) if len(parts) > 1 else None
 
@@ -93,14 +100,17 @@ def test_direct_construction_matches_parse(parts):
 def test_parse_rejects_disallowed_character_in_any_component(
     parts, index, prefix, bad, suffix
 ):
-    """A disallowed character inside any component is rejected, and the error
-    reports the raw input."""
+    """A disallowed character inside any component is rejected; the error reports the
+    raw input, and its reason names the offending component and character."""
     parts = list(parts)
-    parts[index % len(parts)] = prefix + bad + suffix
+    bad_part = prefix + bad + suffix
+    parts[index % len(parts)] = bad_part
     raw = "/".join(parts)
     with pytest.raises(InvalidExperimentNameError) as exc_info:
         ExperimentName.parse(raw)
     assert exc_info.value.raw_name == raw
+    assert repr(bad_part) in _reason(exc_info)
+    assert repr(bad) in _reason(exc_info)
 
 
 @given(parent_parts=_parts, name=_part, bad=st.sampled_from(["\n", " ", "\t", "$"]))
@@ -115,27 +125,64 @@ def test_parse_rejects_disallowed_character_at_end_of_parent_component(
     """
     parent_parts = list(parent_parts)
     parent_parts[-1] = parent_parts[-1] + bad
-    with pytest.raises(InvalidExperimentNameError):
+    with pytest.raises(InvalidExperimentNameError) as exc_info:
         ExperimentName.parse("/".join([*parent_parts, name]))
+    assert repr(parent_parts[-1]) in _reason(exc_info)
+    assert repr(bad) in _reason(exc_info)
 
 
 @given(before=st.lists(_part, max_size=3), after=st.lists(_part, max_size=3))
 def test_parse_rejects_dotdot_component_anywhere(before, after):
     """A '..' component is rejected wherever it appears."""
-    with pytest.raises(InvalidExperimentNameError):
+    with pytest.raises(InvalidExperimentNameError) as exc_info:
         ExperimentName.parse("/".join([*before, "..", *after]))
+    assert "'..' is not allowed" in _reason(exc_info)
 
 
 @given(parts=_parts)
 def test_parse_rejects_absolute_paths(parts):
-    with pytest.raises(InvalidExperimentNameError):
+    with pytest.raises(InvalidExperimentNameError) as exc_info:
         ExperimentName.parse("/" + "/".join(parts))
+    assert _reason(exc_info) == "Parent directory must be a relative path."
 
 
 @pytest.mark.parametrize("raw", ["", ".", "..", "/"])
 def test_parse_rejects_empty_and_dot_only_names(raw):
-    with pytest.raises(InvalidExperimentNameError):
+    with pytest.raises(InvalidExperimentNameError) as exc_info:
         ExperimentName.parse(raw)
+    assert _reason(exc_info)
+
+
+@given(
+    parts=_parts,
+    index=st.integers(min_value=0),
+    bad_part=st.just("..")
+    | st.builds(lambda p, b, s: p + b + s, _part, _bad_char, _part),
+)
+def test_parse_keeps_the_reason_from_validation(parts, index, bad_part):
+    """parse() reports the same reason as constructing from the same components,
+    rather than replacing it with a generic message.
+
+    '.' and '' components are excluded: pathlib drops them when parsing, so parse()
+    and direct construction legitimately differ for them.
+    """
+    parts = list(parts)
+    parts[index % len(parts)] = bad_part
+    parent = Path(*parts[:-1]) if len(parts) > 1 else None
+    with pytest.raises(InvalidExperimentNameError) as direct:
+        ExperimentName(parent, parts[-1])
+    with pytest.raises(InvalidExperimentNameError) as parsed:
+        ExperimentName.parse("/".join(parts))
+    assert parsed.value.reason == direct.value.reason
+
+
+def test_error_message_includes_raw_name_and_reason():
+    with pytest.raises(InvalidExperimentNameError) as exc_info:
+        ExperimentName.parse("funky experiments/my_exp")
+    message = str(exc_info.value)
+    assert "'funky experiments/my_exp'" in message
+    assert _reason(exc_info) in message
+    assert "' '" in _reason(exc_info)
 
 
 @given(name=st.sampled_from(["", ".", ".."]) | st.builds(lambda b: "x" + b, _bad_char))

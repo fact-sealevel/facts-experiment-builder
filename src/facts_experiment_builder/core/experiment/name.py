@@ -2,22 +2,39 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-_VALID = re.compile(r"^[A-Za-z0-9._-]+$")
+# Any character outside the allowed set: letters, digits, '.', '_' and '-'.
+_INVALID_CHAR = re.compile(r"[^A-Za-z0-9._-]")
 
 
 class InvalidExperimentNameError(Exception):
     def __init__(
         self,
         raw_name: str,
+        reason: str | None = None,
     ):
         self.raw_name = raw_name
+        self.reason = reason
 
-        super().__init__(f"Received invalid experiment name '{self.raw_name}'.")
+        super().__init__(
+            f"Received invalid experiment name '{self.raw_name}'."
+            + (f" {self.reason}" if self.reason else "")
+        )
 
 
-def _is_valid_part(part: str) -> bool:
-    """True if part is a single allowed path component (not '.' or '..')."""
-    return bool(_VALID.fullmatch(part)) and part not in (".", "..")
+def _invalid_part_reason(part: str) -> str | None:
+    """Return why `part` is not an allowed path component, or None if it is valid."""
+    if part == "":
+        return "Experiment or directory name is empty."
+    if part in (".", ".."):
+        return f"{part!r} is not allowed as an experiment or directory name."
+    bad = sorted(set(_INVALID_CHAR.findall(part)))
+    if bad:
+        chars = ", ".join(repr(c) for c in bad)
+        return (
+            f"{part!r} contains invalid character(s): {chars}. "
+            "Only letters, digits, '.', '_' and '-' are allowed."
+        )
+    return None
 
 
 @dataclass(frozen=True)
@@ -26,16 +43,22 @@ class ExperimentName:
     name: str
 
     def __post_init__(self) -> None:
-        if not _is_valid_part(self.name):
-            raise InvalidExperimentNameError(self.name)
+        reason = _invalid_part_reason(self.name)
+        if reason:
+            raise InvalidExperimentNameError(self.name, reason)
         if self.parent is not None:
-            parts = self.parent.parts
-            if (
-                self.parent.is_absolute()
-                or not parts
-                or not all(_is_valid_part(part) for part in parts)
-            ):
-                raise InvalidExperimentNameError(str(self.parent))
+            if self.parent.is_absolute():
+                raise InvalidExperimentNameError(
+                    str(self.parent), "Parent directory must be a relative path."
+                )
+            if not self.parent.parts:
+                raise InvalidExperimentNameError(
+                    str(self.parent), "Parent directory is empty."
+                )
+            for part in self.parent.parts:
+                reason = _invalid_part_reason(part)
+                if reason:
+                    raise InvalidExperimentNameError(str(self.parent), reason)
 
     @classmethod
     def parse(cls, raw_name: str) -> "ExperimentName":
@@ -43,9 +66,9 @@ class ExperimentName:
         parent = p.parent if p.parent != Path(".") else None
         try:
             return cls(parent, p.name)
-        except InvalidExperimentNameError:
-            # Report the name as the user typed it, not the failing component.
-            raise InvalidExperimentNameError(raw_name) from None
+        except InvalidExperimentNameError as e:
+            # Report the name as the user typed it, keeping the specific reason.
+            raise InvalidExperimentNameError(raw_name, e.reason) from None
 
     @property
     def relative_path(self) -> Path:
