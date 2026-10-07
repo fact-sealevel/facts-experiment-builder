@@ -61,7 +61,7 @@ def configure_logging(debug_target):
     help="Name of the experiment and parent directory, e.g. experiments/my_first_experiment. This is used in conjunction with `--workspace-dir` (by default, present working directory) to create an experiment directory that holds config files and output data associated with the experiment.",
 )
 @click.option(
-    "--climate-step", type=str, required=False, help="Name of the temperature module"
+    "--climate-step", type=str, required=False, help="Name of the climate module"
 )
 @click.option(
     "--supplied-climate-step-data",

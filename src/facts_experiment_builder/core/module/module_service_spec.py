@@ -432,7 +432,7 @@ class ModuleServiceSpec:
         return volumes
 
     def _get_dependency_names(
-        self, temperature_service_name: str | None = None
+        self, climate_service_name: str | None = None
     ) -> list[str]:
         """Return resolved service names this module depends on.
 
@@ -443,39 +443,39 @@ class ModuleServiceSpec:
         """
         names: list[str] = []
 
-        if self.module_definition.uses_climate_file and temperature_service_name:
-            names.append(temperature_service_name)
+        if self.module_definition.uses_climate_file and climate_service_name:
+            names.append(climate_service_name)
 
         for dep_spec in self.module_definition.depends_on or []:
             if isinstance(dep_spec, dict):
                 service_name = dep_spec.get("service", "")
                 if service_name:
-                    if service_name == "fair" and temperature_service_name:
-                        service_name = temperature_service_name
+                    if service_name == "fair" and climate_service_name:
+                        service_name = climate_service_name
                     names.append(service_name)
             elif isinstance(dep_spec, str):
                 mapped = dep_spec
-                if dep_spec == "fair" and temperature_service_name:
-                    mapped = temperature_service_name
+                if dep_spec == "fair" and climate_service_name:
+                    mapped = climate_service_name
                 names.append(mapped)
 
         return names
 
     def _build_compose_depends_on(
-        self, temperature_service_name: str | None = None
+        self, climate_service_name: str | None = None
     ) -> dict[str, Any]:
         """Build the Docker Compose depends_on dict from dependency configuration.
 
         Compose-specific: wraps each dependency name with a condition dict.
         If uses_climate_file is True, automatically adds dependency on the
-        temperature service. Also processes explicit depends_on entries from YAML.
+        climate service. Also processes explicit depends_on entries from YAML.
 
         For format-agnostic dependency names only, use _get_dependency_names().
         """
         depends_on: dict[str, Any] = {}
 
-        if self.module_definition.uses_climate_file and temperature_service_name:
-            depends_on[temperature_service_name] = {
+        if self.module_definition.uses_climate_file and climate_service_name:
+            depends_on[climate_service_name] = {
                 "condition": "service_completed_successfully"
             }
 
@@ -484,13 +484,13 @@ class ModuleServiceSpec:
                 service_name = dep_spec.get("service", "")
                 condition = dep_spec.get("condition", "service_completed_successfully")
                 if service_name:
-                    if service_name == "fair" and temperature_service_name:
-                        service_name = temperature_service_name
+                    if service_name == "fair" and climate_service_name:
+                        service_name = climate_service_name
                     depends_on[service_name] = {"condition": condition}
             elif isinstance(dep_spec, str):
                 mapped = dep_spec
-                if dep_spec == "fair" and temperature_service_name:
-                    mapped = temperature_service_name
+                if dep_spec == "fair" and climate_service_name:
+                    mapped = climate_service_name
                 depends_on[mapped] = {"condition": "service_completed_successfully"}
 
         return depends_on
@@ -515,13 +515,13 @@ class ModuleServiceSpec:
 
     def generate_compose_service(
         self,
-        temperature_service_name: str | None = None,
+        climate_service_name: str | None = None,
         suppress_output_types: set | None = None,
     ) -> dict[str, Any]:
         """Generate Docker Compose service configuration.
 
         Args:
-            temperature_service_name: Optional name of the temperature service (e.g., "fair-temperature") to map "fair" dependencies to
+            climate_service_name: Optional name of the climate service (e.g., "fair-climate") to map "fair" dependencies to
 
         Returns:
             Dictionary representing a Docker Compose service
@@ -532,7 +532,7 @@ class ModuleServiceSpec:
         command = self._build_command_args(suppress_output_types=suppress_output_types)
         volumes = self._build_volumes()
         depends_on = self._build_compose_depends_on(
-            temperature_service_name=temperature_service_name
+            climate_service_name=climate_service_name
         )
         environment = self._build_environment()
         return build_compose_service_dict(

@@ -32,7 +32,7 @@ class ExperimentSpecificInputData:
 # Framework-level structural keys — these describe the experiment config format,
 # not any particular module's parameters.
 MANIFEST_KEYS = [
-    "temperature_module",
+    "climate_module",
     "sealevel_modules",
     "framework_modules",
     "esl_modules",
@@ -211,7 +211,7 @@ class FactsExperiment:
 
         # Then, build a manifest of the modules included in the experiment
         manifest = {
-            "temperature_module": metadata.get("climate_module"),
+            "climate_module": metadata.get("climate_module"),
             "sealevel_modules": metadata.get("sealevel_modules", []),
             "framework_modules": metadata.get("framework_modules", []),
             "esl_modules": metadata.get("esl_modules", []),

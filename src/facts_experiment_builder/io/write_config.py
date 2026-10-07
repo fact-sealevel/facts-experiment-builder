@@ -100,7 +100,7 @@ def format_module_value(key: str, value: Any, indent: int = 2) -> list[str]:
         for item in value:
             lines.append(f"{indent_str}  - {item}")
     else:
-        # Simple value (like image string, temperature_module string)
+        # Simple value (like image string, climate_module string)
         if isinstance(value, str) and (
             value.startswith("$") or " " in value or "/" in value
         ):
@@ -184,7 +184,7 @@ def format_yaml_value(value: Any) -> str:
     Returns:
         Formatted string representation (with proper indentation for template)
     """
-    # Handle simple values (like experiment_name, temperature_module, sealevel_modules)
+    # Handle simple values (like experiment_name, climate_module, sealevel_modules)
     if not is_metadata_value(value):
         return format_simple_value(value)
 

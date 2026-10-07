@@ -114,7 +114,7 @@ def test_extract_all_module_names_returns_all_modules():
 
 def test_extract_all_module_names_excludes_none_temperature():
     metadata = {
-        "temperature_module": "NONE",
+        "climate_module": "NONE",
         "sealevel_modules": ["tlm-sterodynamics"],
         "framework_modules": [],
         "esl_modules": [],
@@ -124,7 +124,7 @@ def test_extract_all_module_names_excludes_none_temperature():
 
 
 def test_extract_all_module_names_excludes_lowercase_none_temperature():
-    metadata = {"temperature_module": "none", "sealevel_modules": ["tlm-sterodynamics"]}
+    metadata = {"climate_module": "none", "sealevel_modules": ["tlm-sterodynamics"]}
     result = generate_compose._extract_all_module_names_from_manifest(metadata)
     assert result == ["tlm-sterodynamics"]
 
