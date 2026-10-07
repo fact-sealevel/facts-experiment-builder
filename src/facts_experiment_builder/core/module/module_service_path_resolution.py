@@ -358,37 +358,89 @@ def expand_path(path_str: Any, context: str = "") -> str:
     return os.path.abspath(os.path.expandvars(os.path.expanduser(path_str)))
 
 
-def resolve_experiment_paths(
-    metadata: dict[str, Any],
-    module_name_str: str,
-    known_module_names: list,
-    module_name: str,
-    module_definition: ModuleSchema,
-) -> ResolvedPaths:  # tuple[ModuleInputPaths, ModuleOutputPaths, Union[str, Path]]:
-    # module_name = module_definition.module_name
-    experiment_paths = get_experiment_paths(metadata, module_name_str)
-    module_metadata = get_required_field(metadata, module_name, module_name_str)
+@dataclass(frozen=True)
+class ExperimentDataPaths:
+    """Experiment-level host paths from experiment-config.yaml, expanded once per
+    experiment.
+
+    Module-level paths are built from this by resolve_module_paths().
+    """
+
+    shared_input_data: str
+    # Not yet stripped of a trailing known-module dir; resolve_module_paths() does that.
+    module_specific_input_base: str
+    # Experiment-level output root; per-module output dirs are subdirs of this.
+    output_data_location: str
+    experiment_specific_input_data: str | None
+
+
+def resolve_experiment_data_paths(
+    metadata: dict[str, Any], context: str = "experiment config"
+) -> ExperimentDataPaths:
+    """Read and expand the experiment-level path keys from experiment metadata.
+
+    Args:
+        metadata: Experiment metadata dictionary
+        context: Context for error messages
+
+    Returns:
+        ExperimentDataPaths with expanded absolute paths
+
+    Raises:
+        KeyError: If a required path key is missing
+        ValueError: If a required path value is None or invalid
+    """
+    experiment_paths = get_experiment_paths(metadata, context)
 
     raw_exp_specific = metadata.get("experiment-specific-input-data")
     if isinstance(raw_exp_specific, dict):
         raw_exp_specific = raw_exp_specific.get("value")
     experiment_specific_input = (
-        expand_path(
-            raw_exp_specific, f"{module_name_str} (experiment-specific-input-data)"
-        )
+        expand_path(raw_exp_specific, f"{context} (experiment-specific-input-data)")
         if raw_exp_specific
         else None
     )
 
     shared_input_data = expand_path(
         experiment_paths["shared_input_data"],
-        f"{module_name_str} (shared-input-data)",
+        f"{context} (shared-input-data)",
     )
-
     module_specific_input_base = expand_path(
         experiment_paths["module_specific_input_data"],
-        f"{module_name_str} (module-specific-input-data)",
+        f"{context} (module-specific-input-data)",
     )
+    output_data_location = expand_path(
+        experiment_paths["output_data_location"],
+        f"{context} (output-data-location)",
+    )
+    return ExperimentDataPaths(
+        shared_input_data=shared_input_data,
+        module_specific_input_base=module_specific_input_base,
+        output_data_location=output_data_location,
+        experiment_specific_input_data=experiment_specific_input,
+    )
+
+
+def resolve_module_paths(
+    data_paths: ExperimentDataPaths,
+    module_metadata: dict[str, Any],
+    module_name: str,
+    module_definition: ModuleSchema,
+    known_module_names: list,
+) -> ResolvedPaths:
+    """Build one module's host paths from the experiment-level paths.
+
+    Args:
+        data_paths: Experiment-level paths from resolve_experiment_data_paths()
+        module_metadata: This module's section of the experiment metadata
+        module_name: Service name (e.g. 'fair-temperature', 'facts-total-wf1-global')
+        module_definition: Loaded ModuleSchema for this module
+        known_module_names: All module names in the experiment
+
+    Returns:
+        ResolvedPaths for this module
+    """
+    module_specific_input_base = data_paths.module_specific_input_base
     # If metadata points at a specific module's dir (e.g. .../fair-temperature), use parent as base
     # so volume host path is always base + current module's suffix only (never another module's name).
     if (
@@ -404,10 +456,7 @@ def resolve_experiment_paths(
         module_specific_input_base + "/" + module_specific_input_path_suffix
     )
 
-    output_data_partial = expand_path(
-        experiment_paths["output_data_location"],
-        f"{module_name_str} (output-data-location)",
-    )
+    output_data_partial = data_paths.output_data_location
     # Only facts-total workflow services (names like facts-total-wf1) use a shared output
     # subdir and optional container base. Other modules are unchanged.
     is_facts_total_workflow = module_name.startswith("facts-total-")
@@ -422,10 +471,10 @@ def resolve_experiment_paths(
         output_container_base = None
 
     resolved_paths = ResolvedPaths(
-        shared_input_data=shared_input_data,
+        shared_input_data=data_paths.shared_input_data,
         module_specific_input_data=module_specific_input_data,
         output_data_location=output_data_location,
-        experiment_specific_input_data=experiment_specific_input,
+        experiment_specific_input_data=data_paths.experiment_specific_input_data,
         output_container_base=output_container_base,
     )
     return resolved_paths
