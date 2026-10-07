@@ -13,8 +13,9 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_path_resolution import (
+    ExperimentDataPaths,
     get_required_field,
-    resolve_experiment_paths,
+    resolve_module_paths,
 )
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
@@ -32,6 +33,7 @@ def build_module_service_spec(
     module_name: str,
     known_module_names: list,
     module_definition: ModuleSchema,
+    data_paths: ExperimentDataPaths,
 ) -> ModuleServiceSpec:
     """Build a ModuleServiceSpec for the given module from experiment metadata and
     module YAML.
@@ -41,6 +43,7 @@ def build_module_service_spec(
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
         known_module_names: List of all known module names in the experiment
         module_definition: Loaded ModuleSchema for this module
+        data_paths: Experiment-level paths from resolve_experiment_data_paths()
 
     Returns:
         ModuleServiceSpec instance
@@ -49,12 +52,12 @@ def build_module_service_spec(
 
     module_metadata = get_required_field(metadata, module_name, module_name_str)
 
-    resolved_paths = resolve_experiment_paths(
-        metadata=metadata,
-        module_name_str=module_name_str,
-        known_module_names=known_module_names,
+    resolved_paths = resolve_module_paths(
+        data_paths=data_paths,
+        module_metadata=module_metadata,
         module_name=module_name,
         module_definition=module_definition,
+        known_module_names=known_module_names,
     )
     ensure_module_output_dir(resolved_paths.output_data_location)
 

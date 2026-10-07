@@ -26,6 +26,10 @@ from facts_experiment_builder.core.module.module_schema import (
 from facts_experiment_builder.application.module_service_spec_factory import (
     build_module_service_spec,
 )
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    ExperimentDataPaths,
+    resolve_experiment_data_paths,
+)
 from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
 )
@@ -167,6 +171,7 @@ def _build_module_specs(
     metadata: dict[str, Any],
     schemas: dict,
     known_module_names: list,
+    data_paths: ExperimentDataPaths,
 ) -> _ModuleSpecs:
     """Phase 2: Create a ModuleServiceSpec for each module in the experiment.
 
@@ -185,6 +190,7 @@ def _build_module_specs(
             module_name=climate_module_name,
             known_module_names=known_module_names,
             module_definition=climate_module_definition,
+            data_paths=data_paths,
         )
         _log_success("Created %s module", plan.climate_module_name)
     else:
@@ -202,6 +208,7 @@ def _build_module_specs(
             module_name=module_name,
             known_module_names=known_module_names,
             module_definition=module_schema,
+            data_paths=data_paths,
         )
         _log_success("Created %s module", module_name)
 
@@ -214,6 +221,7 @@ def _build_module_specs(
             module_name=module_name,
             known_module_names=known_module_names,
             module_definition=schema,
+            data_paths=data_paths,
         )
 
         _log_success("Created %s module", module_name)
@@ -225,6 +233,7 @@ def _build_module_specs(
             module_name=module_name,
             known_module_names=known_module_names,
             module_definition=schema,
+            data_paths=data_paths,
         )
 
         _log_success("Created %s module", module_name)
@@ -269,10 +278,15 @@ def _build_compose_services(
     metadata: dict[str, Any],
     experiment_dir: Path,
     schemas: dict[str, ModuleSchema],
+    data_paths: ExperimentDataPaths,
 ) -> dict[str, Any]:
     """Phase 3: Render ModuleServiceSpecs into Docker Compose service dicts."""
     execution_plan = build_experiment_execution_plan(
-        specs=specs, plan=plan, metadata=metadata, schemas=schemas
+        specs=specs,
+        plan=plan,
+        metadata=metadata,
+        schemas=schemas,
+        data_paths=data_paths,
     )
     services: dict[str, Any] = {}
 
@@ -371,11 +385,13 @@ def generate_compose(
 
     # Make experiment plan
     plan = _make_experiment_plan(metadata_dict, schemas)
+    data_paths = resolve_experiment_data_paths(metadata_dict)
     specs = _build_module_specs(
         plan=plan,
         metadata=metadata_dict,
         schemas=schemas,
         known_module_names=known_module_names,
+        data_paths=data_paths,
     )
     if not any(
         [
@@ -392,6 +408,7 @@ def generate_compose(
         metadata_dict,
         experiment_dir,
         schemas=schemas,
+        data_paths=data_paths,
     )
     output_obj = PrepareComposeOutput(
         compose_dict={"services": services}, compose_path=compose_path

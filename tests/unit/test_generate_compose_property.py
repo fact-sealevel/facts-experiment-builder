@@ -19,6 +19,9 @@ from facts_experiment_builder.application.generate_compose import (
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    ExperimentDataPaths,
+)
 from facts_experiment_builder.core.workflow import Workflow
 
 
@@ -29,6 +32,13 @@ from facts_experiment_builder.core.workflow import Workflow
 _module_name = st.from_regex(r"[a-z][a-z0-9]{2,8}", fullmatch=True)
 _module_list = st.lists(_module_name, min_size=0, max_size=4, unique=True)
 _nonempty_module_list = st.lists(_module_name, min_size=1, max_size=4, unique=True)
+
+_DATA_PATHS = ExperimentDataPaths(
+    shared_input_data="/in/shared",
+    module_specific_input_base="/in/module",
+    output_data_location="/out",
+    experiment_specific_input_data=None,
+)
 
 
 def _minimal_schema(name: str, *, per_workflow: bool = False) -> ModuleSchema:
@@ -61,7 +71,7 @@ def _make_plan(
 
 
 def _fake_build_module_service_spec(
-    metadata, module_name, known_module_names, module_definition
+    metadata, module_name, known_module_names, module_definition, data_paths
 ):
     stub = MagicMock()
     stub.module_name = module_name
@@ -110,6 +120,7 @@ def _call_build_compose_services(exec_plan: _ExecutionPlan) -> dict[str, Any]:
             metadata={},
             experiment_dir=Path("/fake"),
             schemas={},
+            data_paths=_DATA_PATHS,
         )
 
 
@@ -131,6 +142,7 @@ def test_sealevel_module_keys_match_plan(sealevel_names):
             metadata={},
             schemas=schemas,
             known_module_names=list(schemas.keys()),
+            data_paths=_DATA_PATHS,
         )
 
     assert set(result.sealevel_modules.keys()) == set(sealevel_names)
@@ -149,6 +161,7 @@ def test_esl_module_keys_match_plan(esl_names):
             metadata={},
             schemas=schemas,
             known_module_names=list(schemas.keys()),
+            data_paths=_DATA_PATHS,
         )
 
     assert set(result.esl_modules.keys()) == set(esl_names)
@@ -167,6 +180,7 @@ def test_climate_module_is_none_when_name_is_none(sealevel_names):
             metadata={},
             schemas=schemas,
             known_module_names=list(schemas.keys()),
+            data_paths=_DATA_PATHS,
         )
 
     assert result.climate_module is None
@@ -185,6 +199,7 @@ def test_climate_module_present_when_name_is_not_none(climate_name):
             metadata={},
             schemas=schemas,
             known_module_names=list(schemas.keys()),
+            data_paths=_DATA_PATHS,
         )
 
     assert result.climate_module is not None
@@ -216,6 +231,7 @@ def test_per_workflow_framework_excluded_when_workflows_present(
             metadata={},
             schemas=schemas,
             known_module_names=list(schemas.keys()),
+            data_paths=_DATA_PATHS,
         )
 
     assert framework_name not in result.framework_modules
@@ -245,6 +261,7 @@ def test_per_workflow_framework_included_when_no_workflows(
             metadata={},
             schemas=schemas,
             known_module_names=list(schemas.keys()),
+            data_paths=_DATA_PATHS,
         )
 
     assert framework_name in result.framework_modules
