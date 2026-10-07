@@ -559,6 +559,45 @@ class ModuleServiceSpec:
         #     'image': f"{self.image.image_url}:{self.image.image_tag}",
         # }
 
+    def generate_apptainer_service(
+        self,
+        wait_for_files: list[str] | None = None,
+        run_in_background: bool = False,
+        pid_var: str | None = None,
+        suppress_output_types: set | None = None,
+    ) -> "ApptainerServiceSpec":
+        """Generate Apptainer service specification.
+
+        Args:
+            wait_for_files: Host paths to poll before running (Stage 2 gate).
+            run_in_background: True for facts-total parallel jobs (Stage 3).
+            pid_var: Shell PID variable name e.g. 'PID_WF1F_GLOBAL'; None if not
+                background.
+            suppress_output_types: Output types to omit from command args.
+
+        Returns:
+            ApptainerServiceSpec with all run information for this module.
+        """
+        from facts_experiment_builder.core.module.apptainer_service_spec import (
+            ApptainerServiceSpec,
+        )
+
+        args = self._build_command_args(suppress_output_types=suppress_output_types)
+        volumes = self._build_volumes()
+        image_url = self.components.image.image_url
+        image_tag = self.components.image.image_tag
+        image_name = image_url.rstrip("/").split("/")[-1]
+        return ApptainerServiceSpec(
+            service_name=self.module_name,
+            image_name=image_name,
+            image_tag=image_tag,
+            binds=volumes,
+            args=args,
+            wait_for_files=wait_for_files or [],
+            run_in_background=run_in_background,
+            pid_var=pid_var,
+        )
+
 
 def _resolve_module_inputs_dict(
     module_definition: ModuleSchema,

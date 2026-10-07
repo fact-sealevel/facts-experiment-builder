@@ -10,6 +10,7 @@ from facts_experiment_builder.core.experiment.name import ExperimentName
 
 _CONFIG_FILENAME = "experiment-config.yaml"
 _COMPOSE_FILENAME = "experiment-compose.yaml"
+_APPTAINER_FILENAME = "experiment-apptainer.sh"
 _OUTPUT_DIRNAME = "output"
 
 
@@ -50,6 +51,10 @@ class ExperimentPaths:
     @property
     def compose_path(self) -> Path:
         return self.experiment_dir / _COMPOSE_FILENAME
+
+    @property
+    def apptainer_script_path(self) -> Path:
+        return self.experiment_dir / _APPTAINER_FILENAME
 
 
 def check_experiment_does_not_exist(experiment_paths: ExperimentPaths) -> None:
