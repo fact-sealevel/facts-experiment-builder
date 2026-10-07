@@ -1,8 +1,5 @@
 """Unit tests for generate_apptainer_cli."""
 
-from pathlib import Path
-
-import pytest
 from click.testing import CliRunner
 
 from facts_experiment_builder.cli.generate_apptainer_cli import main
@@ -22,8 +19,10 @@ def test_nonexistent_workspace_dir_fails_click_validation():
     result = runner.invoke(
         main,
         [
-            "--experiment-name", "my_experiment",
-            "--workspace-dir", "/this/path/does/not/exist",
+            "--experiment-name",
+            "my_experiment",
+            "--workspace-dir",
+            "/this/path/does/not/exist",
         ],
     )
     # Click validates `exists=True` before the application layer runs

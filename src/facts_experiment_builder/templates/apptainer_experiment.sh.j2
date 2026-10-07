@@ -29,9 +29,6 @@ PIPELINE_ID="{{ pipeline_id }}"
 {% endfor %}
 {% endif %}
 
-# --- Image registry ----------------------------------------------------------
-REGISTRY="{{ registry }}"
-
 # --- Helpers -----------------------------------------------------------------
 
 log() { echo "[$(date '+%H:%M:%S')] $*"; }
@@ -89,7 +86,7 @@ mkdir -p \
 # --- Pull images -------------------------------------------------------------
 log "=== Pulling images ==="
 {% for spec in all_specs %}
-pull_image "{{ spec.service_name }}-{{ spec.image_tag }}" "${REGISTRY}/{{ spec.image_name }}:{{ spec.image_tag }}"
+pull_image "{{ spec.service_name }}-{{ spec.image_tag }}" "{{ spec.image_ref }}"
 {% endfor %}
 
 # =============================================================================

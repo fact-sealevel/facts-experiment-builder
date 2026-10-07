@@ -1,19 +1,26 @@
 """Unit tests for write_apptainer (template rendering and file writing)."""
 
 import os
-import stat
 
-import pytest
 
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.generate_apptainer import _ApptainerStages
-from facts_experiment_builder.core.module.apptainer_service_spec import ApptainerServiceSpec
-from facts_experiment_builder.io.write_apptainer import render_apptainer_script, write_apptainer_script
+from facts_experiment_builder.core.module.apptainer_service_spec import (
+    ApptainerServiceSpec,
+)
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    resolve_experiment_data_paths,
+)
+from facts_experiment_builder.io.write_apptainer import (
+    render_apptainer_script,
+    write_apptainer_script,
+)
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_apptainer_spec(
     service_name: str = "fair-temperature",
@@ -24,6 +31,7 @@ def _make_apptainer_spec(
     wait_for_files: list[str] | None = None,
     run_in_background: bool = False,
     pid_var: str | None = None,
+    registry: str = "ghcr.io/fact-sealevel",
 ) -> ApptainerServiceSpec:
     return ApptainerServiceSpec(
         service_name=service_name,
@@ -34,6 +42,9 @@ def _make_apptainer_spec(
         wait_for_files=wait_for_files or [],
         run_in_background=run_in_background,
         pid_var=pid_var,
+        output_dir=f"/workspace/output/{service_name}",
+        registry=registry,
+        host_outputs={},
     )
 
 
@@ -81,16 +92,26 @@ _BASE_METADATA = {
     "pipeline-id": "abc123",
 }
 
+_DATA_PATHS = resolve_experiment_data_paths(_BASE_METADATA)
 
-def _render(stages=None, execution_plan=None, metadata=None, workspace_dir=None, mkdir_dirs=None):
+
+def _render(
+    stages=None,
+    execution_plan=None,
+    metadata=None,
+    data_paths=None,
+    workspace_dir=None,
+    mkdir_dirs=None,
+):
     from pathlib import Path
+
     return render_apptainer_script(
         stages=stages or _make_stages(stage1=[_make_apptainer_spec()]),
         execution_plan=execution_plan or _make_execution_plan(),
         metadata=metadata or _BASE_METADATA,
+        data_paths=data_paths or _DATA_PATHS,
         workspace_dir=workspace_dir or Path("/workspace"),
         mkdir_dirs=mkdir_dirs or ["/workspace/output/fair-temperature"],
-        registry="ghcr.io/fact-sealevel",
         workflow_vars=[],
     )
 
@@ -98,6 +119,7 @@ def _render(stages=None, execution_plan=None, metadata=None, workspace_dir=None,
 # ---------------------------------------------------------------------------
 # Rendering tests
 # ---------------------------------------------------------------------------
+
 
 def test_rendered_script_starts_with_shebang():
     result = _render()
@@ -110,7 +132,9 @@ def test_rendered_script_has_set_euo_pipefail():
 
 
 def test_stage1_module_appears_in_output():
-    spec = _make_apptainer_spec("fair-temperature", args=["--pipeline-id=abc", "--nsamps=100"])
+    spec = _make_apptainer_spec(
+        "fair-temperature", args=["--pipeline-id=abc", "--nsamps=100"]
+    )
     stages = _make_stages(stage1=[spec])
     result = _render(stages=stages)
     assert "fair-temperature" in result
@@ -121,7 +145,10 @@ def test_stage3_nonempty_contains_background_operator():
     ft_spec = _make_apptainer_spec(
         service_name="facts-total-wf1f-global",
         image_name="facts-total",
-        args=["--item=/mnt/total_out/module/file.nc", "--output-path=/mnt/total_out/facts-total/out.nc"],
+        args=[
+            "--item=/mnt/total_out/module/file.nc",
+            "--output-path=/mnt/total_out/facts-total/out.nc",
+        ],
         run_in_background=True,
         pid_var="PID_FACTS_TOTAL_WF1F_GLOBAL",
     )
@@ -132,7 +159,9 @@ def test_stage3_nonempty_contains_background_operator():
 
 
 def test_stage3_empty_no_background_operator():
-    spec = _make_apptainer_spec("fair-temperature", args=["--pipeline-id=abc", "--nsamps=100"])
+    spec = _make_apptainer_spec(
+        "fair-temperature", args=["--pipeline-id=abc", "--nsamps=100"]
+    )
     stages = _make_stages(stage1=[spec])
     result = _render(stages=stages)
     assert " &\n" not in result
@@ -158,8 +187,33 @@ def test_pull_image_uses_versioned_sif_name():
     assert 'pull_image "fair-temperature-0.2.1"' in result
 
 
+def test_pull_image_uses_each_images_full_reference():
+    """Images may come from different registries; each is pulled by its own ref."""
+    specs = [
+        _make_apptainer_spec("fair-temperature", image_tag="0.2.1"),
+        _make_apptainer_spec(
+            "tlm-sterodynamics",
+            image_name="tlm-sterodynamics",
+            image_tag="1.0.0",
+            registry="docker.io/other-org",
+        ),
+    ]
+    result = _render(stages=_make_stages(stage1=specs))
+    assert (
+        'pull_image "fair-temperature-0.2.1" '
+        '"ghcr.io/fact-sealevel/fair-temperature:0.2.1"'
+    ) in result
+    assert (
+        'pull_image "tlm-sterodynamics-1.0.0" '
+        '"docker.io/other-org/tlm-sterodynamics:1.0.0"'
+    ) in result
+    assert "REGISTRY" not in result
+
+
 def test_run_service_uses_versioned_sif_name():
-    spec = _make_apptainer_spec("fair-temperature", image_tag="0.2.1", args=["--nsamps=100"])
+    spec = _make_apptainer_spec(
+        "fair-temperature", image_tag="0.2.1", args=["--nsamps=100"]
+    )
     stages = _make_stages(stage1=[spec])
     result = _render(stages=stages)
     assert 'run_service "fair-temperature-0.2.1"' in result
@@ -167,23 +221,42 @@ def test_run_service_uses_versioned_sif_name():
 
 def test_workflow_vars_appear_in_header():
     from pathlib import Path
+
     stages = _make_stages(stage1=[_make_apptainer_spec()])
     result = render_apptainer_script(
         stages=stages,
         execution_plan=_make_execution_plan(),
         metadata=_BASE_METADATA,
+        data_paths=_DATA_PATHS,
         workspace_dir=Path("/workspace"),
         mkdir_dirs=[],
-        registry="ghcr.io/fact-sealevel",
         workflow_vars=[("wf1f", "WORKFLOW1_NAME"), ("wf2f", "WORKFLOW2_NAME")],
     )
     assert 'WORKFLOW1_NAME="wf1f"' in result
     assert 'WORKFLOW2_NAME="wf2f"' in result
 
 
+def test_path_vars_come_from_data_paths_not_metadata():
+    """OUTPUT_DIR / SHARED_IN / MODULE_IN use data_paths, the same source as the module
+    binds, even if the raw metadata says something else."""
+    data_paths = resolve_experiment_data_paths(
+        {
+            "output-data-location": "/apptainer/out",
+            "shared-input-data": "/apptainer/shared",
+            "module-specific-input-data": "/apptainer/module",
+        }
+    )
+    result = _render(data_paths=data_paths)
+    assert 'OUTPUT_DIR="/apptainer/out"' in result
+    assert 'SHARED_IN="/apptainer/shared"' in result
+    assert 'MODULE_IN="/apptainer/module"' in result
+    assert "/workspace/output" not in result.split("# --- Global params")[0]
+
+
 # ---------------------------------------------------------------------------
 # write_apptainer_script() tests
 # ---------------------------------------------------------------------------
+
 
 def test_write_apptainer_script_creates_file(tmp_path):
     script_path = tmp_path / "experiment-apptainer.sh"

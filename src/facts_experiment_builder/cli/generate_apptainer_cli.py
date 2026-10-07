@@ -5,7 +5,9 @@ import click
 
 from facts_experiment_builder.application.generate_apptainer import generate_apptainer
 from facts_experiment_builder.cli.theme import console
-from facts_experiment_builder.io.experiment_repository import StorageExperimentRepository
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
+)
 
 logger = logging.getLogger(__name__)
 

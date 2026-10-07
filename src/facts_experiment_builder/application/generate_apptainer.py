@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """Generate Apptainer bash script from experiment config."""
 
+import dataclasses
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from facts_experiment_builder.application.execution_plan import (
     _ExecutionPlan,
-    _ModuleSpecs,
     build_experiment_execution_plan,
 )
 from facts_experiment_builder.application.generate_compose import (
@@ -21,8 +20,14 @@ from facts_experiment_builder.core.experiment.experiment_plan import (
     _make_experiment_plan,
 )
 from facts_experiment_builder.core.experiment.name import ExperimentName
-from facts_experiment_builder.core.module.apptainer_service_spec import ApptainerServiceSpec
+from facts_experiment_builder.core.module.apptainer_service_spec import (
+    ApptainerServiceSpec,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    ExperimentDataPaths,
+    resolve_experiment_data_paths,
+)
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
 from facts_experiment_builder.io.paths import ExperimentPaths
 from facts_experiment_builder.io.write_apptainer import (
@@ -42,7 +47,9 @@ class _ApptainerStages:
 
     stage1: list[ApptainerServiceSpec]  # climate + non-climate-dependent sealevel
     stage2: list[ApptainerServiceSpec]  # sealevel where uses_climate_file=True
-    stage3: list[ApptainerServiceSpec]  # facts-total × workflow × output_type (parallel)
+    stage3: list[
+        ApptainerServiceSpec
+    ]  # facts-total × workflow × output_type (parallel)
     stage4: list[ApptainerServiceSpec]  # ESL × workflow (sequential)
     all_specs: list[ApptainerServiceSpec]  # stage1+2+3+4; ordered for pull + mkdir
 
@@ -58,71 +65,54 @@ def _log_success(msg: str, *args: object) -> None:
 
 def _get_climate_wait_files(
     spec: ModuleServiceSpec,
-    climate_spec: ModuleServiceSpec,
-    output_dir: str,
+    climate: ApptainerServiceSpec,
 ) -> list[str]:
-    """Return host paths this spec must wait for from the climate module's outputs.
+    """Return host paths `spec` must wait for from the climate service's outputs.
 
-    Iterates the spec's InputArgSpec entries with climate_step_output set, looks up
-    the matching output arg in the climate module's generated args, and converts the
-    container path to a host path via the output volume mount (/mnt/out → output_dir).
+    The climate outputs `spec` needs are named by its inputs' climate_step_output; their
+    host paths come from the climate service's host_outputs.
     """
-    needed: set[str] = set()
-    for inp in spec.module_definition.arguments.inputs:
-        if inp.climate_step_output:
-            needed.add(inp.climate_step_output)
-    if not needed:
-        return []
-
-    climate_args = climate_spec._build_command_args()
-    host_paths: list[str] = []
-    for arg in climate_args:
-        if not arg.startswith("--"):
-            continue
-        rest = arg[2:]
-        if "=" not in rest:
-            continue
-        arg_name, value = rest.split("=", 1)
-        if arg_name in needed and value.startswith("/mnt/out/"):
-            host_path = output_dir.rstrip("/") + value[len("/mnt/out"):]
-            host_paths.append(host_path)
-    return host_paths
+    needed = {
+        inp.climate_step_output
+        for inp in spec.module_definition.arguments.inputs
+        if inp.climate_step_output
+    }
+    return [path for name, path in climate.host_outputs.items() if name in needed]
 
 
+def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
+    """Map _ExecutionPlan fields to Apptainer execution stages.
 
+    ModuleServiceSpec is only read here to choose stages (uses_climate_file) and which
+    climate outputs a module needs; everything else comes from ApptainerServiceSpec.
+    """
+    suppress = execution_plan.suppress_output_types
 
-def _build_apptainer_stages(
-    execution_plan: _ExecutionPlan,
-    metadata: dict[str, Any],
-) -> _ApptainerStages:
-    """Map _ExecutionPlan fields to Apptainer execution stages."""
-    output_dir = str(metadata.get("output-data-location", ""))
-    climate_service_name = execution_plan.climate_service_name
-    climate_spec: ModuleServiceSpec | None = (
-        execution_plan.standard_specs.get(climate_service_name)
-        if climate_service_name
+    # Build the climate service first so Stage 2 can wait on its outputs.
+    climate_name = execution_plan.climate_service_name
+    climate_module_spec = (
+        execution_plan.standard_specs.get(climate_name) if climate_name else None
+    )
+    climate: ApptainerServiceSpec | None = (
+        climate_module_spec.generate_apptainer_service(suppress_output_types=suppress)
+        if climate_module_spec
         else None
     )
 
     stage1: list[ApptainerServiceSpec] = []
     stage2: list[ApptainerServiceSpec] = []
     for service_name, spec in execution_plan.standard_specs.items():
-        if not spec.module_definition.uses_climate_file:
+        if climate is not None and service_name == climate_name:
+            stage1.append(climate)
+        elif not spec.module_definition.uses_climate_file:
             stage1.append(
-                spec.generate_apptainer_service(
-                    suppress_output_types=execution_plan.suppress_output_types,
-                )
+                spec.generate_apptainer_service(suppress_output_types=suppress)
             )
         else:
-            wait_files = (
-                _get_climate_wait_files(spec, climate_spec, output_dir)
-                if climate_spec
-                else []
-            )
+            wait_files = _get_climate_wait_files(spec, climate) if climate else []
             stage2.append(
                 spec.generate_apptainer_service(
-                    wait_for_files=wait_files,
-                    suppress_output_types=execution_plan.suppress_output_types,
+                    wait_for_files=wait_files, suppress_output_types=suppress
                 )
             )
 
@@ -136,8 +126,13 @@ def _build_apptainer_stages(
             )
         )
 
+    # Stage 4 runs after Stage 3 has finished, so per-workflow ESL services see their
+    # totaled inputs. ESL services for experiments without workflows have no totaling
+    # dependency and run here too.
     stage4: list[ApptainerServiceSpec] = []
     for _service_name, (spec, _depends_on) in execution_plan.esl_specs.items():
+        stage4.append(spec.generate_apptainer_service())
+    for spec in execution_plan.standalone_esl_specs.values():
         stage4.append(spec.generate_apptainer_service())
 
     all_specs = stage1 + stage2 + stage3 + stage4
@@ -150,25 +145,25 @@ def _build_apptainer_stages(
     )
 
 
-def _compute_mkdir_dirs(execution_plan: _ExecutionPlan) -> list[str]:
-    """Collect unique module output directories in stage order."""
-    seen: set[str] = set()
-    dirs: list[str] = []
+def _with_apptainer_output_root(
+    data_paths: ExperimentDataPaths, experiment_paths: ExperimentPaths
+) -> ExperimentDataPaths:
+    """Return data_paths with the output root replaced by the Apptainer output dir.
 
-    sources: list[ModuleServiceSpec] = list(execution_plan.standard_specs.values())
-    for spec, _ in execution_plan.facts_total_specs.values():
-        sources.append(spec)
-    for spec, _ in execution_plan.esl_specs.values():
-        sources.append(spec)
-    for spec in execution_plan.standalone_esl_specs.values():
-        sources.append(spec)
+    Apptainer outputs go to ExperimentPaths.apptainer_output_dir instead of the config's
+    output-data-location (used by Compose), so both can run for the same experiment.
+    Every derived output path (binds, mkdir dirs, wait files, OUTPUT_DIR) follows from
+    this one value.
+    """
+    return dataclasses.replace(
+        data_paths,
+        output_data_location=str(experiment_paths.apptainer_output_dir),
+    )
 
-    for spec in sources:
-        d = spec.components.output_paths.output_dir
-        if d not in seen:
-            seen.add(d)
-            dirs.append(d)
-    return dirs
+
+def _compute_mkdir_dirs(stages: _ApptainerStages) -> list[str]:
+    """Collect unique service output directories in stage order."""
+    return list(dict.fromkeys(spec.output_dir for spec in stages.all_specs))
 
 
 def generate_apptainer(
@@ -218,11 +213,15 @@ def generate_apptainer(
     known_module_names = list(schemas.keys())
 
     plan = _make_experiment_plan(metadata_dict, schemas)
+    data_paths = _with_apptainer_output_root(
+        resolve_experiment_data_paths(metadata_dict), experiment_paths
+    )
     specs = _build_module_specs(
         plan=plan,
         metadata=metadata_dict,
         schemas=schemas,
         known_module_names=known_module_names,
+        data_paths=data_paths,
     )
 
     execution_plan = build_experiment_execution_plan(
@@ -230,15 +229,11 @@ def generate_apptainer(
         plan=plan,
         metadata=metadata_dict,
         schemas=schemas,
+        data_paths=data_paths,
     )
 
-    stages = _build_apptainer_stages(execution_plan, metadata_dict)
-    mkdir_dirs = _compute_mkdir_dirs(execution_plan)
-
-    registry = ""
-    for spec in execution_plan.standard_specs.values():
-        registry = spec.components.image.image_url.rstrip("/").rsplit("/", 1)[0]
-        break
+    stages = _build_apptainer_stages(execution_plan)
+    mkdir_dirs = _compute_mkdir_dirs(stages)
 
     workflow_vars = [
         (wf_name, f"WORKFLOW{i + 1}_NAME")
@@ -249,9 +244,9 @@ def generate_apptainer(
         stages=stages,
         execution_plan=execution_plan,
         metadata=metadata_dict,
+        data_paths=data_paths,
         workspace_dir=workspace_dir,
         mkdir_dirs=mkdir_dirs,
-        registry=registry,
         workflow_vars=workflow_vars,
     )
     write_apptainer_script(script_content=script_content, script_path=script_path)
