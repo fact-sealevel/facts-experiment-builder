@@ -28,6 +28,8 @@ class ApptainerServiceSpec:
     output_dir: str  # host output dir for this service (mkdir'd by the script)
     registry: str  # image_url minus its last segment, e.g. "ghcr.io/fact-sealevel"; "" if none
     host_outputs: dict[str, str]  # output arg name -> host path (shared output volume)
+    # env vars for inputs declared with `envvar` (Compose `environment:`)
+    env: dict[str, str]
 
     @property
     def image_ref(self) -> str:
