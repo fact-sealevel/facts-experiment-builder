@@ -26,7 +26,7 @@ def _invalid_part_reason(part: str) -> str | None:
     if part == "":
         return "Experiment or directory name is empty."
     if part in (".", ".."):
-        return f"{part!r} is not allowed as an experiment or directory name."
+        return f"{part!r} is not allowed as an experiment or parent directory name."
     bad = sorted(set(_INVALID_CHAR.findall(part)))
     if bad:
         chars = ", ".join(repr(c) for c in bad)
