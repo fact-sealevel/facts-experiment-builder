@@ -1,6 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from facts_experiment_builder.core.experiment.exceptions import (
+    ExperimentAlreadyExistsError,
+    ExperimentOutsideWorkspaceError,
+    ExperimentParentNotFoundError,
+)
 from facts_experiment_builder.core.experiment.name import ExperimentName
 
 _CONFIG_FILENAME = "experiment-config.yaml"
@@ -47,6 +52,40 @@ class ExperimentPaths:
         return self.experiment_dir / _COMPOSE_FILENAME
 
 
-def make_output_dir(experiment_paths: ExperimentPaths) -> None:
-    output_dir = experiment_paths.output_dir
-    output_dir.mkdir(parents=True)
+def check_experiment_does_not_exist(experiment_paths: ExperimentPaths) -> None:
+    """Raise if an experiment already exists, i.e. its experiment-config.yaml exists."""
+    if experiment_paths.config_path.exists():
+        raise ExperimentAlreadyExistsError(path=str(experiment_paths.experiment_dir))
+
+
+def check_experiment_location(experiment_paths: ExperimentPaths) -> None:
+    """Raise if the experiment directory would fall outside the workspace (e.g. via a
+    symlinked parent) or if its parent directory does not exist.
+
+    Parent directories are never created; they must already exist in the workspace.
+    """
+    workspace_dir = experiment_paths.workspace_dir.resolve()
+    target = experiment_paths.experiment_dir.resolve()
+    if not target.is_relative_to(workspace_dir):
+        raise ExperimentOutsideWorkspaceError(
+            experiment_paths.experiment_name, target, workspace_dir
+        )
+    if not experiment_paths.parent_dir.is_dir():
+        raise ExperimentParentNotFoundError(
+            experiment_paths.experiment_name, experiment_paths.workspace_dir
+        )
+
+
+def create_experiment_dir(experiment_paths: ExperimentPaths) -> None:
+    """Create the experiment directory if needed.
+
+    Its parent must already exist.
+    """
+    check_experiment_location(experiment_paths)
+    try:
+        experiment_paths.experiment_dir.mkdir(parents=False, exist_ok=True)
+    except FileNotFoundError:
+        # Parent removed since check_experiment_location()
+        raise ExperimentParentNotFoundError(
+            experiment_paths.experiment_name, experiment_paths.workspace_dir
+        ) from None
