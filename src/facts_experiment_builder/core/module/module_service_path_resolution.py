@@ -202,46 +202,34 @@ def get_required_field(
     return metadata[field_name]
 
 
-def get_required_field_with_alternatives(
-    metadata: dict[str, Any],
-    primary_field: str,
-    alternative_fields: list[str],
-    context: str = "",
-) -> Any:
-    """Get a required field, trying primary first, then alternatives.
-
-    Args:
-        metadata: Metadata dictionary
-        primary_field: Primary field name to try first
-        alternative_fields: List of alternative field names to try
-        context: Optional context for error message
-
-    Returns:
-        Field value from first found field
-
-    Raises:
-        KeyError: If none of the fields are present
-    """
-    # Try primary field first
-    if primary_field in metadata:
-        return metadata[primary_field]
-
-    # Try alternatives
-    for alt_field in alternative_fields:
-        if alt_field in metadata:
-            return metadata[alt_field]
-
-    # None found
-    # all_fields = [primary_field] + alternative_fields
+def _get_required_path(metadata: dict[str, Any], key: str, context: str) -> str:
+    """Return a required experiment-level path value, which must be a plain string."""
+    value = get_required_field(metadata, key, context)
     context_msg = f" in {context}" if context else ""
-    raise KeyError(
-        f"Required field '{primary_field}' (or alternatives: {', '.join(alternative_fields)}) "
-        f"is missing from metadata{context_msg}"
-    )
+    if value is None:
+        raise ValueError(
+            f"Required path field '{key}' is None{context_msg}. "
+            f"Please provide a valid path string."
+        )
+    if not isinstance(value, str):
+        raise ValueError(
+            f"Required path field '{key}' has invalid type: expected str, got {type(value)}{context_msg}"
+        )
+    return value
 
 
 def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[str, str]:
-    """Extract experiment-level paths from metadata.
+    """Extract the required experiment-level paths from metadata.
+
+    Rules for the three required keys (`shared-input-data`,
+    `module-specific-input-data`, `output-data-location`):
+    - They must be present under exactly these names, as written by the
+      experiment-config.yaml template. No alternative spellings are accepted.
+    - Values must be plain strings. `None` (an empty field) is an error, and a
+      `{"value": ...}` mapping is not unwrapped.
+
+    `experiment-specific-input-data` is optional and handled separately by
+    resolve_experiment_data_paths().
 
     Args:
         metadata: Experiment metadata dictionary
@@ -254,61 +242,17 @@ def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[st
         - 'output_data_location': Path to output data location
 
     Raises:
-        KeyError: If required paths are missing from metadata
-        ValueError: If path values are None or invalid
+        KeyError: If a required path key is missing from metadata
+        ValueError: If a required path value is None or not a string
     """
-    shared_input_data = get_required_field_with_alternatives(
-        metadata, "shared-input-data", ["shared_input_data"], context
-    )
-    if shared_input_data is None:
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Required path field 'shared-input-data' (or 'shared_input_data') is None{context_msg}. "
-            f"Please provide a valid path string."
-        )
-    if not isinstance(shared_input_data, str):
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Required path field 'shared-input-data' has invalid type: expected str, got {type(shared_input_data)}{context_msg}"
-        )
-
-    module_specific_input_data = get_required_field_with_alternatives(
-        metadata, "module-specific-input-data", ["module_specific_input_data"], context
-    )
-    if module_specific_input_data is None:
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Required path field 'module-specific-input-data' (or 'module_specific_input_data') is None{context_msg}. "
-            f"Please provide a valid path string."
-        )
-    if not isinstance(module_specific_input_data, str):
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Required path field 'module-specific-input-data' has invalid type: expected str, got {type(module_specific_input_data)}{context_msg}"
-        )
-
-    output_data_location = get_required_field_with_alternatives(
-        metadata,
-        "output-data-location",
-        ["output_data_location", "output-path", "output_path"],
-        context,
-    )
-    if output_data_location is None:
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Required path field 'output-data-location' (or alternatives: 'output_data_location', 'output-path', 'output_path') is None{context_msg}. "
-            f"Please provide a valid path string."
-        )
-    if not isinstance(output_data_location, str):
-        context_msg = f" in {context}" if context else ""
-        raise ValueError(
-            f"Required path field 'output-data-location' has invalid type: expected str, got {type(output_data_location)}{context_msg}"
-        )
-
     return {
-        "shared_input_data": shared_input_data,
-        "module_specific_input_data": module_specific_input_data,
-        "output_data_location": output_data_location,
+        "shared_input_data": _get_required_path(metadata, "shared-input-data", context),
+        "module_specific_input_data": _get_required_path(
+            metadata, "module-specific-input-data", context
+        ),
+        "output_data_location": _get_required_path(
+            metadata, "output-data-location", context
+        ),
     }
 
 
@@ -378,6 +322,11 @@ def resolve_experiment_data_paths(
     metadata: dict[str, Any], context: str = "experiment config"
 ) -> ExperimentDataPaths:
     """Read and expand the experiment-level path keys from experiment metadata.
+
+    The three required keys follow the rules in get_experiment_paths().
+    `experiment-specific-input-data` is optional: it may be missing, empty
+    (None, "", []), a string, a list (first entry used), or a `{"value": ...}`
+    mapping, which is unwrapped. An empty value resolves to None.
 
     Args:
         metadata: Experiment metadata dictionary

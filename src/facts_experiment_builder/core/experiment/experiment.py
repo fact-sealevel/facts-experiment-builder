@@ -44,16 +44,10 @@ PATH_KEYS_PRIMARY = [
     "supplied-totaled-sealevel-step-data",
     "output-data-location",
 ]
-PATH_KEYS_ALTERNATIVES = {
-    "shared-input-data": ["shared_input_data"],
-    "module-specific-input-data": ["module_specific_input_data"],
-    "output-data-location": ["output_data_location", "output-path", "output_path"],
-}
 
 _STRUCTURAL_KEYS: set[str] = (
     set(MANIFEST_KEYS)
     | set(PATH_KEYS_PRIMARY)
-    | {k for alts in PATH_KEYS_ALTERNATIVES.values() for k in alts}
     | {
         "experiment_name",
         "workflows",
@@ -222,23 +216,8 @@ class FactsExperiment:
         if isinstance(manifest["esl_modules"], str):
             manifest["esl_modules"] = [manifest["esl_modules"]]
 
-        # Normalize the paths that are passed in the inputs and outputs sections
-        paths_normalized = {}
-        for primary in PATH_KEYS_PRIMARY:
-            value = metadata.get(primary)
-            if value is None and primary in PATH_KEYS_ALTERNATIVES:
-                for alt in PATH_KEYS_ALTERNATIVES[primary]:
-                    value = metadata.get(alt)
-                    if value is not None:
-                        break
-            if value is not None:
-                if isinstance(value, dict) and "clue" in value:
-                    paths_normalized[primary] = value
-                else:
-                    if isinstance(value, dict) and "value" in value:
-                        value = value["value"]
-                    if isinstance(value, str):
-                        paths_normalized[primary] = value
+        # Paths are not read here: experiment-level paths for generation are resolved
+        # once by resolve_experiment_data_paths(), so `paths` is left empty.
         excluded = _top_level_keys | _fp_keys | _STRUCTURAL_KEYS
 
         workflows = metadata.get("workflows")
@@ -264,7 +243,7 @@ class FactsExperiment:
             for k, v in metadata.items()
             if k not in top_level_params
             and k not in manifest
-            and k not in paths_normalized
+            and k not in PATH_KEYS_PRIMARY
             and k not in fingerprint_params
             and k not in module_sections
             and k != "experiment_name"
@@ -284,7 +263,7 @@ class FactsExperiment:
             sealevel_step=sealevel_step,
             totaling_step=totaling_step,
             extreme_sealevel_step=extreme_sealevel_step,
-            paths=paths_normalized,
+            paths={},
             fingerprint_params=fingerprint_params,
             extra=extra,
             workflows=workflows,
