@@ -36,6 +36,15 @@ def test_cli_help_exits_zero():
     assert "extremesealevel-step" in result.output
 
 
+def test_cli_rejects_projection_scale_both():
+    """'both' is no longer accepted; 'local' already includes global outputs."""
+    result = runner.invoke(
+        main, ["--experiment-name", "test-exp", "--projection-scale", "both"]
+    )
+    assert result.exit_code == 2
+    assert "Invalid value for '--projection-scale'" in result.output
+
+
 def test_cli_fails_without_required_args():
     """Invoking without required options exits non-zero."""
     result = runner.invoke(main, [])

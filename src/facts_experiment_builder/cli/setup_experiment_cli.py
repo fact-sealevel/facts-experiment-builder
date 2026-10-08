@@ -128,10 +128,11 @@ def configure_logging(debug_target):
 )
 @click.option(
     "--projection-scale",
-    type=click.Choice(["global", "local", "both"], case_sensitive=False),
+    type=click.Choice(["global", "local"], case_sensitive=False),
     default="local",
     show_default=True,
-    help="Projection scale for this experiment: 'global', 'local', or 'both'.",
+    help="Projection scale for this experiment: 'global' (global outputs only) or "
+    "'local' (local and global outputs).",
 )
 @click.option(
     "--module-regions",
