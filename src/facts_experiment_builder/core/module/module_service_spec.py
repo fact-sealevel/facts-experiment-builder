@@ -334,8 +334,7 @@ class ModuleServiceSpec:
         path.
 
         Used for top-level, fingerprint param, option and input specs. Applies the
-        spec's `transform` (scenario_name, scenario_name_ssp_landwaterstorage,
-        filename), then maps mounted TypedPaths and str/Path values to container paths.
+        spec's `transform` (scenario_name, filename), then maps mounted TypedPaths and str/Path values to container paths.
 
         Args:
             value: Resolved value from the arg's source (or an alternative)
@@ -354,9 +353,6 @@ class ModuleServiceSpec:
                 value = value.scenario_name
             elif isinstance(value, dict):
                 value = value.get("scenario_name", value.get("scenario", value))
-        elif transform == "scenario_name_ssp_landwaterstorage":
-            mapping = self.module_definition.extra.get("scenario_name_mapping", {})
-            value = scenario_name_ssp_landwaterstorage(value, mapping=mapping)
         elif transform == "filename":
             # Skip for output-volume args that are paths under output root (e.g. fair-temperature/climate.nc).
             if isinstance(value, (str, Path)) and not (

@@ -4,7 +4,6 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.io.exceptions import ModuleYamlNotFoundError
 
@@ -50,16 +49,6 @@ class FileSystemModuleRegistry:
                     module_name=module_name, path=path, e=e
                 ) from e
             module_schema = ModuleSchema.from_dict(data)
-            # some modules have an additional file in the registry entry
-            mapping_path = (
-                path.parent
-                / f"scenario_name_mapping_{module_name.replace('-', '_')}.yaml"
-            )  # TODO Fix this
-            if mapping_path.exists():
-                with open(mapping_path) as f:
-                    m = yaml.safe_load(f)
-                if isinstance(m, dict):
-                    module_schema.extra["scenario_name_mapping"] = m
             self._schemas[module_name] = module_schema
         return self._schemas[module_name]
 
