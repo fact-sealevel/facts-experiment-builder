@@ -56,7 +56,7 @@ Parameters defined once at the experiment level and automatically passed to ever
 | `location-file` | Path to a CSV of named locations (id, name, lat, lon) for localized projections |
 
 ### Scenario
-An emissions pathway identifier used to select the appropriate climate forcing data. Common values: `ssp585`, `ssp245`, `ssp126`, `rcp85`. Some modules (e.g., `ssp-landwaterstorage`) require scenario names in a different format — the experiment builder handles this translation automatically via a scenario name transform.
+An emissions pathway identifier used to select the appropriate climate forcing data. Common values: `ssp585`, `ssp245`, `ssp126`, `rcp85`. The experiment builder passes the scenario to every module exactly as written in `experiment-config.yaml`; it does not translate scenario names for any module.
 
 ### Manifest
 The section of `experiment-config.yaml` that declares which module fills each role in the experiment:

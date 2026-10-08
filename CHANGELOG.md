@@ -7,11 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] 
 
+### Added
+- `_ExecutionPlan` in new `application.execution_plan` module: a format-agnostic intermediate object that groups `ModuleServiceSpec`s by experiment stage (standard, facts-total per workflow, ESL per workflow, standalone ESL), for use by `generate-compose` and future run-script generators ([PR #127](https://github.com/fact-sealevel/facts-experiment-builder/pull/127), [@e-marshall](https://github.com/e-marshall))
+- `ExperimentDataPaths` and `resolve_experiment_data_paths()` in `core.module.module_service_path_resolution`: experiment-level paths (`shared-input-data`, `module-specific-input-data`, `output-data-location`, `experiment-specific-input-data`) are now read and expanded once per experiment and used as the single source of truth for every module's paths ([PR #130](https://github.com/fact-sealevel/facts-experiment-builder/pull/130), [@e-marshall](https://github.com/e-marshall))
+- Tests for the execution plan, property-based tests for `application.generate_compose` and `application.module_service_spec_factory` ([PR #127](https://github.com/fact-sealevel/facts-experiment-builder/pull/127), [@e-marshall](https://github.com/e-marshall)), and characterization tests for module path resolution ([PR #130](https://github.com/fact-sealevel/facts-experiment-builder/pull/130), [@e-marshall](https://github.com/e-marshall))
+
+### Changed
+- Split `_create_esl_workflow_services()` and `_build_per_workflow_services()` in `generate_compose` into format-agnostic spec builders (`_build_esl_specs_for_workflows()`, `_build_facts_total_specs_for_workflows()`) and compose-specific service builders ([PR #125](https://github.com/fact-sealevel/facts-experiment-builder/pull/125), [@e-marshall](https://github.com/e-marshall))
+- Split `ModuleServiceSpec._build_depends_on()` into format-agnostic `_get_dependency_names()` and compose-specific `_build_compose_depends_on()` ([PR #126](https://github.com/fact-sealevel/facts-experiment-builder/pull/126), [@e-marshall](https://github.com/e-marshall))
+- Moved `build_module_service_spec()` from `core.module.module_service_spec` to new `application.module_service_spec_factory`, and output-directory creation from `core.module.module_service_path_resolution` to new `io.module_dirs`, so filesystem side effects stay out of `core` ([PR #127](https://github.com/fact-sealevel/facts-experiment-builder/pull/127), [@e-marshall](https://github.com/e-marshall))
+- Renamed `temperature_module` / `temperature_service_name` to `climate_module` / `climate_service_name` throughout, including the experiment manifest key and the `climate_service_name` arg of `ModuleServiceSpec.generate_compose_service()` ([PR #127](https://github.com/fact-sealevel/facts-experiment-builder/pull/127), [PR #129](https://github.com/fact-sealevel/facts-experiment-builder/pull/129), [@e-marshall](https://github.com/e-marshall))
+- Renamed `resolve_experiment_paths()` to `resolve_module_paths()`; it now takes an `ExperimentDataPaths` and the module's own config section instead of the full metadata dict. `build_module_service_spec()`, `build_experiment_execution_plan()` and the `generate_compose` helpers take a new `data_paths` arg. Errors for missing or invalid path fields now refer to the experiment config rather than a module and are raised before any module spec is built ([PR #130](https://github.com/fact-sealevel/facts-experiment-builder/pull/130), [@e-marshall](https://github.com/e-marshall))
 
 
 ## [0.6.0] - 2026-09-30 
 
 ### Added
+
 - `ExperimentConfig` in `core.experiment` to hold config-building logic that was previously in the io layer ([PR #103](https://github.com/fact-sealevel/facts-experiment-builder/pull/103), [@e-marshall](https://github.com/e-marshall))
 - `ExperimentRepository` port and adapter; `setup-experiment` and `generate-compose` now use its `.add()` / `.get()` methods to write and read experiment config files ([PR #109](https://github.com/fact-sealevel/facts-experiment-builder/pull/109), [@e-marshall](https://github.com/e-marshall))
 - New `module_schemas` section in `experiment-config.yaml`, written by `setup-experiment`, that stores the schema of each module used in the experiment ([PR #115](https://github.com/fact-sealevel/facts-experiment-builder/pull/115), [@e-marshall](https://github.com/e-marshall))
