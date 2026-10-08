@@ -32,7 +32,7 @@ experiment_name:
         my-ssp585-experiment
 
 projection_scale:
-        local                  # "global", "local", or "both" — set via --projection-scale
+        local                  # "global" or "local" (local also produces global outputs) — set via --projection-scale
 
 ##----- Top-level params -----##
 # These values are passed automatically to every module that declares them.

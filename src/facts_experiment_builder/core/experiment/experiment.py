@@ -1,5 +1,6 @@
 """In-memory representation of an experiment (analogous to experiment-config.yaml)."""
 
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
@@ -17,10 +18,45 @@ from facts_experiment_builder.core.steps import (
     steps_from_metadata,
 )
 
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.workflow import (
     Workflow,
 )
+
+logger = logging.getLogger(__name__)
+
+# "local" also produces global outputs; "global" produces global outputs only.
+PROJECTION_SCALES = ("global", "local")
+DEFAULT_PROJECTION_SCALE = "local"
+
+
+def parse_projection_scale(value: Any) -> str:
+    """Return the projection scale for a config's `projection_scale` value.
+
+    A missing or empty value means the default, "local". Case and surrounding whitespace
+    are ignored, and the value is returned in lower case. The deprecated "both" is read
+    as "local" (which already includes global outputs), with a warning.
+
+    Raises:
+        ValueError: value is not "global", "local" or "both".
+    """
+    if value is None:
+        return DEFAULT_PROJECTION_SCALE
+    raw_value = value
+    if isinstance(value, str):
+        value = value.strip().lower()
+    if value == "both":
+        logger.warning(
+            "projection_scale 'both' is deprecated and is treated as 'local', which "
+            "already includes global outputs. Set projection_scale to 'local' in "
+            "experiment-config.yaml."
+        )
+        return "local"
+    if value not in PROJECTION_SCALES:
+        raise ValueError(
+            f"Invalid projection_scale {raw_value!r} in experiment-config.yaml. "
+            f"Expected one of: {', '.join(PROJECTION_SCALES)}."
+        )
+    return value
 
 
 @dataclass
@@ -254,7 +290,7 @@ class FactsExperiment:
             steps_from_metadata(manifest, module_sections)
         )
 
-        projection_scale = metadata.get("projection_scale")
+        projection_scale = parse_projection_scale(metadata.get("projection_scale"))
 
         return cls(
             experiment_name=experiment_name,

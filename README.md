@@ -261,9 +261,10 @@ Options:
                                   to use in experiment.
   --shared-input-data TEXT        Absolute path to shared input data to use in
                                   experiment.
-  --projection-scale [global|local|both]
+  --projection-scale [global|local]
                                   Projection scale for this experiment:
-                                  'global', 'local', or 'both'.  [default:
+                                  'global' (global outputs only) or 'local'
+                                  (local and global outputs).  [default:
                                   local]
   --module-regions TEXT           Specify regions for a module, format:
                                   module-name=REGION1,REGION2. Repeatable.
