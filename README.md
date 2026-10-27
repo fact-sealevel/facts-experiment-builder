@@ -132,8 +132,8 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 --pipeline-id aaa --scenario ssp126 --baseyear 2005 \
 --pyear-start 2020 --pyear-end 2150 --pyear-step 10 \
 --nsamps 1000 --location-file location.lst \
---module-specific-input-data /path/to/module/inputs \
---shared-input-data /path/to/shared/inputs
+--module-specific-input-data /path/to/module/inputs \ #replace this with the path to module-specific data on your machine
+--shared-input-data /path/to/shared/inputs # replace this with path to shared data on your machine
 ```
 - Not all of these options must be passed to `setup-experiment`.
 - The required arguments are:
