@@ -77,7 +77,6 @@ def _make_execution_plan(climate_service_name: str | None = None) -> _ExecutionP
         standard_specs={},
         facts_total_specs={},
         esl_specs={},
-        standalone_esl_specs={},
         climate_service_name=climate_service_name,
         suppress_output_types=set(),
     )

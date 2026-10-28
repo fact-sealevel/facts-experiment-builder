@@ -127,12 +127,9 @@ def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
         )
 
     # Stage 4 runs after Stage 3 has finished, so per-workflow ESL services see their
-    # totaled inputs. ESL services for experiments without workflows have no totaling
-    # dependency and run here too.
+    # totaled inputs.
     stage4: list[ApptainerServiceSpec] = []
     for _service_name, (spec, _depends_on) in execution_plan.esl_specs.items():
-        stage4.append(spec.generate_apptainer_service())
-    for spec in execution_plan.standalone_esl_specs.values():
         stage4.append(spec.generate_apptainer_service())
 
     all_specs = stage1 + stage2 + stage3 + stage4
