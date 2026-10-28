@@ -313,10 +313,6 @@ def _build_compose_services(
         services[service_name] = compose_svc
         _log_success("Created %s ESL workflow service", service_name)
 
-    for service_name, spec in execution_plan.standalone_esl_specs.items():
-        services[service_name] = spec.generate_compose_service()
-        _log_success("Created %s module", service_name)
-
     return services
 
 
