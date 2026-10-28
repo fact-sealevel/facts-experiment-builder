@@ -279,7 +279,6 @@ def test_standard_spec_names_appear_in_services(standard_names):
         standard_specs={n: _stub_spec() for n in standard_names},
         facts_total_specs={},
         esl_specs={},
-        standalone_esl_specs={},
         climate_service_name=standard_names[0],
         suppress_output_types=set(),
     )
@@ -297,7 +296,6 @@ def test_facts_total_spec_names_appear_in_services(ft_names, wf_module_names):
         standard_specs={},
         facts_total_specs={n: (_stub_spec(), wf) for n in ft_names},
         esl_specs={},
-        standalone_esl_specs={},
         climate_service_name=None,
         suppress_output_types=set(),
     )
@@ -314,7 +312,6 @@ def test_esl_spec_names_appear_in_services(esl_names):
         standard_specs={},
         facts_total_specs={},
         esl_specs={n: (_stub_spec(), "dep-service") for n in esl_names},
-        standalone_esl_specs={},
         climate_service_name=None,
         suppress_output_types=set(),
     )
@@ -324,34 +321,14 @@ def test_esl_spec_names_appear_in_services(esl_names):
     assert set(esl_names) <= result.keys()
 
 
-@given(standalone_names=_nonempty_module_list)
-def test_standalone_esl_spec_names_appear_in_services(standalone_names):
-    """Every standalone ESL spec name appears as a key in the returned services dict."""
-    exec_plan = _ExecutionPlan(
-        standard_specs={},
-        facts_total_specs={},
-        esl_specs={},
-        standalone_esl_specs={n: _stub_spec() for n in standalone_names},
-        climate_service_name=None,
-        suppress_output_types=set(),
-    )
-
-    result = _call_build_compose_services(exec_plan)
-
-    assert set(standalone_names) <= result.keys()
-
-
 @given(
     standard_names=_module_list,
     ft_names=_module_list,
     esl_names=_module_list,
-    standalone_names=_module_list,
 )
-def test_service_count_equals_sum_of_plan_specs(
-    standard_names, ft_names, esl_names, standalone_names
-):
+def test_service_count_equals_sum_of_plan_specs(standard_names, ft_names, esl_names):
     """len(services) equals the total number of specs across all plan categories."""
-    all_names = standard_names + ft_names + esl_names + standalone_names
+    all_names = standard_names + ft_names + esl_names
     assume(len(all_names) == len(set(all_names)))  # no cross-category collisions
     assume(len(all_names) > 0)
 
@@ -360,7 +337,6 @@ def test_service_count_equals_sum_of_plan_specs(
         standard_specs={n: _stub_spec() for n in standard_names},
         facts_total_specs={n: (_stub_spec(), wf) for n in ft_names},
         esl_specs={n: (_stub_spec(), "dep") for n in esl_names},
-        standalone_esl_specs={n: _stub_spec() for n in standalone_names},
         climate_service_name=standard_names[0] if standard_names else None,
         suppress_output_types=set(),
     )
@@ -380,7 +356,6 @@ def test_facts_total_depends_on_matches_workflow_module_names(
         standard_specs={},
         facts_total_specs={service_name: (_stub_spec(), wf)},
         esl_specs={},
-        standalone_esl_specs={},
         climate_service_name=None,
         suppress_output_types=set(),
     )
@@ -397,7 +372,6 @@ def test_esl_depends_on_is_exactly_the_dep_service(service_name, dep_service):
         standard_specs={},
         facts_total_specs={},
         esl_specs={service_name: (_stub_spec(), dep_service)},
-        standalone_esl_specs={},
         climate_service_name=None,
         suppress_output_types=set(),
     )

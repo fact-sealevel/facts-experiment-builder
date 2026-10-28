@@ -42,6 +42,34 @@ def check_metadata_has_required_fields(metadata_obj, required_fields):
             )
 
 
+def check_totaling_and_esl_have_workflows(
+    sealevel_module_names: list[str],
+    framework_module_names: list[str],
+    esl_module_names: list[str],
+    workflows: dict[str, Workflow],
+) -> None:
+    """Raise if facts-total or ESL modules cannot receive their inputs.
+
+    facts-total and ESL services are built per workflow, and ESL reads the facts-total
+    output. Without sea-level modules there is nothing to total; without workflows no
+    facts-total service is built.
+    """
+    if esl_module_names and not sealevel_module_names:
+        raise ValueError(
+            f"Extreme sea-level module(s) {esl_module_names} require sea-level modules "
+            "in the sea-level step; they cannot be used without them or with supplied "
+            "totaled sea-level data. Remove the extreme sea-level step or add sea-level "
+            "modules and re-run setup-experiment."
+        )
+    if framework_module_names and not workflows:
+        raise ValueError(
+            "This experiment includes a totaling step but no workflows, so facts-total "
+            "(and any extreme sea-level module) would never run. Add a 'workflows' entry "
+            "to experiment-config.yml (e.g. 'all-modules: <sea-level modules>') or re-run "
+            "setup-experiment."
+        )
+
+
 @dataclass(frozen=True)
 class _ExperimentPlan:
     """Result of phase 1 of gen compose: parsed experiment structure and module name
@@ -102,6 +130,12 @@ def _make_experiment_plan(
     )
     # Make workflow obj from metadata
     workflows = workflows_from_metadata(metadata)
+    check_totaling_and_esl_have_workflows(
+        sealevel_module_names=sealevel_module_names,
+        framework_module_names=framework_module_names,
+        esl_module_names=esl_module_names,
+        workflows=workflows,
+    )
 
     # Make an ExperimentPlan obj
     # (first component of generate compose, used to build module spec objs)
