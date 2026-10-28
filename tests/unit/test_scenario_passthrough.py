@@ -82,7 +82,7 @@ def _setup_experiment(workspace_dir: Path, scenario: str) -> Path:
         experiment_name=_EXPERIMENT_NAME,
         experiment_paths=prepared.experiment_paths,
         experiment_skeleton=prepared.experiment_skeleton,
-        workflows_dict={},
+        workflows_dict={"all-modules": "ssp-landwaterstorage,tlm-sterodynamics"},
         pipeline_id="abc123",
         scenario=scenario,
         baseyear=2005,

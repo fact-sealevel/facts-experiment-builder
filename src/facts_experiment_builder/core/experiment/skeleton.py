@@ -29,12 +29,6 @@ from facts_experiment_builder.core.steps import (
 from facts_experiment_builder.core.steps.climate_resolver import resolve_climate_file
 
 
-def is_totaling_needed(sealevel_step: str) -> bool:
-    sealevel_module_ls = parse_module_list_str(s=sealevel_step)
-
-    return len(sealevel_module_ls) > 1
-
-
 def parse_module_regions(module_regions_args: tuple) -> dict[str, list[str]]:
     """Parse a tuple of 'module-name=R1,R2' strings into {module: [regions]}.
 
@@ -87,10 +81,6 @@ class ExperimentSkeleton:
         module_regions: dict[str, list[str]] | None = None,
     ) -> "ExperimentSkeleton":
         """Build a skeleton by parsing comma-separated CLI module strings."""
-        from facts_experiment_builder.core.experiment.module_name_validation import (
-            parse_module_list_str,
-        )
-
         # validate climate step inputs
         if not supplied_totaled_sealevel_step_data:
             if climate_step and supplied_climate_step_data:
@@ -114,19 +104,18 @@ class ExperimentSkeleton:
         sealevel_modules = parse_module_list_str(sealevel_step)
         esl_modules = parse_module_list_str(extremesealevel_step)
 
-        # Domain rules:
-        # - totaling can't run if sealevel step bypassed
-        # - totaling doesn't run if no sealevel modules are passed
-        # - totaling runs if more than one sealevel module included
-        if supplied_totaled_sealevel_step_data or not sealevel_modules:
-            totaling_module = None
-        else:
-            totaling_module = "facts-total"
-        if not supplied_totaled_sealevel_step_data and not sealevel_modules:
-            totaling_module = None
-        elif sealevel_modules:
-            if len(sealevel_modules) >= 1:
-                totaling_module = "facts-total"
+        # ESL reads facts-total's output, which only exists when sea-level modules run
+        if esl_modules and not sealevel_modules:
+            raise ValueError(
+                "Extreme sea-level modules (--extremesealevel-step) require sea-level "
+                "modules (--sealevel-step); they cannot be used without them or with "
+                "totaled sea-level data (--supplied-totaled-sealevel-step-data)."
+            )
+
+        # Totaling runs whenever sea-level modules run, including a single module,
+        # because ESL reads facts-total's output. Modules and supplied totaled data are
+        # mutually exclusive (validated above), so no modules means no totaling.
+        totaling_module = "facts-total" if sealevel_modules else None
         return cls(
             climate_module=climate_modules[0] if climate_modules else None,
             climate_data=supplied_climate_step_data,
