@@ -2,7 +2,6 @@
 
 import pytest
 
-from facts_experiment_builder.application import prepare_plan
 from facts_experiment_builder.application.generate_compose import (
     _SUCCESS,
     _log_success,
@@ -97,61 +96,22 @@ def test_check_metadata_has_required_fields():
         )
 
 
-def test_extract_all_module_names_returns_all_modules():
-    metadata = {
-        "climate_module": "fair-temperature",
-        "sealevel_modules": ["bamber19-icesheets", "tlm-sterodynamics"],
-        "framework_modules": ["facts-total"],
-        "esl_modules": ["extremesealevel-pointsoverthreshold"],
-    }
-    result = prepare_plan._extract_all_module_names_from_manifest(metadata)
-    assert result == [
-        "fair-temperature",
-        "bamber19-icesheets",
-        "tlm-sterodynamics",
-        "facts-total",
-        "extremesealevel-pointsoverthreshold",
-    ]
-
-
-def test_extract_all_module_names_excludes_none_temperature():
-    metadata = {
-        "climate_module": "NONE",
-        "sealevel_modules": ["tlm-sterodynamics"],
-        "framework_modules": [],
-        "esl_modules": [],
-    }
-    result = prepare_plan._extract_all_module_names_from_manifest(metadata)
-    assert result == ["tlm-sterodynamics"]
-
-
-def test_extract_all_module_names_excludes_lowercase_none_temperature():
-    metadata = {"climate_module": "none", "sealevel_modules": ["tlm-sterodynamics"]}
-    result = prepare_plan._extract_all_module_names_from_manifest(metadata)
-    assert result == ["tlm-sterodynamics"]
-
-
-def test_extract_all_module_names_empty_metadata():
-    result = prepare_plan._extract_all_module_names_from_manifest({})
-    assert result == []
-
-
 def test_check_module_schemas_present_raises_when_key_missing():
     with pytest.raises(ValueError, match="module_schemas"):
-        check_module_schemas_present({}, ["fair-temperature"])
+        check_module_schemas_present(None, ["fair-temperature"])
 
 
 def test_check_module_schemas_present_raises_when_module_missing():
-    metadata = {"module_schemas": {"fair-temperature": {}}}
+    module_schemas = {"fair-temperature": {}}
     with pytest.raises(ValueError, match="tlm-sterodynamics"):
         check_module_schemas_present(
-            metadata, ["fair-temperature", "tlm-sterodynamics"]
+            module_schemas, ["fair-temperature", "tlm-sterodynamics"]
         )
 
 
 def test_check_module_schemas_present_passes_when_all_present():
-    metadata = {"module_schemas": {"fair-temperature": {}}}
-    check_module_schemas_present(metadata, ["fair-temperature"])  # no raise
+    module_schemas = {"fair-temperature": {}}
+    check_module_schemas_present(module_schemas, ["fair-temperature"])  # no raise
 
 
 def test_log_success_emits_at_correct_level(caplog):

@@ -5,6 +5,9 @@ from pathlib import Path
 from typing import Protocol
 
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
 
@@ -25,4 +28,4 @@ class ExperimentRepository(Protocol):
         config_path: Path,
         module_registry_version=None,
     ) -> None: ...
-    def get(self, config_path: Path) -> dict: ...
+    def get(self, config_path: Path) -> LoadedExperimentConfig: ...

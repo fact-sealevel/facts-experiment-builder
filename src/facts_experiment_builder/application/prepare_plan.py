@@ -21,6 +21,9 @@ from facts_experiment_builder.core.experiment.experiment_plan import (
     _ExperimentPlan,
     _make_experiment_plan,
 )
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
@@ -37,24 +40,6 @@ _SUCCESS = 25  # custom level between INFO (20) and WARNING (30); must match CLI
 
 def _log_success(msg: str, *args: object) -> None:
     logger.log(_SUCCESS, msg, *args)
-
-
-def _extract_all_module_names_from_manifest(metadata: dict[str, Any]) -> list[str]:
-    """Extract a flat list of all module names from the experiment manifest keys."""
-    names: list[str] = []
-    climate_mod = metadata.get("climate_module")
-    if climate_mod and str(climate_mod).upper() != "NONE":
-        names.append(str(climate_mod))
-    for m in metadata.get("sealevel_modules") or []:
-        if isinstance(m, str):
-            names.append(m)
-    for m in metadata.get("framework_modules") or []:
-        if isinstance(m, str):
-            names.append(m)
-    for m in metadata.get("esl_modules") or []:
-        if isinstance(m, str):
-            names.append(m)
-    return names
 
 
 def _validate_climate_file_inputs(
@@ -101,13 +86,12 @@ def _validate_climate_file_inputs(
 
 
 def check_module_schemas_present(
-    metadata: dict[str, Any],
+    module_schemas: dict[str, Any] | None,
     required_module_names: Iterable[str],
 ) -> None:
     """Raise an informative error if the experiment-config.yaml file associated with
     provided experiment_name does not contain module schemas section, or is missing
     schema data for a module."""
-    module_schemas = metadata.get("module_schemas")
     if not isinstance(module_schemas, dict) or not module_schemas:
         raise ValueError(
             "This experiment's experiment-config.yaml file does not contain a 'module_schemas' section. "
@@ -218,10 +202,10 @@ def _build_module_specs(
 
 
 def prepare_execution_plan(
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     data_paths: ExperimentDataPaths,
 ) -> tuple[_ExperimentPlan, _ExecutionPlan]:
-    """Turn loaded experiment-config metadata into a format-agnostic _ExecutionPlan.
+    """Turn a loaded experiment config into a format-agnostic _ExecutionPlan.
 
     data_paths is passed in rather than resolved here so that a caller can relocate the
     output root (Apptainer writes to its own output directory). Returns the
@@ -230,13 +214,14 @@ def prepare_execution_plan(
     If no module services can be created (every step uses pre-existing data), returns an
     empty _ExecutionPlan.
     """
-    module_names = _extract_all_module_names_from_manifest(metadata)
-    check_module_schemas_present(metadata, module_names)
+    module_names = config.module_names
+    check_module_schemas_present(config.module_schemas, module_names)
 
     schemas = {
-        m: ModuleSchema.from_dict(metadata["module_schemas"][m])
-        for m in set(module_names)
+        m: ModuleSchema.from_dict(config.module_schemas[m]) for m in set(module_names)
     }
+    # Functions below still take the metadata dict.
+    metadata = config.raw
     known_module_names = list(schemas.keys())
 
     plan = _make_experiment_plan(metadata, schemas)

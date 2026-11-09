@@ -114,9 +114,6 @@ def generate_compose(
     Returns:
         PrepareComposeOutput with the compose dict and the path to write it to
     """
-    # TODO: in future, should probably make a dataclass or similar for experiment metadata dict so that
-    # can just access an attr instead of needing fns to get names from manifest etc?
-
     experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
 
     experiment_paths = ExperimentPaths(
@@ -147,12 +144,10 @@ def generate_compose(
         "Found experiment config file at provided path", extra={"detail": config_path}
     )
 
-    metadata_dict = experiment_repo.get(
-        config_path=config_path,
-    )
+    config = experiment_repo.get(config_path=config_path)
 
-    data_paths = resolve_experiment_data_paths(metadata_dict)
-    _plan, execution_plan = prepare_execution_plan(metadata_dict, data_paths)
+    data_paths = resolve_experiment_data_paths(config.raw)
+    _plan, execution_plan = prepare_execution_plan(config, data_paths)
 
     services = render_compose_services(execution_plan)
     output_obj = PrepareComposeOutput(
