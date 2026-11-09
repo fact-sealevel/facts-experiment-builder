@@ -18,6 +18,7 @@ from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     resolve_experiment_data_paths,
 )
+from facts_experiment_builder.io.compose_service import to_compose_service
 from facts_experiment_builder.io.paths import ExperimentPaths
 
 logger = logging.getLogger(__name__)
@@ -41,13 +42,17 @@ def render_compose_services(execution_plan: _ExecutionPlan) -> dict[str, Any]:
     services: dict[str, Any] = {}
 
     for service_name, spec in execution_plan.standard_specs.items():
-        services[service_name] = spec.generate_compose_service(
-            climate_service_name=execution_plan.climate_service_name,
-            suppress_output_types=execution_plan.suppress_output_types,
+        services[service_name] = to_compose_service(
+            spec.to_service_run(
+                suppress_output_types=execution_plan.suppress_output_types
+            ),
+            depends_on=spec.dependencies(
+                climate_service_name=execution_plan.climate_service_name
+            ),
         )
 
     for service_name, (spec, wf) in execution_plan.facts_total_specs.items():
-        compose_svc = spec.generate_compose_service()
+        compose_svc = to_compose_service(spec.to_service_run())
         compose_svc["depends_on"] = {
             mod: {"condition": "service_completed_successfully"}
             for mod in wf.module_names
@@ -56,7 +61,7 @@ def render_compose_services(execution_plan: _ExecutionPlan) -> dict[str, Any]:
         _log_success("Created %s workflow service", service_name)
 
     for service_name, (spec, depends_on_service) in execution_plan.esl_specs.items():
-        compose_svc = spec.generate_compose_service()
+        compose_svc = to_compose_service(spec.to_service_run())
         compose_svc["depends_on"] = {
             depends_on_service: {"condition": "service_completed_successfully"}
         }

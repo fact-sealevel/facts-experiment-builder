@@ -5,7 +5,7 @@ import os
 
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.generate_apptainer import _ApptainerStages
-from facts_experiment_builder.core.module.apptainer_service_spec import (
+from facts_experiment_builder.io.apptainer_service import (
     ApptainerServiceSpec,
 )
 from facts_experiment_builder.core.module.module_service_path_resolution import (

@@ -60,8 +60,8 @@ class _ExecutionPlan:
     Both Docker Compose and Apptainer renderers consume this as their input.
 
     standard_specs: climate module + all sealevel modules. Compose passes
-        climate_service_name to generate_compose_service(); _build_compose_depends_on()
-        handles whether to actually add a depends_on entry. Apptainer checks
+        climate_service_name to ModuleServiceSpec.dependencies(), which decides whether
+        the climate service is a dependency. Apptainer checks
         spec.module_definition.uses_climate_file to split into Stage 1 (independent)
         and Stage 2 (climate-dependent).
 

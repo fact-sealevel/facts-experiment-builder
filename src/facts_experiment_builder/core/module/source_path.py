@@ -1,7 +1,7 @@
 """Typed form of the dotted source strings used in module YAMLs.
 
 `source:` and volume `host_path:` entries say where a value comes from when building a
-compose service. Every one has one of these shapes:
+module service. Every one has one of these shapes:
 
 metadata.<top-level param>            e.g. metadata.pipeline-id
 module_inputs.<section>.<key>         e.g. module_inputs.inputs.rcmip_fname
@@ -9,7 +9,7 @@ module_inputs.<paths>.<attr>          e.g. module_inputs.input_paths.shared_inpu
 module_inputs.module_name
 
 Parsing them once (at YAML load time) means a typo fails loudly instead of silently
-resolving to None at compose time.
+resolving to None when services are generated.
 """
 
 from dataclasses import dataclass

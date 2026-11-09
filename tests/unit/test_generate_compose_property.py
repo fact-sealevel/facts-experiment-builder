@@ -14,10 +14,14 @@ from facts_experiment_builder.application.generate_compose import (
 from facts_experiment_builder.application.prepare_plan import _build_module_specs
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleContainerImage,
+    ModuleSchema,
+)
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
 )
+from facts_experiment_builder.core.module.service_run import ServiceRun
 from facts_experiment_builder.core.workflow import Workflow
 
 
@@ -86,14 +90,18 @@ def _mock_build_module_service_spec():
 
 
 def _stub_spec() -> MagicMock:
-    """Stub ModuleServiceSpec: generate_compose_service returns a fresh dict each call."""
+    """Stub ModuleServiceSpec: a minimal ServiceRun and no schema dependencies."""
     stub = MagicMock()
-    stub.generate_compose_service.side_effect = lambda *a, **kw: {
-        "image": "img:tag",
-        "command": [],
-        "volumes": [],
-        "restart": "no",
-    }
+    stub.to_service_run.return_value = ServiceRun(
+        name="stub",
+        image=ModuleContainerImage(image_url="img", image_tag="tag"),
+        args=[],
+        binds=[],
+        env={},
+        output_dir="/out/stub",
+        host_outputs={},
+    )
+    stub.dependencies.return_value = []
     return stub
 
 

@@ -42,8 +42,8 @@ def check_totaling_and_esl_have_workflows(
 
 @dataclass(frozen=True)
 class _ExperimentPlan:
-    """Result of phase 1 of gen compose: parsed experiment structure and module name
-    lists."""
+    """Result of phase 1 of generating services: parsed experiment structure and module
+    name lists."""
 
     experiment: FactsExperiment
     climate_module_name: str | None  # TODO rename to climate
@@ -57,7 +57,7 @@ class _ExperimentPlan:
 def _make_experiment_plan(
     metadata: dict[str, Any], schemas: dict[str, ModuleSchema]
 ) -> _ExperimentPlan:
-    """Phase 1 of generating compose:
+    """Phase 1 of generating services:
     Validate metadata and build a typed experiment plan.
 
     Ths fn is only data transformation, there should be no filesystem I/O.
@@ -103,7 +103,7 @@ def _make_experiment_plan(
     )
 
     # Make an ExperimentPlan obj
-    # (first component of generate compose, used to build module spec objs)
+    # (first component of generating services, used to build module spec objs)
     return _ExperimentPlan(
         experiment=experiment,
         climate_module_name=climate_module_name,

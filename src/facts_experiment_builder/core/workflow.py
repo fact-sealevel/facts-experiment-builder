@@ -32,7 +32,7 @@ class WorkflowName:
 class Workflow:
     """One workflow: name and list of sealevel module names for facts-total.
 
-    Used by setup_new_experiment and generate_compose.
+    Used by setup_new_experiment and when generating an experiment's services.
     """
 
     name: str
@@ -83,8 +83,8 @@ class Workflow:
         return self.to_module_list_str()
 
     def facts_total_service_name_for_type(self, output_type: str) -> str:
-        """Compose service name for this workflow's facts-total service for a given
-        output type (e.g. facts-total-wf1-global)."""
+        """Service name for this workflow's facts-total service for a given output type
+        (e.g. facts-total-wf1-global)."""
         return f"facts-total-{self.name}-{output_type}"
 
     @property

@@ -10,14 +10,15 @@ from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.prepare_plan import prepare_execution_plan
 from facts_experiment_builder.application.storage import ExperimentRepository
 from facts_experiment_builder.core.experiment.name import ExperimentName
-from facts_experiment_builder.core.module.apptainer_service_spec import (
-    ApptainerServiceSpec,
-)
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
     resolve_experiment_data_paths,
 )
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
+from facts_experiment_builder.io.apptainer_service import (
+    ApptainerServiceSpec,
+    to_apptainer_service,
+)
 from facts_experiment_builder.io.paths import ExperimentPaths
 from facts_experiment_builder.io.write_apptainer import (
     render_apptainer_script,
@@ -83,7 +84,9 @@ def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
         execution_plan.standard_specs.get(climate_name) if climate_name else None
     )
     climate: ApptainerServiceSpec | None = (
-        climate_module_spec.generate_apptainer_service(suppress_output_types=suppress)
+        to_apptainer_service(
+            climate_module_spec.to_service_run(suppress_output_types=suppress)
+        )
         if climate_module_spec
         else None
     )
@@ -95,13 +98,16 @@ def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
             stage1.append(climate)
         elif not spec.module_definition.uses_climate_file:
             stage1.append(
-                spec.generate_apptainer_service(suppress_output_types=suppress)
+                to_apptainer_service(
+                    spec.to_service_run(suppress_output_types=suppress)
+                )
             )
         else:
             wait_files = _get_climate_wait_files(spec, climate) if climate else []
             stage2.append(
-                spec.generate_apptainer_service(
-                    wait_for_files=wait_files, suppress_output_types=suppress
+                to_apptainer_service(
+                    spec.to_service_run(suppress_output_types=suppress),
+                    wait_for_files=wait_files,
                 )
             )
 
@@ -109,7 +115,8 @@ def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
     for service_name, (spec, _wf) in execution_plan.facts_total_specs.items():
         pid_var = f"PID_{service_name.upper().replace('-', '_')}"
         stage3.append(
-            spec.generate_apptainer_service(
+            to_apptainer_service(
+                spec.to_service_run(),
                 run_in_background=True,
                 pid_var=pid_var,
             )
@@ -119,7 +126,7 @@ def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
     # totaled inputs.
     stage4: list[ApptainerServiceSpec] = []
     for _service_name, (spec, _depends_on) in execution_plan.esl_specs.items():
-        stage4.append(spec.generate_apptainer_service())
+        stage4.append(to_apptainer_service(spec.to_service_run()))
 
     all_specs = stage1 + stage2 + stage3 + stage4
     return _ApptainerStages(

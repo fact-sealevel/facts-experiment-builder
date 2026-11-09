@@ -1,14 +1,11 @@
 """Module in service: has all information needed to run a module and slot into an
-experiment implementation (e.g. one compose service)."""
+experiment implementation (e.g. one service in a generated run file)."""
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from facts_experiment_builder.core.components.top_level_params import TopLevelParams
-from facts_experiment_builder.core.module.apptainer_service_spec import (
-    ApptainerServiceSpec,
-)
 from facts_experiment_builder.core.module.arg_specs import (
     BaseArgSpec,
     OtherOutputSpec,
@@ -27,6 +24,10 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
     resolve_output_path,
 )
 
+from facts_experiment_builder.core.module.service_run import (
+    ServiceDependency,
+    ServiceRun,
+)
 from facts_experiment_builder.core.module.source_path import SourcePath
 
 from facts_experiment_builder.core.typed_path import (
@@ -106,7 +107,7 @@ class ModuleServiceSpecComponents:
 
 class ModuleServiceSpec:
     """Has all information needed to run a module and slot into an experiment
-    implementation (e.g. one compose service).
+    implementation (e.g. one service in a generated run file).
 
     Built from a ModuleSchema (module YAML) plus experiment-specific inputs.
     """
@@ -464,20 +465,20 @@ class ModuleServiceSpec:
 
         return volumes
 
-    def _get_dependency_names(
+    def dependencies(
         self, climate_service_name: str | None = None
-    ) -> list[str]:
-        """Return resolved service names this module depends on.
+    ) -> list[ServiceDependency]:
+        """Return the services this module depends on, in declaration order.
 
-        Format-agnostic: returns names only, without condition metadata.
-        Useful for dependency-graph calculations where only the names matter
-        (e.g. stage grouping for Apptainer). For the Docker Compose depends_on
-        dict, use _build_compose_depends_on() instead.
+        If uses_climate_file is True, the climate service comes first. Explicit
+        depends_on entries from the module YAML follow; "fair" maps to
+        climate_service_name when one is given. A name can appear more than once;
+        backends that key dependencies by name keep the last entry's condition.
         """
-        names: list[str] = []
+        dependencies: list[ServiceDependency] = []
 
         if self.module_definition.uses_climate_file and climate_service_name:
-            names.append(climate_service_name)
+            dependencies.append(ServiceDependency(service=climate_service_name))
 
         for dep_spec in self.module_definition.depends_on or []:
             if isinstance(dep_spec, dict):
@@ -485,48 +486,18 @@ class ModuleServiceSpec:
                 if service_name:
                     if service_name == "fair" and climate_service_name:
                         service_name = climate_service_name
-                    names.append(service_name)
+                    dependencies.append(
+                        ServiceDependency(
+                            service=service_name, condition=dep_spec.get("condition")
+                        )
+                    )
             elif isinstance(dep_spec, str):
                 mapped = dep_spec
                 if dep_spec == "fair" and climate_service_name:
                     mapped = climate_service_name
-                names.append(mapped)
+                dependencies.append(ServiceDependency(service=mapped))
 
-        return names
-
-    def _build_compose_depends_on(
-        self, climate_service_name: str | None = None
-    ) -> dict[str, Any]:
-        """Build the Docker Compose depends_on dict from dependency configuration.
-
-        Compose-specific: wraps each dependency name with a condition dict.
-        If uses_climate_file is True, automatically adds dependency on the
-        climate service. Also processes explicit depends_on entries from YAML.
-
-        For format-agnostic dependency names only, use _get_dependency_names().
-        """
-        depends_on: dict[str, Any] = {}
-
-        if self.module_definition.uses_climate_file and climate_service_name:
-            depends_on[climate_service_name] = {
-                "condition": "service_completed_successfully"
-            }
-
-        for dep_spec in self.module_definition.depends_on or []:
-            if isinstance(dep_spec, dict):
-                service_name = dep_spec.get("service", "")
-                condition = dep_spec.get("condition", "service_completed_successfully")
-                if service_name:
-                    if service_name == "fair" and climate_service_name:
-                        service_name = climate_service_name
-                    depends_on[service_name] = {"condition": condition}
-            elif isinstance(dep_spec, str):
-                mapped = dep_spec
-                if dep_spec == "fair" and climate_service_name:
-                    mapped = climate_service_name
-                depends_on[mapped] = {"condition": "service_completed_successfully"}
-
-        return depends_on
+        return dependencies
 
     def _build_environment(self) -> dict[str, str]:
         """Build environment variable dict for args declared with envvar in the module
@@ -546,34 +517,20 @@ class ModuleServiceSpec:
                 environment[arg_spec.envvar] = str(value)
         return environment
 
-    def generate_compose_service(
-        self,
-        climate_service_name: str | None = None,
-        suppress_output_types: set | None = None,
-    ) -> dict[str, Any]:
-        """Generate Docker Compose service configuration.
+    def to_service_run(self, suppress_output_types: set | None = None) -> ServiceRun:
+        """Return everything needed to run this module, independent of the backend.
 
         Args:
-            climate_service_name: Optional name of the climate service (e.g., "fair-climate") to map "fair" dependencies to
-
-        Returns:
-            Dictionary representing a Docker Compose service
+            suppress_output_types: Output types to omit from command args.
         """
-        image_str = (
-            f"{self.components.image.image_url}:{self.components.image.image_tag}"
-        )
-        command = self._build_command_args(suppress_output_types=suppress_output_types)
-        volumes = self._build_volumes()
-        depends_on = self._build_compose_depends_on(
-            climate_service_name=climate_service_name
-        )
-        environment = self._build_environment()
-        return build_compose_service_dict(
-            image_str=image_str,
-            command=command,
-            volumes=volumes,
-            depends_on=depends_on,
-            environment=environment,
+        return ServiceRun(
+            name=self.module_name,
+            image=self.components.image,
+            args=self._build_command_args(suppress_output_types=suppress_output_types),
+            binds=self._build_volumes(),
+            env=self._build_environment(),
+            output_dir=self.components.output_paths.output_dir,
+            host_outputs=self.host_output_paths(),
         )
 
     def generate_asyncflow_config(self) -> dict[str, Any]:
@@ -591,47 +548,6 @@ class ModuleServiceSpec:
         #    'module_name': self.module_name,
         #     'image': f"{self.image.image_url}:{self.image.image_tag}",
         # }
-
-    def generate_apptainer_service(
-        self,
-        wait_for_files: list[str] | None = None,
-        run_in_background: bool = False,
-        pid_var: str | None = None,
-        suppress_output_types: set | None = None,
-    ) -> ApptainerServiceSpec:
-        """Generate Apptainer service specification.
-
-        Args:
-            wait_for_files: Host paths to poll before running (Stage 2 gate).
-            run_in_background: True for facts-total parallel jobs (Stage 3).
-            pid_var: Shell PID variable name e.g. 'PID_WF1F_GLOBAL'; None if not
-                background.
-            suppress_output_types: Output types to omit from command args.
-
-        Returns:
-            ApptainerServiceSpec with all run information for this module.
-        """
-        args = self._build_command_args(suppress_output_types=suppress_output_types)
-        volumes = self._build_volumes()
-        image_url = self.components.image.image_url.rstrip("/")
-        image_tag = self.components.image.image_tag
-        registry, _, image_name = image_url.rpartition("/")
-        return ApptainerServiceSpec(
-            service_name=self.module_name,
-            image_name=image_name,
-            image_tag=image_tag,
-            binds=volumes,
-            args=args,
-            wait_for_files=wait_for_files or [],
-            run_in_background=run_in_background,
-            pid_var=pid_var,
-            output_dir=self.components.output_paths.output_dir,
-            registry=registry,
-            # All outputs, not filtered by suppress_output_types: other services may
-            # wait on outputs this one writes regardless of what is passed downstream.
-            host_outputs=self.host_output_paths(),
-            env=self._build_environment(),
-        )
 
 
 def _resolve_module_inputs_dict(
@@ -669,7 +585,7 @@ def _resolve_module_inputs_dict(
         is_dir = arg_spec.type == "dir"
 
         if is_multiple:
-            # List of already container paths (e.g. facts-total item from generate_compose): do not resolve.
+            # List of already container paths (e.g. facts-total item from the execution plan): do not resolve.
             if (
                 isinstance(value, list)
                 and value
@@ -846,35 +762,3 @@ def _assemble_fingerprint_params(module_definition, module_fp_section, location_
                 continue
             fingerprint_params[fp_spec.source.leaf] = actual
     return fingerprint_params
-
-
-def build_compose_service_dict(
-    image_str: str,
-    command: list[str],
-    volumes: list[str],
-    depends_on: dict[str, Any] | None = None,
-    environment: dict[str, str] | None = None,
-) -> dict[str, Any]:
-    """Build a Docker Compose service dictionary from a ModuleServiceSpec.
-
-    Args:
-        image_str: Full image string (e.g. "repo/image:tag")
-        command: List of command-line argument strings (e.g. ["--pipeline-id=aaa", ...])
-        volumes: List of volume mount strings (e.g. ["/host/path:/container/path"])
-        depends_on: Optional dict mapping service names to dependency conditions
-        environment: Optional dict of environment variables to set in the container
-
-    Returns:
-        Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
-    """
-    service = {
-        "image": image_str,
-        "command": command,
-        "volumes": volumes,
-        "restart": "no",
-    }
-    if environment:
-        service["environment"] = environment
-    if depends_on:
-        service["depends_on"] = depends_on
-    return service

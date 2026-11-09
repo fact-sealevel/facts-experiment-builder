@@ -8,8 +8,9 @@ from facts_experiment_builder.application.generate_apptainer import (
     _compute_mkdir_dirs,
     _with_apptainer_output_root,
 )
-from facts_experiment_builder.core.module.apptainer_service_spec import (
+from facts_experiment_builder.io.apptainer_service import (
     ApptainerServiceSpec,
+    to_apptainer_service,
 )
 from facts_experiment_builder.core.module.arg_specs import (
     ArgumentsSpec,
@@ -181,50 +182,52 @@ def _make_execution_plan(
 
 
 # ---------------------------------------------------------------------------
-# generate_apptainer_service() unit tests
+# to_apptainer_service() unit tests
 # ---------------------------------------------------------------------------
 
 
-def test_generate_apptainer_service_returns_correct_type():
+def test_to_apptainer_service_returns_correct_type():
     spec = _make_spec("fair-temperature")
-    result = spec.generate_apptainer_service()
+    result = to_apptainer_service(spec.to_service_run())
     assert isinstance(result, ApptainerServiceSpec)
 
 
-def test_generate_apptainer_service_service_name():
+def test_to_apptainer_service_service_name():
     spec = _make_spec("fair-temperature")
-    result = spec.generate_apptainer_service()
+    result = to_apptainer_service(spec.to_service_run())
     assert result.service_name == "fair-temperature"
 
 
-def test_generate_apptainer_service_image_name_is_last_url_segment():
+def test_to_apptainer_service_image_name_is_last_url_segment():
     spec = _make_spec(
         "ipccar5-glaciers", image_url="ghcr.io/fact-sealevel/ipccar5", image_tag="0.1.2"
     )
-    result = spec.generate_apptainer_service()
+    result = to_apptainer_service(spec.to_service_run())
     assert result.image_name == "ipccar5"
     assert result.image_tag == "0.1.2"
 
 
-def test_generate_apptainer_service_defaults():
+def test_to_apptainer_service_defaults():
     spec = _make_spec("my-module")
-    result = spec.generate_apptainer_service()
+    result = to_apptainer_service(spec.to_service_run())
     assert result.wait_for_files == []
     assert result.run_in_background is False
     assert result.pid_var is None
 
 
-def test_generate_apptainer_service_background_params():
+def test_to_apptainer_service_background_params():
     spec = _make_spec("facts-total-wf1-global")
-    result = spec.generate_apptainer_service(run_in_background=True, pid_var="PID_WF1")
+    result = to_apptainer_service(
+        spec.to_service_run(), run_in_background=True, pid_var="PID_WF1"
+    )
     assert result.run_in_background is True
     assert result.pid_var == "PID_WF1"
 
 
-def test_generate_apptainer_service_wait_for_files_passthrough():
+def test_to_apptainer_service_wait_for_files_passthrough():
     spec = _make_spec("fittedismip-gris")
     files = ["/output/fair-temperature/climate.nc"]
-    result = spec.generate_apptainer_service(wait_for_files=files)
+    result = to_apptainer_service(spec.to_service_run(), wait_for_files=files)
     assert result.wait_for_files == files
 
 
@@ -446,7 +449,7 @@ def test_compute_mkdir_dirs_deduplicates_shared_facts_total_dir():
 )
 def test_apptainer_service_image_reference(image_url, registry, image_name, image_ref):
     spec = _make_spec("m", image_url=image_url, image_tag="0.1.2")
-    result = spec.generate_apptainer_service()
+    result = to_apptainer_service(spec.to_service_run())
     assert result.registry == registry
     assert result.image_name == image_name
     assert result.image_ref == image_ref

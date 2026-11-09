@@ -10,11 +10,14 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpecComponents,
     ModuleServiceSpec,
 )
+from facts_experiment_builder.core.module.service_run import ServiceDependency
 from facts_experiment_builder.core.module.source_path import SourcePath
 from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
     ModuleOutputPaths,
 )
+from facts_experiment_builder.io.apptainer_service import to_apptainer_service
+from facts_experiment_builder.io.compose_service import to_compose_service
 from tests.unit.helpers import (
     make_schema,
 )
@@ -268,14 +271,14 @@ def output_spec(tmp_path):
 
 
 def test_output_file_arg_includes_module_subdir(output_spec):
-    service = output_spec.generate_compose_service()
-    assert "--output-gslr-file=/mnt/out/tlm-sterodynamics/gslr.nc" in service["command"]
+    run = output_spec.to_service_run()
+    assert "--output-gslr-file=/mnt/out/tlm-sterodynamics/gslr.nc" in run.args
 
 
 def test_output_volume_mounts_shared_output_root(output_spec):
-    service = output_spec.generate_compose_service()
+    run = output_spec.to_service_run()
     host_output_root = str(output_spec.output_paths.output_dir).rsplit("/", 1)[0]
-    assert any(v.startswith(f"{host_output_root}:/mnt/out") for v in service["volumes"])
+    assert any(v.startswith(f"{host_output_root}:/mnt/out") for v in run.binds)
 
 
 @pytest.mark.parametrize(
@@ -297,8 +300,8 @@ def test_command_args_subcommand_shared_by_compose_and_apptainer(
             output_spec.module_definition, command=command
         ),
     )
-    compose_command = spec.generate_compose_service()["command"]
-    apptainer_args = spec.generate_apptainer_service().args
+    compose_command = to_compose_service(spec.to_service_run())["command"]
+    apptainer_args = to_apptainer_service(spec.to_service_run()).args
 
     assert compose_command == apptainer_args
     assert "main" not in compose_command
@@ -338,9 +341,77 @@ def test_apptainer_env_matches_compose_environment(output_spec):
             ),
         ),
     )
-    compose_env = spec.generate_compose_service()["environment"]
-    apptainer = spec.generate_apptainer_service()
+    compose_env = to_compose_service(spec.to_service_run())["environment"]
+    apptainer = to_apptainer_service(spec.to_service_run())
     assert apptainer.env == compose_env
     assert "EMULANDICE_FORCING_HEAD_PATH" in apptainer.env
     # envvar inputs are passed as env, not as CLI args
     assert not any(a.startswith("--forcing-head-path") for a in apptainer.args)
+
+
+def test_to_service_run_collects_args_binds_env_and_outputs(output_spec):
+    run = output_spec.to_service_run()
+    output_dir = str(output_spec.output_paths.output_dir)
+
+    assert run.name == "tlm-sterodynamics"
+    assert run.image == output_spec.image
+    assert run.args == output_spec._build_command_args()
+    assert run.binds == output_spec._build_volumes()
+    assert run.env == {}
+    assert run.output_dir == output_dir
+    assert run.host_outputs == {"output-gslr-file": f"{output_dir}/gslr.nc"}
+
+
+def test_to_service_run_suppresses_args_but_keeps_all_host_outputs(output_spec):
+    run = output_spec.to_service_run(suppress_output_types={"global"})
+
+    assert not any(a.startswith("--output-gslr-file") for a in run.args)
+    assert "output-gslr-file" in run.host_outputs
+
+
+def _spec_with_dependencies(uses_climate_file, depends_on):
+    schema = make_schema("dependent-module", uses_climate_file=uses_climate_file)
+    schema = ModuleSchema.from_dict({**schema.to_dict(), "depends_on": depends_on})
+    components = ModuleServiceSpecComponents(
+        module_name="dependent-module",
+        options={},
+        fingerprint_params={},
+        inputs={},
+        outputs={},
+        input_paths=ModuleInputPaths(
+            input_dir="/input",
+            module_specific_input_dir="/module_specific_input",
+            shared_input_dir="/shared",
+        ),
+        output_paths=ModuleOutputPaths(output_dir="/out/x", output_type="global"),
+        image=ModuleContainerImage(image_url="img", image_tag="tag"),
+        top_level_params=TopLevelParams(),
+    )
+    return ModuleServiceSpec(components=components, module_definition=schema)
+
+
+def test_dependencies_climate_first_then_schema_entries_in_order():
+    spec = _spec_with_dependencies(
+        uses_climate_file=True,
+        depends_on=[
+            "fair",
+            "plain",
+            {"service": "with-condition", "condition": "service_started"},
+            {"service": "no-condition"},
+            {"service": ""},
+        ],
+    )
+
+    assert spec.dependencies(climate_service_name="fair-temperature") == [
+        ServiceDependency("fair-temperature"),
+        ServiceDependency("fair-temperature"),
+        ServiceDependency("plain"),
+        ServiceDependency("with-condition", condition="service_started"),
+        ServiceDependency("no-condition"),
+    ]
+
+
+def test_dependencies_without_climate_service_keeps_fair_unmapped():
+    spec = _spec_with_dependencies(uses_climate_file=True, depends_on=["fair"])
+
+    assert spec.dependencies() == [ServiceDependency("fair")]
