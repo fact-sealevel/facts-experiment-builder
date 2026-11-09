@@ -2,12 +2,14 @@
 
 import pytest
 
-from facts_experiment_builder.application import generate_compose
+from facts_experiment_builder.application import prepare_plan
 from facts_experiment_builder.application.generate_compose import (
     _SUCCESS,
     _log_success,
-    _validate_climate_file_inputs,
     check_metadata_has_required_fields,
+)
+from facts_experiment_builder.application.prepare_plan import (
+    _validate_climate_file_inputs,
     check_module_schemas_present,
 )
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
@@ -102,7 +104,7 @@ def test_extract_all_module_names_returns_all_modules():
         "framework_modules": ["facts-total"],
         "esl_modules": ["extremesealevel-pointsoverthreshold"],
     }
-    result = generate_compose._extract_all_module_names_from_manifest(metadata)
+    result = prepare_plan._extract_all_module_names_from_manifest(metadata)
     assert result == [
         "fair-temperature",
         "bamber19-icesheets",
@@ -119,18 +121,18 @@ def test_extract_all_module_names_excludes_none_temperature():
         "framework_modules": [],
         "esl_modules": [],
     }
-    result = generate_compose._extract_all_module_names_from_manifest(metadata)
+    result = prepare_plan._extract_all_module_names_from_manifest(metadata)
     assert result == ["tlm-sterodynamics"]
 
 
 def test_extract_all_module_names_excludes_lowercase_none_temperature():
     metadata = {"climate_module": "none", "sealevel_modules": ["tlm-sterodynamics"]}
-    result = generate_compose._extract_all_module_names_from_manifest(metadata)
+    result = prepare_plan._extract_all_module_names_from_manifest(metadata)
     assert result == ["tlm-sterodynamics"]
 
 
 def test_extract_all_module_names_empty_metadata():
-    result = generate_compose._extract_all_module_names_from_manifest({})
+    result = prepare_plan._extract_all_module_names_from_manifest({})
     assert result == []
 
 

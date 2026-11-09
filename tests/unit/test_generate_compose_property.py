@@ -1,21 +1,17 @@
-"""Property tests for _build_module_specs() and _build_compose_services()."""
+"""Property tests for _build_module_specs() and render_compose_services()."""
 
 from contextlib import contextmanager
-from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 from hypothesis import assume, given
 from hypothesis import strategies as st
 
-from facts_experiment_builder.application import (
-    generate_compose as generate_compose_module,
-)
+from facts_experiment_builder.application import prepare_plan
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.generate_compose import (
-    _build_compose_services,
-    _build_module_specs,
+    render_compose_services,
 )
+from facts_experiment_builder.application.prepare_plan import _build_module_specs
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
@@ -82,20 +78,9 @@ def _fake_build_module_service_spec(
 def _mock_build_module_service_spec():
     """Context manager: stub build_module_service_spec for _build_module_specs tests."""
     with patch.object(
-        generate_compose_module,
+        prepare_plan,
         "build_module_service_spec",
         _fake_build_module_service_spec,
-    ):
-        yield
-
-
-@contextmanager
-def _mock_execution_plan(exec_plan: _ExecutionPlan):
-    """Context manager: stub build_experiment_execution_plan for _build_compose_services tests."""
-    with patch.object(
-        generate_compose_module,
-        "build_experiment_execution_plan",
-        lambda *a, **kw: exec_plan,
     ):
         yield
 
@@ -110,18 +95,6 @@ def _stub_spec() -> MagicMock:
         "restart": "no",
     }
     return stub
-
-
-def _call_build_compose_services(exec_plan: _ExecutionPlan) -> dict[str, Any]:
-    with _mock_execution_plan(exec_plan):
-        return _build_compose_services(
-            specs=MagicMock(),
-            plan=MagicMock(),
-            metadata={},
-            experiment_dir=Path("/fake"),
-            schemas={},
-            data_paths=_DATA_PATHS,
-        )
 
 
 # ---------------------------------------------------------------------------
@@ -268,7 +241,7 @@ def test_per_workflow_framework_included_when_no_workflows(
 
 
 # ---------------------------------------------------------------------------
-# _build_compose_services — structural invariants
+# render_compose_services — structural invariants
 # ---------------------------------------------------------------------------
 
 
@@ -283,7 +256,7 @@ def test_standard_spec_names_appear_in_services(standard_names):
         suppress_output_types=set(),
     )
 
-    result = _call_build_compose_services(exec_plan)
+    result = render_compose_services(exec_plan)
 
     assert set(standard_names) <= result.keys()
 
@@ -300,7 +273,7 @@ def test_facts_total_spec_names_appear_in_services(ft_names, wf_module_names):
         suppress_output_types=set(),
     )
 
-    result = _call_build_compose_services(exec_plan)
+    result = render_compose_services(exec_plan)
 
     assert set(ft_names) <= result.keys()
 
@@ -316,7 +289,7 @@ def test_esl_spec_names_appear_in_services(esl_names):
         suppress_output_types=set(),
     )
 
-    result = _call_build_compose_services(exec_plan)
+    result = render_compose_services(exec_plan)
 
     assert set(esl_names) <= result.keys()
 
@@ -341,7 +314,7 @@ def test_service_count_equals_sum_of_plan_specs(standard_names, ft_names, esl_na
         suppress_output_types=set(),
     )
 
-    result = _call_build_compose_services(exec_plan)
+    result = render_compose_services(exec_plan)
 
     assert len(result) == len(all_names)
 
@@ -360,7 +333,7 @@ def test_facts_total_depends_on_matches_workflow_module_names(
         suppress_output_types=set(),
     )
 
-    result = _call_build_compose_services(exec_plan)
+    result = render_compose_services(exec_plan)
 
     assert set(result[service_name]["depends_on"].keys()) == set(wf_module_names)
 
@@ -376,7 +349,7 @@ def test_esl_depends_on_is_exactly_the_dep_service(service_name, dep_service):
         suppress_output_types=set(),
     )
 
-    result = _call_build_compose_services(exec_plan)
+    result = render_compose_services(exec_plan)
 
     assert result[service_name]["depends_on"] == {
         dep_service: {"condition": "service_completed_successfully"}

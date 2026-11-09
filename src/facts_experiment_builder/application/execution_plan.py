@@ -37,6 +37,19 @@ class _ModuleSpecs:
     esl_modules: dict[str, ModuleServiceSpec]
     # TODO do not want these categories to be so rigid in the future
 
+    @property
+    def is_empty(self) -> bool:
+        """True when no module specs were created (every step uses pre-existing
+        data)."""
+        return not any(
+            [
+                self.climate_module,
+                self.sealevel_modules,
+                self.framework_modules,
+                self.esl_modules,
+            ]
+        )
+
 
 @dataclass(frozen=True)
 class _ExecutionPlan:
@@ -293,8 +306,8 @@ def build_experiment_execution_plan(
     """Build a format-agnostic execution plan from module specs and experiment plan.
 
     Assembles _ExecutionPlan from the already-resolved _ModuleSpecs, adding per-workflow
-    facts-total and ESL specs. Both compose and apptainer renderers call this and then
-    render the result in their own format.
+    facts-total and ESL specs. Called by prepare_plan.prepare_execution_plan(), whose
+    result both compose and apptainer render in their own format.
     """
     climate_service_name = (
         specs.climate_module.module_name if specs.climate_module else None

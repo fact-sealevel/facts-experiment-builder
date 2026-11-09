@@ -6,24 +6,13 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
-from facts_experiment_builder.application.execution_plan import (
-    _ExecutionPlan,
-    build_experiment_execution_plan,
-)
-from facts_experiment_builder.application.generate_compose import (
-    _build_module_specs,
-    _extract_all_module_names_from_manifest,
-    check_module_schemas_present,
-)
+from facts_experiment_builder.application.execution_plan import _ExecutionPlan
+from facts_experiment_builder.application.prepare_plan import prepare_execution_plan
 from facts_experiment_builder.application.storage import ExperimentRepository
-from facts_experiment_builder.core.experiment.experiment_plan import (
-    _make_experiment_plan,
-)
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.apptainer_service_spec import (
     ApptainerServiceSpec,
 )
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
     resolve_experiment_data_paths,
@@ -200,34 +189,10 @@ def generate_apptainer(
     logger.info("Found experiment config file at provided path")
 
     metadata_dict = experiment_repo.get(config_path=config_path)
-    module_names = _extract_all_module_names_from_manifest(metadata_dict)
-    check_module_schemas_present(metadata_dict, module_names)
-
-    schemas = {
-        m: ModuleSchema.from_dict(metadata_dict["module_schemas"][m])
-        for m in set(module_names)
-    }
-    known_module_names = list(schemas.keys())
-
-    plan = _make_experiment_plan(metadata_dict, schemas)
     data_paths = _with_apptainer_output_root(
         resolve_experiment_data_paths(metadata_dict), experiment_paths
     )
-    specs = _build_module_specs(
-        plan=plan,
-        metadata=metadata_dict,
-        schemas=schemas,
-        known_module_names=known_module_names,
-        data_paths=data_paths,
-    )
-
-    execution_plan = build_experiment_execution_plan(
-        specs=specs,
-        plan=plan,
-        metadata=metadata_dict,
-        schemas=schemas,
-        data_paths=data_paths,
-    )
+    plan, execution_plan = prepare_execution_plan(metadata_dict, data_paths)
 
     stages = _build_apptainer_stages(execution_plan)
     mkdir_dirs = _compute_mkdir_dirs(stages)
