@@ -1,5 +1,6 @@
 import logging
 from pathlib import Path
+from pathlib import Path
 from unittest.mock import patch
 
 from click.testing import CliRunner
@@ -7,6 +8,7 @@ from click.testing import CliRunner
 from facts_experiment_builder.cli.generate_compose_cli import (
     _ClickEchoHandler,
     _SUCCESS,
+    main,
     main,
 )
 
