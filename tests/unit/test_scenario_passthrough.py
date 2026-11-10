@@ -99,6 +99,26 @@ def _setup_experiment(workspace_dir: Path, scenario: str) -> Path:
     )
 
 
+# Required by generate-compose. setup-experiment only writes the ones a module's schema
+# declares (here only scenario); a user adds the rest to experiment-config.yaml by hand.
+_REQUIRED_PARAMS = {
+    "pipeline-id": "abc123",
+    "nsamps": 50,
+    "baseyear": 2005,
+    "pyear_start": 2020,
+    "pyear_end": 2150,
+    "pyear_step": 10,
+}
+
+
+def _fill_in_required_params(config_path: Path) -> None:
+    """Append required top-level params missing from the config, as a user would."""
+    config = yaml.safe_load(config_path.read_text())
+    missing = {k: v for k, v in _REQUIRED_PARAMS.items() if k not in config}
+    with config_path.open("a") as f:
+        f.write(yaml.safe_dump(missing, sort_keys=False))
+
+
 @pytest.fixture
 def workspace(tmp_path) -> Path:
     workspace_dir = tmp_path / "workspace"
@@ -119,7 +139,8 @@ def test_setup_records_scenario_unchanged(workspace, scenario):
 
 @pytest.mark.parametrize("scenario", _SCENARIOS)
 def test_every_module_receives_scenario_unchanged(workspace, scenario):
-    _setup_experiment(workspace, scenario)
+    config_path = _setup_experiment(workspace, scenario)
+    _fill_in_required_params(config_path)
     output = generate_compose(
         experiment_name=_EXPERIMENT_NAME,
         workspace_dir=workspace,

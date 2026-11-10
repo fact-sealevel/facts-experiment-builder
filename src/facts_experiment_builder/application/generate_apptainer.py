@@ -188,11 +188,11 @@ def generate_apptainer(
     )
     logger.info("Found experiment config file at provided path")
 
-    metadata_dict = experiment_repo.get(config_path=config_path)
+    config = experiment_repo.get(config_path=config_path)
     data_paths = _with_apptainer_output_root(
-        resolve_experiment_data_paths(metadata_dict), experiment_paths
+        resolve_experiment_data_paths(config.raw), experiment_paths
     )
-    plan, execution_plan = prepare_execution_plan(metadata_dict, data_paths)
+    plan, execution_plan = prepare_execution_plan(config, data_paths)
 
     stages = _build_apptainer_stages(execution_plan)
     mkdir_dirs = _compute_mkdir_dirs(stages)
@@ -205,7 +205,7 @@ def generate_apptainer(
     script_content = render_apptainer_script(
         stages=stages,
         execution_plan=execution_plan,
-        metadata=metadata_dict,
+        metadata=config.raw,
         data_paths=data_paths,
         workspace_dir=workspace_dir,
         mkdir_dirs=mkdir_dirs,

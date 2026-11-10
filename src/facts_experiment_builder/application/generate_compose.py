@@ -25,20 +25,6 @@ logger.setLevel(logging.INFO)
 
 _SUCCESS = 25  # custom level between INFO (20) and WARNING (30); must match CLI handler
 
-_REQUIRED_FIELDS = [
-    "experiment_name",
-    "pipeline-id",
-    "nsamps",
-    "scenario",
-    "pyear_start",
-    "pyear_end",
-    "pyear_step",
-    "baseyear",
-    "module-specific-input-data",
-    "shared-input-data",
-    "output-data-location",
-]
-
 
 @dataclass(frozen=True)
 class PrepareComposeOutput:
@@ -48,22 +34,6 @@ class PrepareComposeOutput:
 
 def _log_success(msg: str, *args: object) -> None:
     logger.log(_SUCCESS, msg, *args)
-
-
-def check_metadata_has_required_fields(metadata_obj, required_fields):
-    """This function accepts a list of required fields and a metadata object and subsets
-    the metadata to required fields."""
-    # Subset
-    required_fields_meta = {
-        k: v for k, v in metadata_obj.items() if k in required_fields
-    }
-
-    # R aise error if any are missing a value
-    for k, v in required_fields_meta.items():
-        if v is None:
-            raise ValueError(
-                f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml have been completed."
-            )
 
 
 def render_compose_services(execution_plan: _ExecutionPlan) -> dict[str, Any]:
@@ -114,9 +84,6 @@ def generate_compose(
     Returns:
         PrepareComposeOutput with the compose dict and the path to write it to
     """
-    # TODO: in future, should probably make a dataclass or similar for experiment metadata dict so that
-    # can just access an attr instead of needing fns to get names from manifest etc?
-
     experiment_name_obj = ExperimentName.parse(raw_name=experiment_name)
 
     experiment_paths = ExperimentPaths(
@@ -147,12 +114,10 @@ def generate_compose(
         "Found experiment config file at provided path", extra={"detail": config_path}
     )
 
-    metadata_dict = experiment_repo.get(
-        config_path=config_path,
-    )
+    config = experiment_repo.get(config_path=config_path)
 
-    data_paths = resolve_experiment_data_paths(metadata_dict)
-    _plan, execution_plan = prepare_execution_plan(metadata_dict, data_paths)
+    data_paths = resolve_experiment_data_paths(config.raw)
+    _plan, execution_plan = prepare_execution_plan(config, data_paths)
 
     services = render_compose_services(execution_plan)
     output_obj = PrepareComposeOutput(

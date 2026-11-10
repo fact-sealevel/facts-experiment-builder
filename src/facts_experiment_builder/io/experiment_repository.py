@@ -7,6 +7,9 @@ from facts_experiment_builder.core.experiment.experiment import FactsExperiment
 from facts_experiment_builder.core.experiment.experiment_config import (
     facts_experiment_to_config,
 )
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.io.write_config import (
     write_config_jinja2,
 )
@@ -29,5 +32,5 @@ class StorageExperimentRepository:
         config = facts_experiment_to_config(experiment, module_registry_version)
         write_config_jinja2(experiment_config=config, config_path=config_path)
 
-    def get(self, config_path: Path) -> dict:
-        return load_experiment_config(config_path)
+    def get(self, config_path: Path) -> LoadedExperimentConfig:
+        return LoadedExperimentConfig.from_dict(load_experiment_config(config_path))
