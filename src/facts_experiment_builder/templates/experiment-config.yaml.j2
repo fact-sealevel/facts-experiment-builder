@@ -61,6 +61,10 @@ workflows:
 {% endfor %}
 
 ##----- Outputs -----##
+# Where each run command writes this experiment's outputs. generate-compose uses
+# compose-output-data-location and generate-apptainer uses apptainer-output-data-location,
+# exactly as written. They default to the output-compose and output-apptainer
+# subdirectories of the experiment directory; change them to write outputs elsewhere.
 {% for key in outputs %}
 {% if key in paths %}
 {{ key }}:

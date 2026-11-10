@@ -78,7 +78,9 @@ PATH_KEYS_PRIMARY = [
     "module-specific-input-data",
     "experiment-specific-input-data",
     "supplied-totaled-sealevel-step-data",
-    "output-data-location",
+    "compose-output-data-location",
+    "apptainer-output-data-location",
+    "output-data-location",  # deprecated; read as compose-output-data-location
 ]
 
 _STRUCTURAL_KEYS: set[str] = (
@@ -107,8 +109,8 @@ def _is_top_level_param_value(value: Any) -> bool:
 class FactsExperiment:
     """In-memory representation of an experiment (analoguous to experiment-config.yaml).
 
-    Used to generate run-environment artifacts (e.g. experiment-compose.yaml). Loaded
-    from or written to experiment-config.yaml.
+    Used to generate run-environment artifacts (one run file per backend). Loaded from
+    or written to experiment-config.yaml.
     """
 
     def __init__(

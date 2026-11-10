@@ -93,7 +93,7 @@ def build_module_output_paths(
     if output_dir is None:
         raise ValueError(
             f"output_dir is None when building paths for {module_name}. "
-            "This usually means 'output-data-location' path is None in metadata."
+            "This usually means the run command's output location (e.g. 'compose-output-data-location') is None in metadata."
         )
     if not isinstance(output_dir, str):
         raise ValueError(

@@ -1,14 +1,66 @@
 import click
 import pytest
 
+from facts_experiment_builder.cli import workflow_prompts
 from facts_experiment_builder.cli.workflow_prompts import (
     _collect_workflows,
     _create_all_modules_workflow,
+    _resolve_workflows,
     _validate_modules_list_workflow,
 )
 from facts_experiment_builder.core.experiment.module_name_validation import (
     parse_module_list_str,
 )
+from facts_experiment_builder.core.experiment.skeleton import ExperimentSkeleton
+
+
+def _skeleton(sealevel_step: str | None, supplied: str | None = None):
+    return ExperimentSkeleton.from_inputs(
+        climate_step="fair-temperature" if not supplied else None,
+        supplied_climate_step_data=None,
+        sealevel_step=sealevel_step,
+        supplied_totaled_sealevel_step_data=supplied,
+        extremesealevel_step=None,
+    )
+
+
+def _fail_if_prompted(*args, **kwargs):
+    raise AssertionError("user was prompted for workflows")
+
+
+# --- _resolve_workflows ---
+
+
+@pytest.mark.parametrize("supplied", [None, "data.nc"])
+def test_resolve_workflows_empty_without_totaling(monkeypatch, supplied):
+    monkeypatch.setattr(workflow_prompts, "_collect_workflows", _fail_if_prompted)
+    skeleton = _skeleton(None, supplied)
+    assert _resolve_workflows(skeleton, total_all_modules=False) == {}
+
+
+@pytest.mark.parametrize("total_all_modules", [True, False])
+def test_resolve_workflows_single_module_creates_all_modules_without_prompt(
+    monkeypatch, total_all_modules
+):
+    monkeypatch.setattr(workflow_prompts, "_collect_workflows", _fail_if_prompted)
+    skeleton = _skeleton("tlm-sterodynamics")
+    assert _resolve_workflows(skeleton, total_all_modules=total_all_modules) == {
+        "all-modules": "tlm-sterodynamics"
+    }
+
+
+def test_resolve_workflows_multiple_modules_collects_from_user(monkeypatch):
+    captured = {}
+
+    def fake_collect(complete_modules_list, total_all_modules):
+        captured["args"] = (complete_modules_list, total_all_modules)
+        return {"wf1": "a"}
+
+    monkeypatch.setattr(workflow_prompts, "_collect_workflows", fake_collect)
+    skeleton = _skeleton("a,b")
+    assert _resolve_workflows(skeleton, total_all_modules=True) == {"wf1": "a"}
+    assert captured["args"] == (["a", "b"], True)
+
 
 # --- _create_all_modules_workflow ---
 

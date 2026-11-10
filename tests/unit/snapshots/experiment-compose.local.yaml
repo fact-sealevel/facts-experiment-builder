@@ -1,0 +1,228 @@
+services:
+   fair-temperature:
+      image: ghcr.io/fact-sealevel/fair-temperature:0.2.1
+      command:
+      - --pipeline-id=abc123
+      - --nsamps=50
+      - --scenario=ssp585
+      - --cyear-start=1850
+      - --cyear-end=1900
+      - --smooth-win=19
+      - --seed=2314
+      - --rcmip-file=/mnt/module_specific_in/rcmip/rcmip-emissions-annual-means-v5-1-0.csv
+      - --param-file=/mnt/module_specific_in/parameters/fair_ar6_climate_params_v4.0.nc
+      - --output-oceantemp-file=/mnt/out/fair-temperature/oceantemp.nc
+      - --output-climate-file=/mnt/out/fair-temperature/climate.nc
+      - --output-ohc-file=/mnt/out/fair-temperature/ohc.nc
+      - --output-gsat-file=/mnt/out/fair-temperature/gsat.nc
+      volumes:
+      - <TMP>/workspace/data/module/fair-temperature:/mnt/module_specific_in
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
+      restart: 'no'
+   ssp-landwaterstorage:
+      image: ghcr.io/fact-sealevel/ssp-landwaterstorage:0.3.0
+      command:
+      - --pipeline-id=abc123
+      - --nsamps=50
+      - --scenario=ssp585
+      - --baseyear=2005
+      - --pyear-start=2020
+      - --pyear-end=2150
+      - --pyear-step=10
+      - --location-file=/mnt/shared_in/location.lst
+      - --fp-file=/mnt/module_specific_in/REL_GROUNDWATER_NOMASK.nc
+      - --dcyear-start=2020
+      - --dcyear-end=2040
+      - --chunksize=50
+      - --seed=1243
+      - --pophist-file=/mnt/module_specific_in/UNWPP2012 population historical.csv
+      - --reservoir-file=/mnt/module_specific_in/Chao2008 groundwater impoundment.csv
+      - --popscen-file=/mnt/module_specific_in/ssp_iam_baseline_popscenarios2100.csv
+      - --gwd-file=/mnt/module_specific_in/Konikow2011 GWD.csv
+      - --gwd-file=/mnt/module_specific_in/Wada2012 GWD.csv
+      - --output-gslr-file=/mnt/out/ssp-landwaterstorage/gslr.nc
+      - --output-lslr-file=/mnt/out/ssp-landwaterstorage/lslr.nc
+      volumes:
+      - <TMP>/workspace/data/module/ssp-landwaterstorage:/mnt/module_specific_in
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
+      restart: 'no'
+   tlm-sterodynamics:
+      image: ghcr.io/fact-sealevel/tlm-sterodynamics:0.3.2
+      command:
+      - --pipeline-id=abc123
+      - --nsamps=50
+      - --scenario=ssp585
+      - --baseyear=2005
+      - --pyear-start=2020
+      - --pyear-end=2150
+      - --pyear-step=10
+      - --location-file=/mnt/shared_in/location.lst
+      - --seed=4321
+      - --climate-data-file=/mnt/out/fair-temperature/climate.nc
+      - --model-dir=/mnt/module_specific_in/cmip6/
+      - --expansion-coefficients-file=/mnt/module_specific_in/scmpy2LM_RCMIP_CMIP6calpm_n18_expcoefs.nc
+      - --gsat-rmses-file=/mnt/module_specific_in/scmpy2LM_RCMIP_CMIP6calpm_n17_gsat_rmse.nc
+      - --output-gslr-file=/mnt/out/tlm-sterodynamics/gslr.nc
+      - --output-lslr-file=/mnt/out/tlm-sterodynamics/lslr.nc
+      volumes:
+      - <TMP>/workspace/data/module/tlm-sterodynamics:/mnt/module_specific_in
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
+      restart: 'no'
+      depends_on:
+         fair-temperature:
+            condition: service_completed_successfully
+   emulandice-ais:
+      image: ghcr.io/fact-sealevel/emulandice:0.2.0
+      command:
+      - ais
+      - --pipeline-id=abc123
+      - --baseyear=2005
+      - --location-file=/mnt/shared_in/location.lst
+      - --fprint-wais-file=/mnt/shared_in/FPRINT/fprint_wais.nc
+      - --fprint-eais-file=/mnt/shared_in/FPRINT/fprint_eais.nc
+      - --chunksize=50
+      - --input-data-file=/mnt/out/fair-temperature/gsat.nc
+      - --output-gslr-file=/mnt/out/emulandice-ais/output-gslr.nc
+      - --output-gslr-wais-file=/mnt/out/emulandice-ais/output-gslr-wais.nc
+      - --output-gslr-eais-file=/mnt/out/emulandice-ais/output-gslr-eais.nc
+      - --output-gslr-pen-file=/mnt/out/emulandice-ais/output-gslr-pen.nc
+      - --output-lslr-file=/mnt/out/emulandice-ais/output-lslr.nc
+      - --output-lslr-eais-file=/mnt/out/emulandice-ais/output-lslr-eais.nc
+      - --output-lslr-wais-file=/mnt/out/emulandice-ais/output-lslr-wais.nc
+      volumes:
+      - <TMP>/workspace/data/module/emulandice-ais:/mnt/module_specific_in
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
+      restart: 'no'
+      depends_on:
+         fair-temperature:
+            condition: service_completed_successfully
+   facts-total-wf1-global:
+      image: ghcr.io/fact-sealevel/facts-total:0.2.1
+      command:
+      - --pyear-start=2020
+      - --pyear-end=2150
+      - --pyear-step=10
+      - --item=/mnt/total_out/ssp-landwaterstorage/gslr.nc
+      - --output-path=/mnt/total_out/facts-total/wf1_global_total.nc
+      volumes:
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
+      restart: 'no'
+      depends_on:
+         ssp-landwaterstorage:
+            condition: service_completed_successfully
+   facts-total-wf1-local:
+      image: ghcr.io/fact-sealevel/facts-total:0.2.1
+      command:
+      - --pyear-start=2020
+      - --pyear-end=2150
+      - --pyear-step=10
+      - --item=/mnt/total_out/ssp-landwaterstorage/lslr.nc
+      - --output-path=/mnt/total_out/facts-total/wf1_local_total.nc
+      volumes:
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
+      restart: 'no'
+      depends_on:
+         ssp-landwaterstorage:
+            condition: service_completed_successfully
+   facts-total-wf2-global:
+      image: ghcr.io/fact-sealevel/facts-total:0.2.1
+      command:
+      - --pyear-start=2020
+      - --pyear-end=2150
+      - --pyear-step=10
+      - --item=/mnt/total_out/tlm-sterodynamics/gslr.nc
+      - --item=/mnt/total_out/emulandice-ais/output-gslr.nc
+      - --output-path=/mnt/total_out/facts-total/wf2_global_total.nc
+      volumes:
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
+      restart: 'no'
+      depends_on:
+         tlm-sterodynamics:
+            condition: service_completed_successfully
+         emulandice-ais:
+            condition: service_completed_successfully
+   facts-total-wf2-local:
+      image: ghcr.io/fact-sealevel/facts-total:0.2.1
+      command:
+      - --pyear-start=2020
+      - --pyear-end=2150
+      - --pyear-step=10
+      - --item=/mnt/total_out/tlm-sterodynamics/lslr.nc
+      - --item=/mnt/total_out/emulandice-ais/output-lslr.nc
+      - --output-path=/mnt/total_out/facts-total/wf2_local_total.nc
+      volumes:
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
+      restart: 'no'
+      depends_on:
+         tlm-sterodynamics:
+            condition: service_completed_successfully
+         emulandice-ais:
+            condition: service_completed_successfully
+   extremesealevel-pointsoverthreshold-wf1:
+      image: ghcr.io/fact-sealevel/extremesealevel-pointsoverthreshold:0.2.0
+      command:
+      - --pipeline-id=abc123
+      - --nsamps=50
+      - --min-days=250
+      - --min-years=20
+      - --match-lim=0.1
+      - --center-year=2000
+      - --pct-pot=95
+      - --gpd-pot-threshold=99.7
+      - --cluster-lim=72
+      - --min-z=-0.5
+      - --max-z=8.0
+      - --quantile-min=0.01
+      - --quantile-max=0.99
+      - --quantile-step=0.01
+      - --allowance-freq=0.01
+      - --output-dir=/mnt/out/extremesealevel-pointsoverthreshold-wf1
+      - --seed=2413
+      - --total-localsl-file=/mnt/out/facts-total/wf1_local_total.nc
+      - --gesla-dir=/mnt/module_specific_in/gesla_data_full/
+      volumes:
+      - <TMP>/workspace/data/module/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
+      restart: 'no'
+      depends_on:
+         facts-total-wf1-local:
+            condition: service_completed_successfully
+   extremesealevel-pointsoverthreshold-wf2:
+      image: ghcr.io/fact-sealevel/extremesealevel-pointsoverthreshold:0.2.0
+      command:
+      - --pipeline-id=abc123
+      - --nsamps=50
+      - --min-days=250
+      - --min-years=20
+      - --match-lim=0.1
+      - --center-year=2000
+      - --pct-pot=95
+      - --gpd-pot-threshold=99.7
+      - --cluster-lim=72
+      - --min-z=-0.5
+      - --max-z=8.0
+      - --quantile-min=0.01
+      - --quantile-max=0.99
+      - --quantile-step=0.01
+      - --allowance-freq=0.01
+      - --output-dir=/mnt/out/extremesealevel-pointsoverthreshold-wf2
+      - --seed=2413
+      - --total-localsl-file=/mnt/out/facts-total/wf2_local_total.nc
+      - --gesla-dir=/mnt/module_specific_in/gesla_data_full/
+      volumes:
+      - <TMP>/workspace/data/module/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
+      - <TMP>/workspace/data/shared:/mnt/shared_in
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
+      restart: 'no'
+      depends_on:
+         facts-total-wf2-local:
+            condition: service_completed_successfully

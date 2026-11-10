@@ -10,7 +10,9 @@ from facts_experiment_builder.core.experiment.name import ExperimentName
 
 _CONFIG_FILENAME = "experiment-config.yaml"
 _COMPOSE_FILENAME = "experiment-compose.yaml"
-_OUTPUT_DIRNAME = "output"
+_APPTAINER_FILENAME = "experiment-apptainer.sh"
+_COMPOSE_OUTPUT_DIRNAME = "output-compose"
+_APPTAINER_OUTPUT_DIRNAME = "output-apptainer"
 
 
 @dataclass
@@ -40,8 +42,9 @@ class ExperimentPaths:
         return self.experiment_dir.parent
 
     @property
-    def output_dir(self) -> Path:
-        return self.experiment_dir / _OUTPUT_DIRNAME
+    def compose_output_dir(self) -> Path:
+        """Default Compose output location written to experiment-config.yaml."""
+        return self.experiment_dir / _COMPOSE_OUTPUT_DIRNAME
 
     @property
     def config_path(self) -> Path:
@@ -50,6 +53,18 @@ class ExperimentPaths:
     @property
     def compose_path(self) -> Path:
         return self.experiment_dir / _COMPOSE_FILENAME
+
+    @property
+    def apptainer_script_path(self) -> Path:
+        return self.experiment_dir / _APPTAINER_FILENAME
+
+    @property
+    def apptainer_output_dir(self) -> Path:
+        """Default Apptainer output location written to experiment-config.yaml.
+
+        Separate from the Compose default so both can run for the same experiment.
+        """
+        return self.experiment_dir / _APPTAINER_OUTPUT_DIRNAME
 
 
 def check_experiment_does_not_exist(experiment_paths: ExperimentPaths) -> None:

@@ -207,10 +207,11 @@ def test_create_experiment_dir_is_idempotent(workspace):
     assert paths.experiment_dir.is_dir()
 
 
-def test_create_experiment_dir_does_not_create_output_dir(workspace):
+def test_create_experiment_dir_does_not_create_output_dirs(workspace):
     paths = _paths(workspace)
     create_experiment_dir(paths)
-    assert not paths.output_dir.exists()
+    assert not paths.compose_output_dir.exists()
+    assert not paths.apptainer_output_dir.exists()
 
 
 # ---------------------------------------------------------------------------
@@ -250,17 +251,23 @@ def test_setup_without_parent_dir_creates_experiment_in_workspace(workspace):
     assert config_path.is_file()
 
 
-def test_setup_does_not_create_output_dir(workspace):
+def test_setup_does_not_create_output_dirs(workspace):
     _finalize(_prepare(workspace))
-    assert not _paths(workspace).output_dir.exists()
+    assert not _paths(workspace).compose_output_dir.exists()
+    assert not _paths(workspace).apptainer_output_dir.exists()
 
 
-def test_setup_default_output_data_location_is_experiment_paths_output_dir(
-    workspace,
-):
+def test_setup_writes_default_output_location_for_each_run_command(workspace):
     config_path = _finalize(_prepare(workspace))
     config = yaml.safe_load(config_path.read_text())
-    assert config["output-data-location"] == _paths(workspace).output_dir.as_posix()
+    paths = _paths(workspace)
+    assert config["compose-output-data-location"] == (
+        paths.compose_output_dir.as_posix()
+    )
+    assert config["apptainer-output-data-location"] == (
+        paths.apptainer_output_dir.as_posix()
+    )
+    assert "output-data-location" not in config
 
 
 def test_setup_succeeds_when_experiment_dir_exists_without_config(workspace):
@@ -273,10 +280,10 @@ def test_setup_succeeds_when_experiment_dir_exists_without_config(workspace):
 
 
 def test_setup_succeeds_when_output_dir_exists_without_config(workspace):
-    """An existing output/ directory alone does not mean the experiment exists
+    """An existing output directory alone does not mean the experiment exists
     (previously setup failed here with FileExistsError)."""
     paths = _paths(workspace)
-    paths.output_dir.mkdir(parents=True)
+    paths.compose_output_dir.mkdir(parents=True)
     _finalize(_prepare(workspace))
     assert paths.config_path.is_file()
 

@@ -42,7 +42,7 @@ def experiment_name_no_parent():
 def reset_feb_logger():
     """Reset facts_experiment_builder logger state between tests.
 
-    _configure_feb_logging() (called by CLI tests) sets propagate=False on the
+    configure_feb_logging() (called by CLI tests) sets propagate=False on the
     facts_experiment_builder logger. This persists across tests in the same session
     and prevents caplog from capturing log records in later tests.
     """

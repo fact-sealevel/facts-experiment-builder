@@ -33,7 +33,7 @@ class SealevelStep(ExperimentStep):
                 region values (e.g. {"emulandice2-glaciers": ["RGI01", "RGI02"]}).
                 When provided, pre-fills the region option for that module so the
                 experiment-config renders a list value that generates multiple
-                ``--region`` flags in the compose command.
+                ``--region`` flags in the module's command.
             top_level_context: Top-level experiment params (e.g. {"pyear_end": 2300})
                 passed through to ModuleExperimentSpec for multi-key filename_map
                 resolution.

@@ -23,7 +23,7 @@ from facts_experiment_builder.application.setup_experiment import (
 # ---------------------- CLI imports ----------------------------
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
-    _collect_workflows,
+    _resolve_workflows,
 )
 from facts_experiment_builder.core.experiment.exceptions import (
     ExperimentSetupError,
@@ -35,7 +35,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.skeleton import (
     ExperimentSkeleton,
-    is_totaling_needed,
 )
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
@@ -266,15 +265,12 @@ def main(
             testing_schemas[m] = registry.get_schema(m)
         except ValidationError as e:
             raise ValueError(f"shcema validation failed for module: '{m}") from e
-    # If framework includes facts-total, collect workflows and attach to skeleton
-    sl_modules = skeleton.sealevel_modules
-    if is_totaling_needed(sealevel_step=sealevel_step):
-        workflow_dict = _collect_workflows(
-            complete_modules_list=sl_modules,
-            total_all_modules=total_all_modules,
-        )
-    else:
-        workflow_dict = {}
+    # facts-total and ESL services are built per workflow, so every experiment with
+    # sea-level modules needs at least one (see _resolve_workflows)
+    workflow_dict = _resolve_workflows(
+        skeleton=skeleton,
+        total_all_modules=total_all_modules,
+    )
     console.rule(style="rule")
     console.rule(style="rule", title="Setting up new FACTS experiment")
 

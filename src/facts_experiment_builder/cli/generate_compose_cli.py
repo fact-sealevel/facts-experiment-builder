@@ -3,53 +3,22 @@ from pathlib import Path
 
 import click
 
-# ---------------------- Core imports ----------------------------
 # ---------------------- Application imports ----------------------------
-from facts_experiment_builder.application.generate_compose import (
-    generate_compose,
+from facts_experiment_builder.application.generate_run_file import (
+    generate_run_file,
 )
 
 # ---------------------- CLI imports ----------------------------
+from facts_experiment_builder.cli.log_handler import configure_feb_logging
 from facts_experiment_builder.cli.theme import console
+
+# ---------------------- IO imports ----------------------------
+from facts_experiment_builder.io.compose_backend import ComposeBackend
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
 
-# ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.write_compose import (
-    make_compose_yaml,
-    write_compose_yaml,
-)
-
 logger = logging.getLogger(__name__)
-
-
-_SUCCESS = 25  # must match application layer value
-logging.addLevelName(_SUCCESS, "SUCCESS")
-
-
-class _ClickEchoHandler(logging.Handler):
-    def emit(self, record: logging.LogRecord) -> None:
-        msg = record.getMessage()
-        if record.levelno >= logging.WARNING:
-            console.print(f"⚠ [danger]Warning: [/danger]{msg}")
-        elif record.levelno == _SUCCESS:
-            console.print(f"✓ [success]{msg}[/success]")
-        else:  # INFO
-            console.print(f"ℹ [accent]{msg}[/accent]")
-
-
-def _configure_feb_logging() -> None:
-    """Wire the ClickEchoHandler onto the facts_experiment_builder namespace logger.
-
-    Called at CLI invocation time (not import time) so that tests importing from sibling
-    modules don't accidentally install the handler and break caplog capture.
-    """
-    feb_logger = logging.getLogger("facts_experiment_builder")
-    if not any(isinstance(h, _ClickEchoHandler) for h in feb_logger.handlers):
-        feb_logger.addHandler(_ClickEchoHandler())
-    feb_logger.setLevel(logging.INFO)
-    feb_logger.propagate = False
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -61,7 +30,7 @@ def _configure_feb_logging() -> None:
 )
 @click.option(
     "--custom-compose-path",
-    type=click.Path(),
+    type=click.Path(path_type=Path),
     default=None,
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
@@ -86,7 +55,7 @@ def main(
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
-    _configure_feb_logging()
+    configure_feb_logging()
 
     experiment_repo = StorageExperimentRepository()
     if debug:
@@ -107,39 +76,24 @@ def main(
     # TODO in future, check it conforms to schema?
 
     try:
-        output = generate_compose(
+        output = generate_run_file(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
             experiment_repo=experiment_repo,
-            custom_compose_path=custom_compose_path,
+            backend=ComposeBackend(),
+            custom_output_path=custom_compose_path,
         )
-        compose_dict = output.compose_dict
-        compose_path = output.compose_path
+        compose_path = output.path
     except (FileNotFoundError, ValueError) as e:  # need to incldue more errors ehre?
         console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
         raise SystemExit(1)
 
-    # Step 3: Resolve output path for compose file
-    console.print(
-        "[primary]Step 3:[/primary] Resolving output path for compose file..."
-    )
-
-    # # Step 4: Make compose YAML content from dict
-    console.print("[primary]Step 4:[/primary] Making compose YAML content from dict...")
-    yaml_content = make_compose_yaml(content_dict=compose_dict)
-
-    # # Step 5: Write compose YAML content to file
-    console.print("[primary]Step 5:[/primary] Writing compose YAML content to file...")
-    write_compose_yaml(
-        compose_content=yaml_content,
-        compose_path=compose_path,
-    )
     console.print(
         f"[success]✓ Generated Docker Compose file:[/success] [secondary]{compose_path}[/secondary]"
     )
     console.print("\n[primary]Next steps:[/primary]")
     console.print(
-        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path.relative_to(Path.cwd())} up[/accent]"
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path} up[/accent]"
     )
     console.rule(
         style="rule",

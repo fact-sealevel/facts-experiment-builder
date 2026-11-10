@@ -2,23 +2,8 @@ import pytest
 
 from facts_experiment_builder.core.experiment.skeleton import (
     ExperimentSkeleton,
-    is_totaling_needed,
     parse_module_regions,
 )
-
-
-def test_is_totaling_needed_returns_false_if_less_than_2_sealevel_modules():
-    sealevel_step_opts = ["bamber19-icesheets", "", "fair-temperature,,"]
-    for sealevel_step in sealevel_step_opts:
-        result = is_totaling_needed(sealevel_step=sealevel_step)
-        assert result is False, f"Result for {sealevel_step} is {result}"
-
-
-def test_is_totaling_needed_true_if_more_than_2_sealevel_modules():
-    sealevel_step = "bamber19-icesheets,kopp14-verticallandmotion,tlm-sterodynamics"
-    result = is_totaling_needed(sealevel_step=sealevel_step)
-    print(f"Result for {sealevel_step} is {result}")
-    assert result is True
 
 
 def test_parse_module_regions_fails_if_no_regions_specified():
@@ -48,7 +33,7 @@ def test_parse_module_regions_fails_if_missing_equals():
         parse_module_regions(example_in)
 
 
-# this is testing the scenarios covered in lines 92-100 in experiment skeleton
+# totaling runs whenever sea-level modules are passed, including a single module (#146)
 @pytest.mark.parametrize(
     "supplied,modules,expected",
     [
@@ -81,11 +66,31 @@ def test_experiment_skeleton_fails_if_climate_data_and_module_passed():
 
 
 def test_experiment_skeleton_fails_if_sealevel_data_and_module_passed():
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="--supplied-totaled-sealevel-step-data"):
         ExperimentSkeleton.from_inputs(
             climate_step="fair-temperature",
-            supplied_climate_step_data="data.nc",
+            supplied_climate_step_data=None,
             sealevel_step="some-module",
-            supplied_totaled_sealevel_step_data=None,
+            supplied_totaled_sealevel_step_data="data.nc",
             extremesealevel_step=None,
+        )
+
+
+@pytest.mark.parametrize(
+    "climate_step,supplied",
+    [
+        (None, "data.nc"),  # supplied totaled sea-level data
+        ("fair-temperature", None),  # no sea-level step at all
+    ],
+)
+def test_experiment_skeleton_fails_if_esl_without_sealevel_modules(
+    climate_step, supplied
+):
+    with pytest.raises(ValueError, match="--extremesealevel-step"):
+        ExperimentSkeleton.from_inputs(
+            climate_step=climate_step,
+            supplied_climate_step_data=None,
+            sealevel_step=None,
+            supplied_totaled_sealevel_step_data=supplied,
+            extremesealevel_step="extremesealevel-pointsoverthreshold",
         )
