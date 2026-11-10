@@ -2,11 +2,9 @@
 
 import pytest
 
-from facts_experiment_builder.application.generate_compose import (
+from facts_experiment_builder.application.prepare_plan import (
     _SUCCESS,
     _log_success,
-)
-from facts_experiment_builder.application.prepare_plan import (
     _validate_climate_file_inputs,
     check_module_schemas_present,
 )
@@ -90,7 +88,7 @@ def test_check_module_schemas_present_passes_when_all_present():
 
 def test_log_success_emits_at_correct_level(caplog):
     with caplog.at_level(
-        _SUCCESS, logger="facts_experiment_builder.application.generate_compose"
+        _SUCCESS, logger="facts_experiment_builder.application.prepare_plan"
     ):
         _log_success("Created %s module", "my-module")
 

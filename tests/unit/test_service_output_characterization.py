@@ -20,8 +20,7 @@ from typing import Any
 
 import pytest
 
-from facts_experiment_builder.application.generate_apptainer import generate_apptainer
-from facts_experiment_builder.application.generate_compose import generate_compose
+from facts_experiment_builder.application.generate_run_file import generate_run_file
 from facts_experiment_builder.application.setup_experiment import (
     finalize_experiment_setup,
     prepare_experiment_setup,
@@ -39,13 +38,14 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpec,
     ModuleServiceSpecComponents,
 )
+from facts_experiment_builder.io.apptainer_backend import ApptainerBackend
 from facts_experiment_builder.io.apptainer_service import to_apptainer_service
+from facts_experiment_builder.io.compose_backend import ComposeBackend
 from facts_experiment_builder.io.compose_service import to_compose_service
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
-from facts_experiment_builder.io.write_compose import make_compose_yaml
 from tests.unit.helpers import InMemoryModuleDefinitions
 
 _SNAPSHOT_DIR = Path(__file__).parent / "snapshots"
@@ -335,22 +335,24 @@ def test_generated_files_match_snapshot(tmp_path, projection_scale):
     _setup_experiment(workspace_dir, projection_scale)
     repo = StorageExperimentRepository()
 
-    compose = generate_compose(
+    compose = generate_run_file(
         experiment_name=_EXPERIMENT_NAME,
         workspace_dir=workspace_dir,
         experiment_repo=repo,
+        backend=ComposeBackend(),
     )
-    apptainer = generate_apptainer(
+    apptainer = generate_run_file(
         experiment_name=_EXPERIMENT_NAME,
         workspace_dir=workspace_dir,
         experiment_repo=repo,
+        backend=ApptainerBackend(),
     )
 
     _check_snapshot(
         f"experiment-compose.{projection_scale}.yaml",
-        _normalize(make_compose_yaml(content_dict=compose.compose_dict), tmp_path),
+        _normalize(compose.path.read_text(), tmp_path),
     )
     _check_snapshot(
         f"experiment-apptainer.{projection_scale}.sh",
-        _normalize(apptainer.script_path.read_text(), tmp_path),
+        _normalize(apptainer.path.read_text(), tmp_path),
     )

@@ -3,22 +3,18 @@ from pathlib import Path
 
 import click
 
-# ---------------------- Core imports ----------------------------
 # ---------------------- Application imports ----------------------------
-from facts_experiment_builder.application.generate_compose import (
-    generate_compose,
+from facts_experiment_builder.application.generate_run_file import (
+    generate_run_file,
 )
 
 # ---------------------- CLI imports ----------------------------
 from facts_experiment_builder.cli.theme import console
-from facts_experiment_builder.io.experiment_repository import (
-    StorageExperimentRepository,
-)
 
 # ---------------------- IO imports ----------------------------
-from facts_experiment_builder.io.write_compose import (
-    make_compose_yaml,
-    write_compose_yaml,
+from facts_experiment_builder.io.compose_backend import ComposeBackend
+from facts_experiment_builder.io.experiment_repository import (
+    StorageExperimentRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -107,33 +103,20 @@ def main(
     # TODO in future, check it conforms to schema?
 
     try:
-        output = generate_compose(
+        output = generate_run_file(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
             experiment_repo=experiment_repo,
-            custom_compose_path=custom_compose_path,
+            backend=ComposeBackend(),
+            custom_output_path=(
+                Path(custom_compose_path) if custom_compose_path else None
+            ),
         )
-        compose_dict = output.compose_dict
-        compose_path = output.compose_path
+        compose_path = output.path
     except (FileNotFoundError, ValueError) as e:  # need to incldue more errors ehre?
         console.print(f"[red]✗ Failed to generate compose file:[/red] {e}")
         raise SystemExit(1)
 
-    # Step 3: Resolve output path for compose file
-    console.print(
-        "[primary]Step 3:[/primary] Resolving output path for compose file..."
-    )
-
-    # # Step 4: Make compose YAML content from dict
-    console.print("[primary]Step 4:[/primary] Making compose YAML content from dict...")
-    yaml_content = make_compose_yaml(content_dict=compose_dict)
-
-    # # Step 5: Write compose YAML content to file
-    console.print("[primary]Step 5:[/primary] Writing compose YAML content to file...")
-    write_compose_yaml(
-        compose_content=yaml_content,
-        compose_path=compose_path,
-    )
     console.print(
         f"[success]✓ Generated Docker Compose file:[/success] [secondary]{compose_path}[/secondary]"
     )

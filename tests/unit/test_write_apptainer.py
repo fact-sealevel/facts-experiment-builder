@@ -1,10 +1,14 @@
 """Unit tests for write_apptainer (template rendering and file writing)."""
 
 import os
+from pathlib import Path
 
 
-from facts_experiment_builder.application.execution_plan import _ExecutionPlan
-from facts_experiment_builder.application.generate_apptainer import _ApptainerStages
+from facts_experiment_builder.application.backend import RunInfo
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
+from facts_experiment_builder.io.apptainer_backend import _ApptainerStages
 from facts_experiment_builder.io.apptainer_service import (
     ApptainerServiceSpec,
 )
@@ -71,17 +75,6 @@ def _make_stages(
     )
 
 
-def _make_execution_plan(climate_service_name: str | None = None) -> _ExecutionPlan:
-    """Helper function to make an _ExecutionPlan object with empty values for testing."""
-    return _ExecutionPlan(
-        standard_specs={},
-        facts_total_specs={},
-        esl_specs={},
-        climate_service_name=climate_service_name,
-        suppress_output_types=set(),
-    )
-
-
 _BASE_METADATA = {
     "output-data-location": "/workspace/output",
     "shared-input-data": "/workspace/data/shared",
@@ -99,24 +92,26 @@ _BASE_METADATA = {
 _DATA_PATHS = resolve_experiment_data_paths(_BASE_METADATA)
 
 
+def _run_info(data_paths=None, workflow_names=None) -> RunInfo:
+    return RunInfo(
+        config=LoadedExperimentConfig.from_dict(_BASE_METADATA),
+        data_paths=data_paths or _DATA_PATHS,
+        workspace_dir=Path("/workspace"),
+        workflow_names=workflow_names or [],
+    )
+
+
 def _render(
     stages=None,
-    execution_plan=None,
-    metadata=None,
+    climate_service_name=None,
     data_paths=None,
-    workspace_dir=None,
     mkdir_dirs=None,
 ):
-    from pathlib import Path
-
     return render_apptainer_script(
         stages=stages or _make_stages(stage1=[_make_apptainer_spec()]),
-        execution_plan=execution_plan or _make_execution_plan(),
-        metadata=metadata or _BASE_METADATA,
-        data_paths=data_paths or _DATA_PATHS,
-        workspace_dir=workspace_dir or Path("/workspace"),
+        info=_run_info(data_paths=data_paths),
+        climate_service_name=climate_service_name,
         mkdir_dirs=mkdir_dirs or ["/workspace/output/fair-temperature"],
-        workflow_vars=[],
     )
 
 
@@ -209,8 +204,7 @@ def test_stage2_wait_for_output_appears():
         wait_for_files=["/workspace/output/fair-temperature/climate.nc"],
     )
     stages = _make_stages(stage2=[s2_spec])
-    plan = _make_execution_plan(climate_service_name="fair-temperature")
-    result = _render(stages=stages, execution_plan=plan)
+    result = _render(stages=stages, climate_service_name="fair-temperature")
     assert "wait_for_output" in result
     assert "/workspace/output/fair-temperature/climate.nc" in result
 
@@ -255,25 +249,20 @@ def test_run_service_uses_versioned_sif_name():
 
 
 def test_workflow_vars_appear_in_header():
-    from pathlib import Path
-
     stages = _make_stages(stage1=[_make_apptainer_spec()])
     result = render_apptainer_script(
         stages=stages,
-        execution_plan=_make_execution_plan(),
-        metadata=_BASE_METADATA,
-        data_paths=_DATA_PATHS,
-        workspace_dir=Path("/workspace"),
+        info=_run_info(workflow_names=["wf1f", "wf2f"]),
+        climate_service_name=None,
         mkdir_dirs=[],
-        workflow_vars=[("wf1f", "WORKFLOW1_NAME"), ("wf2f", "WORKFLOW2_NAME")],
     )
     assert 'WORKFLOW1_NAME="wf1f"' in result
     assert 'WORKFLOW2_NAME="wf2f"' in result
 
 
 def test_path_vars_come_from_data_paths_not_metadata():
-    """OUTPUT_DIR / SHARED_IN / MODULE_IN use data_paths, the same source as the module
-    binds, even if the raw metadata says something else."""
+    """OUTPUT_DIR / SHARED_IN / MODULE_IN use RunInfo.data_paths, the same source as the
+    module binds, even if the loaded config says something else."""
     data_paths = resolve_experiment_data_paths(
         {
             "output-data-location": "/apptainer/out",

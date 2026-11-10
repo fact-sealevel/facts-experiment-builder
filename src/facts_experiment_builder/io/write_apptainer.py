@@ -5,46 +5,43 @@ from typing import Any
 
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
-from facts_experiment_builder.application.execution_plan import _ExecutionPlan
-from facts_experiment_builder.core.module.module_service_path_resolution import (
-    ExperimentDataPaths,
-)
+from facts_experiment_builder.application.backend import RunInfo
 
 
 def _build_template_context(
     stages: Any,
-    execution_plan: _ExecutionPlan,
-    metadata: dict[str, Any],
-    data_paths: ExperimentDataPaths,
-    workspace_dir: Path,
+    info: RunInfo,
+    climate_service_name: str | None,
     mkdir_dirs: list[str],
-    workflow_vars: list[tuple[str, str]],
 ) -> dict[str, Any]:
     # Paths come from the same ExperimentDataPaths used to build the module specs,
     # so OUTPUT_DIR etc. always match the binds.
-    output_dir = data_paths.output_data_location
-    shared_in = data_paths.shared_input_data
-    module_in = data_paths.module_specific_input_base
-    sif_dir = str(workspace_dir / "apptainer_experiments" / "sif")
+    data_paths = info.data_paths
+    config = info.config
+    sif_dir = str(info.workspace_dir / "apptainer_experiments" / "sif")
 
     climate_wait_files: list[str] = list(
         dict.fromkeys(f for spec in stages.stage2 for f in spec.wait_for_files)
     )
+    workflow_vars = [
+        (wf_name, f"WORKFLOW{i + 1}_NAME")
+        for i, wf_name in enumerate(info.workflow_names)
+    ]
 
     return {
-        "workspace_dir": str(workspace_dir),
-        "experiment_name": str(metadata.get("experiment_name", "")),
-        "output_dir": output_dir,
-        "shared_in": shared_in,
-        "module_in": module_in,
+        "workspace_dir": str(info.workspace_dir),
+        "experiment_name": str(config.experiment_name),
+        "output_dir": data_paths.output_data_location,
+        "shared_in": data_paths.shared_input_data,
+        "module_in": data_paths.module_specific_input_base,
         "sif_dir": sif_dir,
-        "pyear_start": str(metadata.get("pyear_start", "")),
-        "pyear_end": str(metadata.get("pyear_end", "")),
-        "pyear_step": str(metadata.get("pyear_step", "")),
-        "baseyear": str(metadata.get("baseyear", "")),
-        "scenario": str(metadata.get("scenario", "")),
-        "nsamps": str(metadata.get("nsamps", "")),
-        "pipeline_id": str(metadata.get("pipeline-id", "")),
+        "pyear_start": str(config.pyear_start),
+        "pyear_end": str(config.pyear_end),
+        "pyear_step": str(config.pyear_step),
+        "baseyear": str(config.baseyear),
+        "scenario": str(config.scenario),
+        "nsamps": str(config.nsamps),
+        "pipeline_id": str(config.pipeline_id),
         "workflow_vars": workflow_vars,
         "all_specs": stages.all_specs,
         "stage1": stages.stage1,
@@ -52,7 +49,7 @@ def _build_template_context(
         "stage3": stages.stage3,
         "stage4": stages.stage4,
         "climate_wait_files": climate_wait_files,
-        "climate_service_name": execution_plan.climate_service_name or "",
+        "climate_service_name": climate_service_name or "",
         "mkdir_dirs": mkdir_dirs,
         "has_workflows": bool(stages.stage3),
     }
@@ -60,12 +57,9 @@ def _build_template_context(
 
 def render_apptainer_script(
     stages: Any,
-    execution_plan: _ExecutionPlan,
-    metadata: dict[str, Any],
-    data_paths: ExperimentDataPaths,
-    workspace_dir: Path,
+    info: RunInfo,
+    climate_service_name: str | None,
     mkdir_dirs: list[str],
-    workflow_vars: list[tuple[str, str]],
 ) -> str:
     """Render the Apptainer bash script template to a string."""
     env = Environment(
@@ -77,12 +71,9 @@ def render_apptainer_script(
     )
     context = _build_template_context(
         stages=stages,
-        execution_plan=execution_plan,
-        metadata=metadata,
-        data_paths=data_paths,
-        workspace_dir=workspace_dir,
+        info=info,
+        climate_service_name=climate_service_name,
         mkdir_dirs=mkdir_dirs,
-        workflow_vars=workflow_vars,
     )
     return env.get_template("apptainer_experiment.sh.j2").render(**context)
 

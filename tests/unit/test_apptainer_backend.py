@@ -1,8 +1,9 @@
-"""Unit tests for generate_apptainer application layer."""
+"""Unit tests for the Apptainer adapter (io.apptainer_backend, io.apptainer_service)."""
 
 import pytest
 
-from facts_experiment_builder.application.generate_apptainer import (
+from facts_experiment_builder.application.execution_graph import build_execution_graph
+from facts_experiment_builder.io.apptainer_backend import (
     _build_apptainer_stages,
     _compute_mkdir_dirs,
     _with_apptainer_output_root,
@@ -16,6 +17,10 @@ from tests.unit.helpers import (
     make_service_spec,
     make_service_spec_with_outputs,
 )
+
+
+def _stages(plan):
+    return _build_apptainer_stages(build_execution_graph(plan))
 
 
 # ---------------------------------------------------------------------------
@@ -83,7 +88,7 @@ def test_stage1_contains_non_climate_modules():
         },
         climate_service_name="fair-temperature",
     )
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
 
     assert len(stages.stage1) == 2
     assert len(stages.stage2) == 0
@@ -101,7 +106,7 @@ def test_stage2_contains_climate_dependent_modules():
         },
         climate_service_name="fair-temperature",
     )
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
 
     assert len(stages.stage1) == 1
     assert stages.stage1[0].service_name == "fair-temperature"
@@ -117,7 +122,7 @@ def test_stage3_specs_have_run_in_background_and_pid_var():
     plan = make_execution_plan(
         facts_total_specs={"facts-total-wf1f-global": (ft_spec, wf)},
     )
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
 
     assert len(stages.stage3) == 1
     spec = stages.stage3[0]
@@ -131,7 +136,7 @@ def test_stage4_specs_have_run_in_background_false():
     plan = make_execution_plan(
         esl_specs={"extremesealevel-wf1f": (esl_spec, "facts-total-wf1f-local")},
     )
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
 
     assert len(stages.stage4) == 1
     assert stages.stage4[0].run_in_background is False
@@ -147,7 +152,7 @@ def test_all_specs_is_flat_ordered_list():
         },
         climate_service_name="fair-temperature",
     )
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
 
     assert (
         stages.all_specs
@@ -211,7 +216,7 @@ def test_stage2_waits_for_the_climate_output_it_declares():
         standard_specs={"fair-temperature": climate, "tlm-sterodynamics": sealevel},
         climate_service_name="fair-temperature",
     )
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
     assert stages.stage2[0].wait_for_files == ["/out/fair-temperature/gsat.nc"]
 
 
@@ -222,7 +227,7 @@ def test_stage2_without_climate_module_has_no_wait_files():
         climate_step_output="output-gsat-file",
     )
     plan = make_execution_plan(standard_specs={"tlm-sterodynamics": sealevel})
-    stages = _build_apptainer_stages(plan)
+    stages = _stages(plan)
     assert stages.stage2[0].wait_for_files == []
 
 
@@ -239,7 +244,7 @@ def test_compute_mkdir_dirs_lists_each_service_output_dir():
     plan = make_execution_plan(
         standard_specs={"fair-temperature": spec_a, "ssp-lws": spec_b},
     )
-    dirs = _compute_mkdir_dirs(_build_apptainer_stages(plan))
+    dirs = _compute_mkdir_dirs(_stages(plan))
     assert dirs == ["/output/fair-temperature", "/output/ssp-lws"]
 
 
@@ -263,7 +268,7 @@ def test_compute_mkdir_dirs_deduplicates_shared_facts_total_dir():
             ),
         },
     )
-    dirs = _compute_mkdir_dirs(_build_apptainer_stages(plan))
+    dirs = _compute_mkdir_dirs(_stages(plan))
     assert dirs == ["/output/facts-total"]
 
 
@@ -305,7 +310,7 @@ def test_mixed_registries_keep_each_images_own_reference():
             "b": make_service_spec("b", image_url="docker.io/other/b"),
         }
     )
-    refs = [s.image_ref for s in _build_apptainer_stages(plan).all_specs]
+    refs = [s.image_ref for s in _stages(plan).all_specs]
     assert refs == ["ghcr.io/fact-sealevel/a:0.1.0", "docker.io/other/b:0.1.0"]
 
 
