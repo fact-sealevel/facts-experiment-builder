@@ -22,7 +22,6 @@ _REQUIRED_FIELDS = {
     "pyear_step": "pyear_step",
     "module_specific_input_data": "module-specific-input-data",
     "shared_input_data": "shared-input-data",
-    "output_data_location": "output-data-location",
 }
 _INT_FIELDS = ("nsamps", "baseyear", "pyear_start", "pyear_end", "pyear_step")
 
@@ -77,7 +76,11 @@ class LoadedExperimentConfig:
     module_specific_input_data: str
     shared_input_data: str
     experiment_specific_input_data: Any
-    output_data_location: str
+    # Output locations: each run command requires its own (see
+    # module_service_path_resolution.output_location_key()).
+    compose_output_data_location: str | None
+    apptainer_output_data_location: str | None
+    output_data_location: str | None  # deprecated; read as the Compose location
 
     module_registry_version: str | None
     module_sections: dict[str, dict[str, Any]]
@@ -140,6 +143,8 @@ class LoadedExperimentConfig:
             module_specific_input_data=raw.get("module-specific-input-data"),
             shared_input_data=raw.get("shared-input-data"),
             experiment_specific_input_data=raw.get("experiment-specific-input-data"),
+            compose_output_data_location=raw.get("compose-output-data-location"),
+            apptainer_output_data_location=raw.get("apptainer-output-data-location"),
             output_data_location=raw.get("output-data-location"),
             module_registry_version=raw.get("module_registry_version"),
             module_sections={

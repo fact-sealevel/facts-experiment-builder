@@ -22,6 +22,8 @@ def _loaded_config() -> dict:
         "module-specific-input-data": "/in/module",
         "shared-input-data": "/in/shared",
         "experiment-specific-input-data": [],
+        "compose-output-data-location": "/out/compose",
+        "apptainer-output-data-location": "/out/apptainer",
         "output-data-location": "/out",
         "fair-temperature": {"inputs": {}, "outputs": {}},
         "tlm-sterodynamics": {"inputs": {}, "outputs": {}},
@@ -53,6 +55,8 @@ def test_from_metadata_dict_path_keys_are_not_params_sections_or_extra():
         "module-specific-input-data",
         "shared-input-data",
         "experiment-specific-input-data",
+        "compose-output-data-location",
+        "apptainer-output-data-location",
         "output-data-location",
     }
     # top_level_keys=None exercises the fallback that infers top-level params

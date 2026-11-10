@@ -66,6 +66,7 @@ def make_config_raw(**overrides) -> dict:
         "pyear_step": 10,
         "module-specific-input-data": "/in/module",
         "shared-input-data": "/in/shared",
-        "output-data-location": "/out",
+        "compose-output-data-location": "/out/compose",
+        "apptainer-output-data-location": "/out/apptainer",
     }
     return {**defaults, **overrides}

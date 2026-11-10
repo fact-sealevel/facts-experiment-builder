@@ -60,7 +60,7 @@ workspace/
     └── {experiment_name}/          ← any experiment directory works, e.g. experiments/{experiment_name}
         ├── experiment-config.yaml  ← required input (from setup-experiment)
         ├── experiment-apptainer.sh ← generated output (created by this command)
-        └── output-apptainer/       ← Apptainer outputs (created by this command)
+        └── output-apptainer/       ← Apptainer outputs, by default (created by this command)
 ```
 
 ### Shared input data (`data/shared_input_data/`)
@@ -90,15 +90,19 @@ SIF files are shared across experiments in the workspace — once `fair-temperat
 
 ### Output data
 
-Apptainer runs write to a separate output directory inside the experiment directory:
+Apptainer runs write to the directory in `apptainer-output-data-location` in `experiment-config.yaml`, exactly as written. `setup-experiment` sets it to a directory inside the experiment directory:
 
 ```
 {experiment_dir}/output-apptainer/
 ```
 
-This is **not** `output-data-location` from `experiment-config.yaml`, which is used by `generate-compose`. Keeping them separate lets you run the same experiment with both Docker Compose and Apptainer without the outputs overwriting each other.
+To write outputs somewhere else, change `apptainer-output-data-location` in `experiment-config.yaml` before running `generate-apptainer`.
 
-`generate-apptainer` creates `output-apptainer/` and one subdirectory per service when it generates the script (the script also runs `mkdir -p` on them). You do not need to create them in advance.
+`generate-compose` uses its own key, `compose-output-data-location` (default `{experiment_dir}/output-compose/`). Keeping them separate lets you run the same experiment with both Docker Compose and Apptainer without the outputs overwriting each other.
+
+`generate-apptainer` creates the output directory and one subdirectory per service when it generates the script (the script also runs `mkdir -p` on them). You do not need to create them in advance.
+
+Experiments set up before `apptainer-output-data-location` was added don't have the key, and `generate-apptainer` stops with an error. Add the key to `experiment-config.yaml`, e.g. `apptainer-output-data-location: "{experiment_dir}/output-apptainer"`.
 
 ---
 

@@ -9,6 +9,7 @@ from facts_experiment_builder.core.module.apptainer_service_spec import (
     ApptainerServiceSpec,
 )
 from facts_experiment_builder.core.module.module_service_path_resolution import (
+    APPTAINER_OUTPUT_KEY,
     resolve_experiment_data_paths,
 )
 from facts_experiment_builder.io.write_apptainer import (
@@ -83,7 +84,7 @@ def _make_execution_plan(climate_service_name: str | None = None) -> _ExecutionP
 
 
 _BASE_METADATA = {
-    "output-data-location": "/workspace/output",
+    "apptainer-output-data-location": "/workspace/output",
     "shared-input-data": "/workspace/data/shared",
     "module-specific-input-data": "/workspace/data/module_specific",
     "experiment_name": "test_experiment",
@@ -96,7 +97,9 @@ _BASE_METADATA = {
     "pipeline-id": "abc123",
 }
 
-_DATA_PATHS = resolve_experiment_data_paths(_BASE_METADATA)
+_DATA_PATHS = resolve_experiment_data_paths(
+    _BASE_METADATA, output_key=APPTAINER_OUTPUT_KEY
+)
 
 
 def _render(
@@ -276,10 +279,11 @@ def test_path_vars_come_from_data_paths_not_metadata():
     binds, even if the raw metadata says something else."""
     data_paths = resolve_experiment_data_paths(
         {
-            "output-data-location": "/apptainer/out",
+            "apptainer-output-data-location": "/apptainer/out",
             "shared-input-data": "/apptainer/shared",
             "module-specific-input-data": "/apptainer/module",
-        }
+        },
+        output_key=APPTAINER_OUTPUT_KEY,
     )
     result = _render(data_paths=data_paths)
     assert 'OUTPUT_DIR="/apptainer/out"' in result

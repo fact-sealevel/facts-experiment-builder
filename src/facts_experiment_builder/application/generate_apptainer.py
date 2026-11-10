@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Generate Apptainer bash script from experiment config."""
 
-import dataclasses
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,7 +13,8 @@ from facts_experiment_builder.core.module.apptainer_service_spec import (
     ApptainerServiceSpec,
 )
 from facts_experiment_builder.core.module.module_service_path_resolution import (
-    ExperimentDataPaths,
+    APPTAINER_OUTPUT_KEY,
+    output_location_key,
     resolve_experiment_data_paths,
 )
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
@@ -131,22 +131,6 @@ def _build_apptainer_stages(execution_plan: _ExecutionPlan) -> _ApptainerStages:
     )
 
 
-def _with_apptainer_output_root(
-    data_paths: ExperimentDataPaths, experiment_paths: ExperimentPaths
-) -> ExperimentDataPaths:
-    """Return data_paths with the output root replaced by the Apptainer output dir.
-
-    Apptainer outputs go to ExperimentPaths.apptainer_output_dir instead of the config's
-    output-data-location (used by Compose), so both can run for the same experiment.
-    Every derived output path (binds, mkdir dirs, wait files, OUTPUT_DIR) follows from
-    this one value.
-    """
-    return dataclasses.replace(
-        data_paths,
-        output_data_location=str(experiment_paths.apptainer_output_dir),
-    )
-
-
 def _compute_mkdir_dirs(stages: _ApptainerStages) -> list[str]:
     """Collect unique service output directories in stage order."""
     return list(dict.fromkeys(spec.output_dir for spec in stages.all_specs))
@@ -189,8 +173,8 @@ def generate_apptainer(
     logger.info("Found experiment config file at provided path")
 
     config = experiment_repo.get(config_path=config_path)
-    data_paths = _with_apptainer_output_root(
-        resolve_experiment_data_paths(config.raw), experiment_paths
+    data_paths = resolve_experiment_data_paths(
+        config.raw, output_key=output_location_key(config.raw, APPTAINER_OUTPUT_KEY)
     )
     plan, execution_plan = prepare_execution_plan(config, data_paths)
 

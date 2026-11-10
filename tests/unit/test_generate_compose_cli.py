@@ -68,4 +68,30 @@ def test_custom_compose_path_is_passed_as_a_path(tmp_path):
     assert passed == custom
 
 
+def test_compose_path_outside_current_directory_is_printed_as_is(tmp_path):
+    """The workspace need not be under the current directory; the next-steps line
+    prints the compose file's absolute path."""
+    compose_path = tmp_path / "experiments" / "exp" / "experiment-compose.yaml"
+    assert not compose_path.is_relative_to(Path.cwd())
+
+    with (
+        patch(
+            "facts_experiment_builder.cli.generate_compose_cli.generate_compose"
+        ) as mock_generate,
+        patch("facts_experiment_builder.cli.generate_compose_cli.write_compose_yaml"),
+        patch(
+            "facts_experiment_builder.cli.generate_compose_cli.console"
+        ) as mock_console,
+    ):
+        mock_generate.return_value.compose_dict = {"services": {}}
+        mock_generate.return_value.compose_path = compose_path
+        result = runner.invoke(
+            main, ["--experiment-name", "exp", "--workspace-dir", str(tmp_path)]
+        )
+
+    assert result.exit_code == 0, result.output
+    printed = [c.args[0] for c in mock_console.print.call_args_list if c.args]
+    assert any(f"docker compose -f {compose_path} up" in p for p in printed)
+
+
 # def test_generate_compose_raises_error_with_invalid_config_path(tmp_path):

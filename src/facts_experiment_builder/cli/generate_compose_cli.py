@@ -139,7 +139,7 @@ def main(
     )
     console.print("\n[primary]Next steps:[/primary]")
     console.print(
-        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path.relative_to(Path.cwd())} up[/accent]"
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path} up[/accent]"
     )
     console.rule(
         style="rule",

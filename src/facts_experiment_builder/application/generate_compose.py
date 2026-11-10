@@ -16,6 +16,8 @@ from facts_experiment_builder.application.storage import (
 )
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.module_service_path_resolution import (
+    COMPOSE_OUTPUT_KEY,
+    output_location_key,
     resolve_experiment_data_paths,
 )
 from facts_experiment_builder.io.paths import ExperimentPaths
@@ -116,7 +118,9 @@ def generate_compose(
 
     config = experiment_repo.get(config_path=config_path)
 
-    data_paths = resolve_experiment_data_paths(config.raw)
+    data_paths = resolve_experiment_data_paths(
+        config.raw, output_key=output_location_key(config.raw, COMPOSE_OUTPUT_KEY)
+    )
     _plan, execution_plan = prepare_execution_plan(config, data_paths)
 
     services = render_compose_services(execution_plan)
