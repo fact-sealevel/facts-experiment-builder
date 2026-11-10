@@ -61,7 +61,7 @@ def _configure_feb_logging() -> None:
 )
 @click.option(
     "--custom-compose-path",
-    type=click.Path(),
+    type=click.Path(path_type=Path),
     default=None,
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
