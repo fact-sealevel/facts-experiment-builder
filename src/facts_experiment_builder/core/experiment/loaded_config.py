@@ -50,8 +50,8 @@ class LoadedExperimentConfig:
 
     The fields in _REQUIRED_FIELDS must have a value, and the integer fields must be
     ints; __post_init__ raises ValueError otherwise. Other values are taken as loaded,
-    without coercion, and are None if their key is missing. Path values are checked
-    and expanded later by resolve_experiment_data_paths().
+    without coercion, and are None if their key is missing. Path values are checked and
+    expanded later by resolve_experiment_data_paths().
 
     `raw` is the full loaded mapping. Functions deeper in the generate pipeline still
     take the metadata dict, so callers pass `raw` to them for now.

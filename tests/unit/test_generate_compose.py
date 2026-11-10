@@ -5,7 +5,6 @@ import pytest
 from facts_experiment_builder.application.generate_compose import (
     _SUCCESS,
     _log_success,
-    check_metadata_has_required_fields,
 )
 from facts_experiment_builder.application.prepare_plan import (
     _validate_climate_file_inputs,
@@ -68,31 +67,6 @@ def test_validate_climate_file_inputs_raises_when_nonstandard_key_missing():
     with pytest.raises(ValueError, match="test-module"):
         _validate_climate_file_inputs(
             metadata, ["test-module"], {"test-module": schema}
-        )
-
-
-def test_check_metadata_has_required_fields():
-    required_fields = {
-        "experiment-name": "my-test-exp",
-        "pipeline-id": "abc123",
-        "nsamps": 100,
-    }
-    metadata_complete = {
-        "experiment-name": "my-test-exp",
-        "pipeline-id": "abc123",
-        "nsamps": 100,
-        "scenario": "ssp585",
-    }
-    metadata_incomplete = {
-        "pipeline-id": "abc123",
-        "nsamps": 100,
-        "experiment-name": None,
-    }
-    check_metadata_has_required_fields(metadata_complete, required_fields)
-
-    with pytest.raises(ValueError, match="experiment-name"):
-        check_metadata_has_required_fields(
-            metadata_incomplete, required_fields=["experiment-name"]
         )
 
 
