@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 from facts_experiment_builder.application.backend import RunInfo
+from facts_experiment_builder.application.log_levels import SUCCESS
 from facts_experiment_builder.application.execution_graph import (
     ExecutionGraph,
     Stage,
@@ -22,15 +23,13 @@ from facts_experiment_builder.io.write_compose import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-_SUCCESS = 25  # custom level between INFO (20) and WARNING (30); must match CLI handler
-
 # facts-total and ESL services always get a depends_on key, even when empty (a workflow
 # with no modules); to_compose_service() would drop an empty one.
 _ALWAYS_DEPENDS_ON = {Stage.TOTALING, Stage.EXTREME_SEALEVEL}
 
 
 def _log_success(msg: str, *args: object) -> None:
-    logger.log(_SUCCESS, msg, *args)
+    logger.log(SUCCESS, msg, *args)
 
 
 def render_compose_services(graph: ExecutionGraph) -> dict[str, Any]:

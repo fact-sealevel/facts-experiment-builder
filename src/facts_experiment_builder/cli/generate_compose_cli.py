@@ -9,6 +9,7 @@ from facts_experiment_builder.application.generate_run_file import (
 )
 
 # ---------------------- CLI imports ----------------------------
+from facts_experiment_builder.cli.log_handler import configure_feb_logging
 from facts_experiment_builder.cli.theme import console
 
 # ---------------------- IO imports ----------------------------
@@ -20,32 +21,12 @@ from facts_experiment_builder.io.experiment_repository import (
 logger = logging.getLogger(__name__)
 
 
-_SUCCESS = 25  # must match application layer value
-logging.addLevelName(_SUCCESS, "SUCCESS")
-
-
-class _ClickEchoHandler(logging.Handler):
-    def emit(self, record: logging.LogRecord) -> None:
-        msg = record.getMessage()
-        if record.levelno >= logging.WARNING:
-            console.print(f"⚠ [danger]Warning: [/danger]{msg}")
-        elif record.levelno == _SUCCESS:
-            console.print(f"✓ [success]{msg}[/success]")
-        else:  # INFO
-            console.print(f"ℹ [accent]{msg}[/accent]")
-
-
-def _configure_feb_logging() -> None:
-    """Wire the ClickEchoHandler onto the facts_experiment_builder namespace logger.
-
-    Called at CLI invocation time (not import time) so that tests importing from sibling
-    modules don't accidentally install the handler and break caplog capture.
-    """
-    feb_logger = logging.getLogger("facts_experiment_builder")
-    if not any(isinstance(h, _ClickEchoHandler) for h in feb_logger.handlers):
-        feb_logger.addHandler(_ClickEchoHandler())
-    feb_logger.setLevel(logging.INFO)
-    feb_logger.propagate = False
+def _display_path(path: Path) -> Path:
+    """Return path relative to the current directory if it is under it, else as is."""
+    try:
+        return path.relative_to(Path.cwd())
+    except ValueError:
+        return path
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -82,7 +63,7 @@ def main(
     debug,
 ) -> None:
     """Generate Docker Compose file from experiment metadata."""
-    _configure_feb_logging()
+    configure_feb_logging()
 
     experiment_repo = StorageExperimentRepository()
     if debug:
@@ -122,7 +103,7 @@ def main(
     )
     console.print("\n[primary]Next steps:[/primary]")
     console.print(
-        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path.relative_to(Path.cwd())} up[/accent]"
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {_display_path(compose_path)} up[/accent]"
     )
     console.rule(
         style="rule",
