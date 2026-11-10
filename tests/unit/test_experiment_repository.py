@@ -40,7 +40,7 @@ def test_storage_exp_repo_get_returns_loaded_config(tmp_path):
     pyear_step: 10
     module-specific-input-data: /in/module
     shared-input-data: /in/shared
-    output-data-location: /out
+    compose-output-data-location: /out/compose
     top_level_params:
       param1: value1
       param2: value2

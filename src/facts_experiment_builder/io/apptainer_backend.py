@@ -1,6 +1,5 @@
 """ApptainerBackend: ExecutionBackend adapter that writes an Apptainer bash script."""
 
-import dataclasses
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,7 +9,7 @@ from facts_experiment_builder.application.execution_graph import (
     Stage,
 )
 from facts_experiment_builder.core.module.module_service_path_resolution import (
-    ExperimentDataPaths,
+    APPTAINER_OUTPUT_KEY,
 )
 from facts_experiment_builder.io.apptainer_service import (
     ApptainerServiceSpec,
@@ -69,22 +68,6 @@ def _build_apptainer_stages(graph: ExecutionGraph) -> _ApptainerStages:
     )
 
 
-def _with_apptainer_output_root(
-    data_paths: ExperimentDataPaths, experiment_paths: ExperimentPaths
-) -> ExperimentDataPaths:
-    """Return data_paths with the output root replaced by the Apptainer output dir.
-
-    Apptainer outputs go to ExperimentPaths.apptainer_output_dir instead of the config's
-    output-data-location (used by Compose), so both can run for the same experiment.
-    Every derived output path (binds, mkdir dirs, wait files, OUTPUT_DIR) follows from
-    this one value.
-    """
-    return dataclasses.replace(
-        data_paths,
-        output_data_location=str(experiment_paths.apptainer_output_dir),
-    )
-
-
 def _compute_mkdir_dirs(stages: _ApptainerStages) -> list[str]:
     """Collect unique service output directories in stage order."""
     return list(dict.fromkeys(spec.output_dir for spec in stages.all_specs))
@@ -93,13 +76,10 @@ def _compute_mkdir_dirs(stages: _ApptainerStages) -> list[str]:
 class ApptainerBackend:
     """Writes the experiment as an executable Apptainer bash script."""
 
+    output_key = APPTAINER_OUTPUT_KEY
+
     def default_output_path(self, experiment_paths: ExperimentPaths) -> Path:
         return experiment_paths.apptainer_script_path
-
-    def data_paths(
-        self, data_paths: ExperimentDataPaths, experiment_paths: ExperimentPaths
-    ) -> ExperimentDataPaths:
-        return _with_apptainer_output_root(data_paths, experiment_paths)
 
     def render(self, graph: ExecutionGraph, info: RunInfo) -> str:
         stages = _build_apptainer_stages(graph)

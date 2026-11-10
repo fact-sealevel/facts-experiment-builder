@@ -20,6 +20,10 @@ from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
     collect_metadata_param_keys,
 )
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    APPTAINER_OUTPUT_KEY,
+    COMPOSE_OUTPUT_KEY,
+)
 from facts_experiment_builder.core.steps import (
     ClimateStep,
     ExtremeSealevelStep,
@@ -238,7 +242,8 @@ def experiment_skeleton_to_facts_experiment(
     skeleton: ExperimentSkeleton,
     top_level_params: "TopLevelParams",
     schemas: dict[str, ModuleSchema],
-    output_data_location: Path,
+    compose_output_data_location: Path,
+    apptainer_output_data_location: Path,
     module_specific_input_data: str | None = None,
     experiment_specific_input_data: list | None = None,
     shared_input_data: str | None = None,
@@ -259,8 +264,10 @@ def experiment_skeleton_to_facts_experiment(
         Values for top-level parameters specified by user via CLI (includes pipeline_id, scenario, baseyear, pyear_start, pyear_end, pyear_step, nsamps, location-file). Used to populate `cli_values` and the top-level and fingerprint parameter bundles used in experiment-config.ymal.
     schemas: dict of {str: ModuleSchemas}
         Mapping from module name to its loaded schema. Used to hydrate experiment steps and to collect top-level/fingerprint param keys across all modules.
-    output_data_location: Path
-        Default output path written to `output-data-location` in experiment-config.yaml (ExperimentPaths.output_dir). Not created on disk here.
+    compose_output_data_location: Path
+        Default Compose output path written to `compose-output-data-location` in experiment-config.yaml (ExperimentPaths.compose_output_dir). Not created on disk here.
+    apptainer_output_data_location: Path
+        Default Apptainer output path written to `apptainer-output-data-location` in experiment-config.yaml (ExperimentPaths.apptainer_output_dir). Not created on disk here.
     module_specific_input_data: str, optional
         Path to module-specific input data, Default is None
     experiment_specific_input_data: str, optional
@@ -331,9 +338,13 @@ def experiment_skeleton_to_facts_experiment(
             "Experiment-specific input data (eg. alternative FAIR data)",
             experiment_specific_input_data,
         ),
-        "output-data-location": create_metadata_bundle(
-            "Output path",
-            Path(output_data_location).as_posix(),
+        COMPOSE_OUTPUT_KEY: create_metadata_bundle(
+            "Output path for generate-compose",
+            Path(compose_output_data_location).as_posix(),
+        ),
+        APPTAINER_OUTPUT_KEY: create_metadata_bundle(
+            "Output path for generate-apptainer",
+            Path(apptainer_output_data_location).as_posix(),
         ),
         **(
             {

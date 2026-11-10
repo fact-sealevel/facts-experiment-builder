@@ -21,14 +21,6 @@ from facts_experiment_builder.io.experiment_repository import (
 logger = logging.getLogger(__name__)
 
 
-def _display_path(path: Path) -> Path:
-    """Return path relative to the current directory if it is under it, else as is."""
-    try:
-        return path.relative_to(Path.cwd())
-    except ValueError:
-        return path
-
-
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
     "--experiment-name",
@@ -38,7 +30,7 @@ def _display_path(path: Path) -> Path:
 )
 @click.option(
     "--custom-compose-path",
-    type=click.Path(),
+    type=click.Path(path_type=Path),
     default=None,
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
@@ -89,9 +81,7 @@ def main(
             workspace_dir=workspace_dir,
             experiment_repo=experiment_repo,
             backend=ComposeBackend(),
-            custom_output_path=(
-                Path(custom_compose_path) if custom_compose_path else None
-            ),
+            custom_output_path=custom_compose_path,
         )
         compose_path = output.path
     except (FileNotFoundError, ValueError) as e:  # need to incldue more errors ehre?
@@ -103,7 +93,7 @@ def main(
     )
     console.print("\n[primary]Next steps:[/primary]")
     console.print(
-        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {_display_path(compose_path)} up[/accent]"
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path} up[/accent]"
     )
     console.rule(
         style="rule",

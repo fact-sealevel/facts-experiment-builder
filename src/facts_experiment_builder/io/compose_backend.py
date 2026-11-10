@@ -11,7 +11,7 @@ from facts_experiment_builder.application.execution_graph import (
     Stage,
 )
 from facts_experiment_builder.core.module.module_service_path_resolution import (
-    ExperimentDataPaths,
+    COMPOSE_OUTPUT_KEY,
 )
 from facts_experiment_builder.io.compose_service import to_compose_service
 from facts_experiment_builder.io.paths import ExperimentPaths
@@ -58,13 +58,10 @@ def render_compose_services(graph: ExecutionGraph) -> dict[str, Any]:
 class ComposeBackend:
     """Writes the experiment as a Docker Compose file."""
 
+    output_key = COMPOSE_OUTPUT_KEY
+
     def default_output_path(self, experiment_paths: ExperimentPaths) -> Path:
         return experiment_paths.compose_path
-
-    def data_paths(
-        self, data_paths: ExperimentDataPaths, experiment_paths: ExperimentPaths
-    ) -> ExperimentDataPaths:
-        return data_paths
 
     def render(self, graph: ExecutionGraph, info: RunInfo) -> str:
         return make_compose_yaml(

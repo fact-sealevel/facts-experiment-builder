@@ -14,6 +14,25 @@ def _build_template_context(
     climate_service_name: str | None,
     mkdir_dirs: list[str],
 ) -> dict[str, Any]:
+    """Build the variables the apptainer_experiment.sh.j2 template renders.
+
+    Args:
+        stages: _ApptainerStages from io.apptainer_backend (typed Any here because
+            apptainer_backend imports this module)
+        info: Experiment-level values. info.config gives the top-level params
+            (experiment name, years, scenario, nsamps, pipeline-id); info.data_paths,
+            the same paths used to build the module specs, gives OUTPUT_DIR,
+            SHARED_IN and MODULE_IN; the SIF directory is
+            <info.workspace_dir>/apptainer_experiments/sif
+        climate_service_name: Name of the climate service, or None if there is none
+        mkdir_dirs: Output directories the script creates before running services
+
+    Returns:
+        Template context dict. workflow_vars pairs each of info.workflow_names with a
+        shell variable name, e.g. ("wf1", "WORKFLOW1_NAME"); climate_wait_files lists
+        each Stage 2 wait file once, in stage order; has_workflows is True when there
+        are facts-total services (Stage 3).
+    """
     # Paths come from the same ExperimentDataPaths used to build the module specs,
     # so OUTPUT_DIR etc. always match the binds.
     data_paths = info.data_paths
@@ -61,7 +80,23 @@ def render_apptainer_script(
     climate_service_name: str | None,
     mkdir_dirs: list[str],
 ) -> str:
-    """Render the Apptainer bash script template to a string."""
+    """Render the Apptainer bash script template to a string.
+
+    The template is apptainer_experiment.sh.j2 in the package's templates directory.
+    It is rendered with StrictUndefined, so a variable missing from the context
+    raises jinja2.UndefinedError instead of rendering as empty.
+
+    Args:
+        stages: _ApptainerStages from io.apptainer_backend
+        info: Experiment-level values: config (top-level params), data_paths,
+            workspace_dir (WORKSPACE and the SIF directory) and workflow_names
+        climate_service_name: Name of the climate service, or None if there is none
+        mkdir_dirs: Output directories the script creates before running services
+
+    Returns:
+        The script's content. See _build_template_context() for how the arguments
+        map to template variables.
+    """
     env = Environment(
         loader=PackageLoader("facts_experiment_builder", "templates"),
         undefined=StrictUndefined,
@@ -79,6 +114,15 @@ def render_apptainer_script(
 
 
 def write_apptainer_script(script_content: str, script_path: Path) -> None:
-    """Write script_content to script_path and make it executable."""
+    """Write script_content to script_path and make it executable.
+
+    Overwrites any existing file at script_path. Adds read and execute permission
+    for everyone and write permission for the owner (0o755) to the file's current
+    mode.
+
+    Args:
+        script_content: Script text, from render_apptainer_script()
+        script_path: Where to write the script; its parent directory must exist
+    """
     script_path.write_text(script_content)
     script_path.chmod(script_path.stat().st_mode | 0o755)

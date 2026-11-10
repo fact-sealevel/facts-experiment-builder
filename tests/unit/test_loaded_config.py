@@ -62,7 +62,9 @@ def test_hyphenated_keys_map_to_fields():
     assert config.location_file == "location.lst"
     assert config.module_specific_input_data == "/in/module"
     assert config.shared_input_data == "/in/shared"
-    assert config.output_data_location == "/out"
+    assert config.compose_output_data_location == "/out/compose"
+    assert config.apptainer_output_data_location == "/out/apptainer"
+    assert config.output_data_location is None
     assert config.experiment_specific_input_data == []
 
 

@@ -6,7 +6,6 @@ from facts_experiment_builder.application.execution_graph import build_execution
 from facts_experiment_builder.io.apptainer_backend import (
     _build_apptainer_stages,
     _compute_mkdir_dirs,
-    _with_apptainer_output_root,
 )
 from facts_experiment_builder.io.apptainer_service import (
     ApptainerServiceSpec,
@@ -315,7 +314,7 @@ def test_mixed_registries_keep_each_images_own_reference():
 
 
 # ---------------------------------------------------------------------------
-# Apptainer output root
+# Default output locations
 # ---------------------------------------------------------------------------
 
 
@@ -328,31 +327,19 @@ def _experiment_paths(tmp_path):
     )
 
 
-def test_apptainer_output_dir_is_separate_from_compose_output_dir(tmp_path):
+def test_default_output_dirs_are_separate(tmp_path):
     paths = _experiment_paths(tmp_path)
     assert paths.apptainer_output_dir == tmp_path / "experiments/exp/output-apptainer"
-    assert paths.apptainer_output_dir != paths.output_dir
+    assert paths.compose_output_dir == tmp_path / "experiments/exp/output-compose"
 
 
-def test_with_apptainer_output_root_replaces_only_the_output_root(tmp_path):
+def test_backends_read_their_own_output_key():
     from facts_experiment_builder.core.module.module_service_path_resolution import (
-        resolve_experiment_data_paths,
+        APPTAINER_OUTPUT_KEY,
+        COMPOSE_OUTPUT_KEY,
     )
+    from facts_experiment_builder.io.apptainer_backend import ApptainerBackend
+    from facts_experiment_builder.io.compose_backend import ComposeBackend
 
-    data_paths = resolve_experiment_data_paths(
-        {
-            "output-data-location": "/compose/output",
-            "shared-input-data": "/data/shared",
-            "module-specific-input-data": "/data/module",
-            "experiment-specific-input-data": "/data/exp",
-        }
-    )
-    paths = _experiment_paths(tmp_path)
-    result = _with_apptainer_output_root(data_paths, paths)
-    assert result.output_data_location == str(paths.apptainer_output_dir)
-    assert result.shared_input_data == data_paths.shared_input_data
-    assert result.module_specific_input_base == data_paths.module_specific_input_base
-    assert (
-        result.experiment_specific_input_data
-        == data_paths.experiment_specific_input_data
-    )
+    assert ApptainerBackend().output_key == APPTAINER_OUTPUT_KEY
+    assert ComposeBackend().output_key == COMPOSE_OUTPUT_KEY

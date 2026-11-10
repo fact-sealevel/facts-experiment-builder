@@ -20,7 +20,7 @@ class RunInfo:
     """Experiment-level values a backend may need besides the services."""
 
     config: LoadedExperimentConfig
-    data_paths: ExperimentDataPaths  # after ExecutionBackend.data_paths()
+    data_paths: ExperimentDataPaths  # output location from the backend's output_key
     workspace_dir: Path
     workflow_names: list[str]  # in experiment-config.yaml order
 
@@ -28,17 +28,12 @@ class RunInfo:
 class ExecutionBackend(Protocol):
     """Protocol to turn an ExecutionGraph into a run file and write it."""
 
+    # experiment-config.yaml key holding where this backend's runs write outputs, e.g.
+    # COMPOSE_OUTPUT_KEY; see module_service_path_resolution.output_location_key().
+    output_key: str
+
     def default_output_path(self, experiment_paths: ExperimentPaths) -> Path:
         """Where to write the run file when no custom path is given."""
-        ...
-
-    def data_paths(
-        self, data_paths: ExperimentDataPaths, experiment_paths: ExperimentPaths
-    ) -> ExperimentDataPaths:
-        """Return the experiment paths this backend's services should use.
-
-        Called before module specs are built, since they fix their paths then.
-        """
         ...
 
     def render(self, graph: ExecutionGraph, info: RunInfo) -> str: ...

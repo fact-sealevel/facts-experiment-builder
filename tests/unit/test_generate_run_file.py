@@ -1,6 +1,5 @@
 """Unit tests for application.generate_run_file, with a fake ExecutionBackend."""
 
-import dataclasses
 from pathlib import Path
 
 import pytest
@@ -11,6 +10,9 @@ from facts_experiment_builder.application.execution_graph import ExecutionGraph
 from facts_experiment_builder.application.generate_run_file import generate_run_file
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
+)
+from facts_experiment_builder.core.module.module_service_path_resolution import (
+    APPTAINER_OUTPUT_KEY,
 )
 from tests.unit.helpers import make_config_raw, make_execution_plan
 
@@ -28,15 +30,13 @@ class _FakeRepo:
 class _FakeBackend:
     """Records each call, in order."""
 
+    output_key = APPTAINER_OUTPUT_KEY
+
     def __init__(self):
         self.calls: list[tuple[str, object]] = []
 
     def default_output_path(self, experiment_paths):
         return experiment_paths.experiment_dir / "run-file"
-
-    def data_paths(self, data_paths, experiment_paths):
-        self.calls.append(("data_paths", data_paths))
-        return dataclasses.replace(data_paths, output_data_location="/backend/out")
 
     def render(self, graph: ExecutionGraph, info: RunInfo) -> str:
         self.calls.append(("render", (graph, info)))
@@ -86,7 +86,7 @@ def test_writes_rendered_content_to_the_default_path(workspace, planned):
     expected = workspace / _EXPERIMENT_NAME / "run-file"
     assert output.path == expected
     assert backend.calls[-1] == ("write", ("content", expected))
-    assert [name for name, _ in backend.calls] == ["data_paths", "render", "write"]
+    assert [name for name, _ in backend.calls] == ["render", "write"]
 
 
 def test_custom_output_path_wins_over_the_default(workspace, planned, tmp_path):
@@ -98,13 +98,14 @@ def test_custom_output_path_wins_over_the_default(workspace, planned, tmp_path):
     assert backend.calls[-1] == ("write", ("content", custom.resolve()))
 
 
-def test_planning_and_render_use_the_backends_data_paths(workspace, planned):
+def test_planning_and_render_use_the_backends_output_location(workspace, planned):
     backend = _FakeBackend()
     _run(workspace, backend)
 
-    assert planned["data_paths"].output_data_location == "/backend/out"
+    expected = make_config_raw()[APPTAINER_OUTPUT_KEY]
+    assert planned["data_paths"].output_data_location == expected
     _graph, info = dict(backend.calls)["render"]
-    assert info.data_paths.output_data_location == "/backend/out"
+    assert info.data_paths.output_data_location == expected
     assert info.workflow_names == ["wf1", "wf2"]
     assert info.workspace_dir == workspace
     assert info.config.nsamps == make_config_raw()["nsamps"]

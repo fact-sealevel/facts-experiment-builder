@@ -18,7 +18,7 @@ services:
       volumes:
       - <TMP>/workspace/data/module/fair-temperature:/mnt/module_specific_in
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
       restart: 'no'
    ssp-landwaterstorage:
       image: ghcr.io/fact-sealevel/ssp-landwaterstorage:0.3.0
@@ -46,7 +46,7 @@ services:
       volumes:
       - <TMP>/workspace/data/module/ssp-landwaterstorage:/mnt/module_specific_in
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
       restart: 'no'
    tlm-sterodynamics:
       image: ghcr.io/fact-sealevel/tlm-sterodynamics:0.3.2
@@ -69,7 +69,7 @@ services:
       volumes:
       - <TMP>/workspace/data/module/tlm-sterodynamics:/mnt/module_specific_in
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
       restart: 'no'
       depends_on:
          fair-temperature:
@@ -95,7 +95,7 @@ services:
       volumes:
       - <TMP>/workspace/data/module/emulandice-ais:/mnt/module_specific_in
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
       restart: 'no'
       depends_on:
          fair-temperature:
@@ -110,7 +110,7 @@ services:
       - --output-path=/mnt/total_out/facts-total/wf1_global_total.nc
       volumes:
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/total_out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
       restart: 'no'
       depends_on:
          ssp-landwaterstorage:
@@ -125,7 +125,7 @@ services:
       - --output-path=/mnt/total_out/facts-total/wf1_local_total.nc
       volumes:
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/total_out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
       restart: 'no'
       depends_on:
          ssp-landwaterstorage:
@@ -141,7 +141,7 @@ services:
       - --output-path=/mnt/total_out/facts-total/wf2_global_total.nc
       volumes:
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/total_out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
       restart: 'no'
       depends_on:
          tlm-sterodynamics:
@@ -159,7 +159,7 @@ services:
       - --output-path=/mnt/total_out/facts-total/wf2_local_total.nc
       volumes:
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/total_out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/total_out
       restart: 'no'
       depends_on:
          tlm-sterodynamics:
@@ -191,7 +191,7 @@ services:
       volumes:
       - <TMP>/workspace/data/module/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
       restart: 'no'
       depends_on:
          facts-total-wf1-local:
@@ -221,7 +221,7 @@ services:
       volumes:
       - <TMP>/workspace/data/module/extremesealevel-pointsoverthreshold:/mnt/module_specific_in
       - <TMP>/workspace/data/shared:/mnt/shared_in
-      - <TMP>/workspace/experiments/snapshot/output:/mnt/out
+      - <TMP>/workspace/experiments/snapshot/output-compose:/mnt/out
       restart: 'no'
       depends_on:
          facts-total-wf2-local:
