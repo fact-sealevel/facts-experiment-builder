@@ -248,6 +248,13 @@ def test_pull_image_uses_each_images_full_reference():
     assert "REGISTRY" not in result
 
 
+def test_sif_dir_is_in_workspace_dir():
+    from pathlib import Path
+
+    result = _render(workspace_dir=Path("/workspace"))
+    assert 'SIF_DIR="/workspace/apptainer_sif_files"' in result
+
+
 def test_run_service_uses_versioned_sif_name():
     spec = _make_apptainer_spec(
         "fair-temperature", image_tag="0.2.1", args=["--nsamps=100"]
