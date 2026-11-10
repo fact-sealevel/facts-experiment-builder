@@ -39,7 +39,7 @@ def test_hydrate_experiment_builds_climate_step():
             uses_climate_file=True,
         ),
     }
-    climate_step, sealevel_step, totaling_step, esl_step = hydrate_experiment(
+    climate_step, sealevel_step, _, _ = hydrate_experiment(
         skeleton=skeleton,
         schemas=schemas,
     )
@@ -152,6 +152,72 @@ def test_hydrate_experiment_climate_module_produces_module_spec():
 
     assert climate.module_spec is not None
     assert climate.module_spec.module_name == "fair-temperature"
+
+
+def test_facts_experiment_gets_supplied_climate_data_in_paths_and_module_inputs():
+    """--supplied-climate-step-data must appear in:
+    1) paths['experiment-specific-input-data']
+    2) each uses_climate_file sealevel module's climate-data-file input"""
+    from facts_experiment_builder.core.components.top_level_params import TopLevelParams
+    from facts_experiment_builder.core.experiment.skeleton import (
+        experiment_skeleton_to_facts_experiment,
+    )
+
+    supplied = "supplied-climate-data/gsat.nc"
+    skeleton = make_skeleton(
+        climate_module=None,
+        climate_data=supplied,
+        sealevel_modules=["tlm-sterodynamics", "bamber19-icesheets"],
+        totaling_module="facts-total",
+        workflows={"all-modules": ["tlm-sterodynamics", "bamber19-icesheets"]},
+    )
+    schemas = {
+        "tlm-sterodynamics": make_schema(
+            "tlm-sterodynamics",
+            uses_climate_file=True,
+            arguments={
+                "inputs": [
+                    {
+                        "name": "climate-data-file",
+                        "type": "file",
+                        "source": "module_inputs.inputs.climate_data_file",
+                        "climate_step_output": "output-gsat-file",
+                        "mount": {"volume": "output", "container_path": "/mnt/out"},
+                    }
+                ]
+            },
+        ),
+        "bamber19-icesheets": make_schema(
+            "bamber19-icesheets",
+            uses_climate_file=False,
+        ),
+        "facts-total": make_schema("facts-total"),
+    }
+    experiment = experiment_skeleton_to_facts_experiment(
+        experiment_name="test_alt_climate_data",
+        skeleton=skeleton,
+        top_level_params=TopLevelParams(
+            scenario="ssp245",
+            pipeline_id="abc123",
+            nsamps=500,
+            baseyear=2005,
+            pyear_start=2020,
+            pyear_end=2100,
+            pyear_step=10,
+            location_file="location.lst",
+        ),
+        schemas=schemas,
+        compose_output_data_location=Path("path/to/compose/output"),
+        apptainer_output_data_location=Path("path/to/apptainer/output"),
+        experiment_specific_input_data=[supplied],
+    )
+    # test climate data path gets propagated to field at top of config
+    assert experiment.paths["experiment-specific-input-data"]["value"] == [supplied]
+
+    # check that its also propagated to module level climate-data-file keys
+    by_name = {s.module_name: s for s in experiment.sealevel_step.module_specs_list}
+    assert by_name["tlm-sterodynamics"].inputs["climate-data-file"]["value"] == supplied
+    assert "climate-data-file" not in by_name["bamber19-icesheets"].inputs
 
 
 def test_hydrate_experiment_totaling_module_produces_module_spec():

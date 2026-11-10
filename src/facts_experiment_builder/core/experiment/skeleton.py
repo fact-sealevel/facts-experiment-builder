@@ -182,6 +182,14 @@ def hydrate_experiment(
     climate_files: dict[str, str] | None = None
     sealevel_schemas = None
 
+    # If skeleton has climate data, build climate_files for each sealevel module where uses_climate_file == True
+    if skeleton.climate_data:
+        sealevel_schemas = [schemas[name] for name in (skeleton.sealevel_modules or [])]
+        climate_files = {
+            s.module_name: skeleton.climate_data
+            for s in sealevel_schemas
+            if s.uses_climate_file
+        }
     # If skeleton has a climate module, extract schema and build step
     if skeleton.climate_module and skeleton.climate_module.upper() != "NONE":
         climate_schema = schemas[skeleton.climate_module]
