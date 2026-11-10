@@ -9,6 +9,7 @@ from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
 )
+from facts_experiment_builder.io.paths import SIF_DIR_NAME
 
 
 def _build_template_context(
@@ -32,7 +33,7 @@ def _build_template_context(
         data_paths: Experiment-level paths, the same ones used to build the module
             specs; give OUTPUT_DIR, SHARED_IN and MODULE_IN
         workspace_dir: Workspace root; the SIF directory is
-            <workspace_dir>/apptainer_experiments/sif
+            <workspace_dir>/apptainer_sif_files
         mkdir_dirs: Output directories the script creates before running services
         workflow_vars: (workflow name, shell variable name) pairs, e.g.
             ("wf1", "WORKFLOW1_NAME")
@@ -47,7 +48,7 @@ def _build_template_context(
     output_dir = data_paths.output_data_location
     shared_in = data_paths.shared_input_data
     module_in = data_paths.module_specific_input_base
-    sif_dir = str(workspace_dir / "apptainer_experiments" / "sif")
+    sif_dir = str(workspace_dir / SIF_DIR_NAME)
 
     climate_wait_files: list[str] = list(
         dict.fromkeys(f for spec in stages.stage2 for f in spec.wait_for_files)
