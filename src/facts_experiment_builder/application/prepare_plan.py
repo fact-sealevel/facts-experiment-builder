@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Shared pipeline from loaded experiment config to a format-agnostic _ExecutionPlan.
 
 Both generate-compose and generate-apptainer call prepare_execution_plan() and then

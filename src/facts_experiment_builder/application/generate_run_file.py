@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Generate an experiment's run file (e.g. Docker Compose YAML or an Apptainer bash
 script) with a given ExecutionBackend."""
 

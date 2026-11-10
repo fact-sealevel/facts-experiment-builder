@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Format-agnostic execution plan for FACTS experiments.
 
 Defines _ExecutionPlan and build_experiment_execution_plan(), which provide a format-
