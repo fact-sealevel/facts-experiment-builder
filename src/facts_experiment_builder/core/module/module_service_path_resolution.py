@@ -1,5 +1,6 @@
 """Resolve experiment-level and module-level host paths from experiment metadata."""
 
+import logging
 import os
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,6 +12,16 @@ from facts_experiment_builder.core.typed_path import (
 )
 from facts_experiment_builder.core.module.arg_specs import MountSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+
+logger = logging.getLogger(__name__)
+
+# experiment-config.yaml keys for where each run command writes outputs. Each command
+# uses its key's value as written.
+COMPOSE_OUTPUT_KEY = "compose-output-data-location"
+APPTAINER_OUTPUT_KEY = "apptainer-output-data-location"
+# Deprecated: the Compose output location in configs written before
+# COMPOSE_OUTPUT_KEY. Still read by generate-compose when COMPOSE_OUTPUT_KEY is missing.
+LEGACY_OUTPUT_KEY = "output-data-location"
 
 
 def is_shared_input(mount: MountSpec | None) -> bool:
@@ -129,7 +140,7 @@ def resolve_input_path(
 
 
 def resolve_output_path(field_value: Any, output_data_location: str, context: str = ""):
-    """Resolve an output file path using the output-data-location base path.
+    """Resolve an output file path using the experiment-level output location.
 
     Args:
         field_value: Value from metadata (can be string path or dict with 'value' key)
@@ -146,7 +157,7 @@ def resolve_output_path(field_value: Any, output_data_location: str, context: st
         context_msg = f" in {context}" if context else ""
         raise ValueError(
             f"output_data_location is None when resolving output path{context_msg}. "
-            f"This usually means 'output-data-location' path is None in metadata."
+            f"This usually means the run command's output location (e.g. 'compose-output-data-location') is None in metadata."
         )
     if not isinstance(output_data_location, str):
         context_msg = f" in {context}" if context else ""
@@ -218,11 +229,40 @@ def _get_required_path(metadata: dict[str, Any], key: str, context: str) -> str:
     return value
 
 
-def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[str, str]:
+def output_location_key(metadata: dict[str, Any], output_key: str) -> str:
+    """Return the experiment-config.yaml key to read a run command's output location
+    from.
+
+    output_key is COMPOSE_OUTPUT_KEY or APPTAINER_OUTPUT_KEY. If a config has no
+    COMPOSE_OUTPUT_KEY but has the deprecated LEGACY_OUTPUT_KEY, that key is used, with
+    a warning.
+
+    Raises:
+        ValueError: If the config has no key for this command's output location
+    """
+    if output_key in metadata:
+        return output_key
+    if output_key == COMPOSE_OUTPUT_KEY and LEGACY_OUTPUT_KEY in metadata:
+        logger.warning(
+            "experiment-config.yaml uses '%s', which is deprecated and will be "
+            "removed in a future version. Rename it to '%s'.",
+            LEGACY_OUTPUT_KEY,
+            COMPOSE_OUTPUT_KEY,
+        )
+        return LEGACY_OUTPUT_KEY
+    raise ValueError(
+        f"experiment-config.yaml has no '{output_key}' value. Add it with the "
+        "directory this experiment's outputs should be written to."
+    )
+
+
+def get_experiment_paths(
+    metadata: dict[str, Any], output_key: str, context: str = ""
+) -> dict[str, str]:
     """Extract the required experiment-level paths from metadata.
 
     Rules for the three required keys (`shared-input-data`,
-    `module-specific-input-data`, `output-data-location`):
+    `module-specific-input-data`, and the output location key `output_key`):
     - They must be present under exactly these names, as written by the
       experiment-config.yaml template. No alternative spellings are accepted.
     - Values must be plain strings. `None` (an empty field) is an error, and a
@@ -233,6 +273,7 @@ def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[st
 
     Args:
         metadata: Experiment metadata dictionary
+        output_key: Key holding the output location, from output_location_key()
         context: Optional context for error messages
 
     Returns:
@@ -250,9 +291,7 @@ def get_experiment_paths(metadata: dict[str, Any], context: str = "") -> dict[st
         "module_specific_input_data": _get_required_path(
             metadata, "module-specific-input-data", context
         ),
-        "output_data_location": _get_required_path(
-            metadata, "output-data-location", context
-        ),
+        "output_data_location": _get_required_path(metadata, output_key, context),
     }
 
 
@@ -319,7 +358,7 @@ class ExperimentDataPaths:
 
 
 def resolve_experiment_data_paths(
-    metadata: dict[str, Any], context: str = "experiment config"
+    metadata: dict[str, Any], output_key: str, context: str = "experiment config"
 ) -> ExperimentDataPaths:
     """Read and expand the experiment-level path keys from experiment metadata.
 
@@ -330,6 +369,7 @@ def resolve_experiment_data_paths(
 
     Args:
         metadata: Experiment metadata dictionary
+        output_key: Key holding the output location, from output_location_key()
         context: Context for error messages
 
     Returns:
@@ -339,7 +379,7 @@ def resolve_experiment_data_paths(
         KeyError: If a required path key is missing
         ValueError: If a required path value is None or invalid
     """
-    experiment_paths = get_experiment_paths(metadata, context)
+    experiment_paths = get_experiment_paths(metadata, output_key, context)
 
     raw_exp_specific = metadata.get("experiment-specific-input-data")
     if isinstance(raw_exp_specific, dict):
@@ -360,7 +400,7 @@ def resolve_experiment_data_paths(
     )
     output_data_location = expand_path(
         experiment_paths["output_data_location"],
-        f"{context} (output-data-location)",
+        f"{context} ({output_key})",
     )
     return ExperimentDataPaths(
         shared_input_data=shared_input_data,

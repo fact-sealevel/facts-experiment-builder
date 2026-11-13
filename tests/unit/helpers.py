@@ -51,3 +51,22 @@ def make_skeleton(**overrides) -> ExperimentSkeleton:
         module_regions=None,
     )
     return ExperimentSkeleton(**{**defaults, **overrides})
+
+
+def make_config_raw(**overrides) -> dict:
+    """A loaded experiment-config.yaml mapping with every required field set."""
+    defaults = {
+        "experiment_name": "test_experiment",
+        "pipeline-id": "abc123",
+        "nsamps": 100,
+        "scenario": "ssp585",
+        "baseyear": 2005,
+        "pyear_start": 2020,
+        "pyear_end": 2150,
+        "pyear_step": 10,
+        "module-specific-input-data": "/in/module",
+        "shared-input-data": "/in/shared",
+        "compose-output-data-location": "/out/compose",
+        "apptainer-output-data-location": "/out/apptainer",
+    }
+    return {**defaults, **overrides}

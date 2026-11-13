@@ -37,6 +37,19 @@ class _ModuleSpecs:
     esl_modules: dict[str, ModuleServiceSpec]
     # TODO do not want these categories to be so rigid in the future
 
+    @property
+    def is_empty(self) -> bool:
+        """True when no module specs were created (every step uses pre-existing
+        data)."""
+        return not any(
+            [
+                self.climate_module,
+                self.sealevel_modules,
+                self.framework_modules,
+                self.esl_modules,
+            ]
+        )
+
 
 @dataclass(frozen=True)
 class _ExecutionPlan:
@@ -55,17 +68,15 @@ class _ExecutionPlan:
     facts_total_specs: one spec per workflow × output_type. Value is (spec, workflow)
         so renderers can construct depends_on / wait_for from wf.module_names.
 
-    esl_specs: one spec per ESL module × workflow when workflows are defined. Value is
-        (spec, depends_on_service_name).
-
-    standalone_esl_specs: ESL specs when no workflows are defined (plain services,
-        no cross-service dependency).
+    esl_specs: one spec per ESL module × workflow. Value is (spec,
+        depends_on_service_name). ESL always runs per workflow because it reads the
+        workflow's facts-total output; _make_experiment_plan rejects ESL without
+        workflows.
     """
 
     standard_specs: dict[str, ModuleServiceSpec]
     facts_total_specs: dict[str, tuple[ModuleServiceSpec, Workflow]]
     esl_specs: dict[str, tuple[ModuleServiceSpec, str]]
-    standalone_esl_specs: dict[str, ModuleServiceSpec]
     climate_service_name: str | None
     suppress_output_types: set[str]
 
@@ -295,8 +306,8 @@ def build_experiment_execution_plan(
     """Build a format-agnostic execution plan from module specs and experiment plan.
 
     Assembles _ExecutionPlan from the already-resolved _ModuleSpecs, adding per-workflow
-    facts-total and ESL specs. Both compose and apptainer renderers call this and then
-    render the result in their own format.
+    facts-total and ESL specs. Called by prepare_plan.prepare_execution_plan(), whose
+    result both compose and apptainer render in their own format.
     """
     climate_service_name = (
         specs.climate_module.module_name if specs.climate_module else None
@@ -315,7 +326,6 @@ def build_experiment_execution_plan(
         )
 
     esl_specs: dict[str, tuple[ModuleServiceSpec, str]] = {}
-    standalone_esl_specs: dict[str, ModuleServiceSpec] = {}
     if plan.workflows:
         esl_specs = _build_esl_specs_for_workflows(
             esl_module_names=plan.esl_module_names,
@@ -325,14 +335,11 @@ def build_experiment_execution_plan(
             schemas=schemas,
             data_paths=data_paths,
         )
-    elif plan.experiment.projection_scale != "global":
-        standalone_esl_specs = dict(specs.esl_modules)
 
     return _ExecutionPlan(
         standard_specs=standard_specs,
         facts_total_specs=facts_total_specs,
         esl_specs=esl_specs,
-        standalone_esl_specs=standalone_esl_specs,
         climate_service_name=climate_service_name,
         suppress_output_types=plan.suppress_output_types,
     )

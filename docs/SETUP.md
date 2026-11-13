@@ -29,7 +29,8 @@ uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main fe
 This single command:
 1. Creates an `experiments/` subdirectory to hold all files and outputs associated with your experiments
 2. Clones the [facts-module-registry](https://github.com/fact-sealevel/facts-module-registry) into your workspace
-3. Writes a `.facts-workspace` marker file
+3. Adds `facts-module-registry/` and `apptainer_sif_files/` (where `generate-apptainer` scripts store Apptainer images; it's created when you first run one) to the workspace's `.gitignore`, creating the file if needed
+4. Writes a `.facts-workspace` marker file
 
 It is safe to re-run on an already-initialized workspace — existing directories and files will not be overwritten.
 

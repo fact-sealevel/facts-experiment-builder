@@ -51,7 +51,11 @@ def init(registry_url: str) -> None:
             "  rm -rf facts-module-registry/\nthen re-run feb init."
         )
 
-    _print_step_result(3, ".gitignore (facts-module-registry/ entry)", result.gitignore)
+    _print_step_result(
+        3,
+        ".gitignore (facts-module-registry/, apptainer_sif_files/ entries)",
+        result.gitignore,
+    )
     _print_step_result(4, ".facts-workspace marker", result.marker_file)
 
     console.print("\n[primary]Step 5:[/primary] Input data")

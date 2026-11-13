@@ -6,6 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from facts_experiment_builder.core.components.top_level_params import TopLevelParams
+from facts_experiment_builder.core.module.apptainer_service_spec import (
+    ApptainerServiceSpec,
+)
 from facts_experiment_builder.core.module.arg_specs import (
     BaseArgSpec,
     OtherOutputSpec,
@@ -152,15 +155,15 @@ class ModuleServiceSpec:
         """Build command arguments from YAML configuration.
 
         Returns:
-            List of command-line arguments (with command name first if specified)
+            List of command-line arguments, starting with the subcommand when the module
+            YAML specifies one (e.g. "glaciers" or "icesheets"). `command: main` means
+            the image's default command, so no subcommand argument is added for it.
         """
         command_args = []
 
-        # Check if a specific command is specified (e.g., "glaciers" or "icesheets")
-        if self.module_definition.command:
-            command_args.append(
-                self.module_definition.command
-            )  # Add command name first
+        command = self.module_definition.command
+        if command and command != "main":
+            command_args.append(command)
 
         arguments_config = self.module_definition.arguments
 
@@ -288,6 +291,42 @@ class ModuleServiceSpec:
                 return base
             return f"{base}/{filename}"
         return value
+
+    def host_output_paths(
+        self, suppress_output_types: set | None = None
+    ) -> dict[str, str]:
+        """Map output arg name -> host path, for outputs on the shared output volume.
+
+        Host-side counterpart of `_to_output_container_path`: the output volume mounts
+        the parent of `output_paths.output_dir`, so a container path
+        `<container_path>/<module_name>/<filename>` (or
+        `<output_container_base>/<filename>` for facts-total services) is the host path
+        `<output_dir>/<filename>`. An output whose value is the module directory itself
+        (e.g. output-dir) maps to `<output_dir>`.
+        """
+        output_dir = Path(self.components.output_paths.output_dir)
+        output_volume = self.module_definition.output_volume_key()
+        host_paths: dict[str, str] = {}
+        for arg_spec in self.module_definition.get_outputs_list(
+            suppress_output_types=suppress_output_types
+        ):
+            mount = arg_spec.mount
+            if not mount or mount.volume != output_volume:
+                continue
+            if not mount.container_path.rstrip("/"):
+                continue
+            value = self._resolve_value(arg_spec.source)
+            if not isinstance(value, (str, Path)):
+                continue
+            filename = Path(value).name
+            if (
+                not self.components.output_container_base
+                and filename == self.components.module_name
+            ):
+                host_paths[arg_spec.name] = str(output_dir)
+            else:
+                host_paths[arg_spec.name] = str(output_dir / filename)
+        return host_paths
 
     def _to_input_container_path(self, value, arg_spec):
         """Apply transforms to a resolved non-output value and map it to its container
@@ -553,6 +592,47 @@ class ModuleServiceSpec:
         #     'image': f"{self.image.image_url}:{self.image.image_tag}",
         # }
 
+    def generate_apptainer_service(
+        self,
+        wait_for_files: list[str] | None = None,
+        run_in_background: bool = False,
+        pid_var: str | None = None,
+        suppress_output_types: set | None = None,
+    ) -> ApptainerServiceSpec:
+        """Generate Apptainer service specification.
+
+        Args:
+            wait_for_files: Host paths to poll before running (Stage 2 gate).
+            run_in_background: True for facts-total parallel jobs (Stage 3).
+            pid_var: Shell PID variable name e.g. 'PID_WF1F_GLOBAL'; None if not
+                background.
+            suppress_output_types: Output types to omit from command args.
+
+        Returns:
+            ApptainerServiceSpec with all run information for this module.
+        """
+        args = self._build_command_args(suppress_output_types=suppress_output_types)
+        volumes = self._build_volumes()
+        image_url = self.components.image.image_url.rstrip("/")
+        image_tag = self.components.image.image_tag
+        registry, _, image_name = image_url.rpartition("/")
+        return ApptainerServiceSpec(
+            service_name=self.module_name,
+            image_name=image_name,
+            image_tag=image_tag,
+            binds=volumes,
+            args=args,
+            wait_for_files=wait_for_files or [],
+            run_in_background=run_in_background,
+            pid_var=pid_var,
+            output_dir=self.components.output_paths.output_dir,
+            registry=registry,
+            # All outputs, not filtered by suppress_output_types: other services may
+            # wait on outputs this one writes regardless of what is passed downstream.
+            host_outputs=self.host_output_paths(),
+            env=self._build_environment(),
+        )
+
 
 def _resolve_module_inputs_dict(
     module_definition: ModuleSchema,
@@ -787,9 +867,6 @@ def build_compose_service_dict(
     Returns:
         Dictionary suitable for a single service in a compose file (image, command, volumes, depends_on, restart)
     """
-    # TODO: better fix for this but should work for now
-    if command and command[0] == "main":
-        command = command[1:]
     service = {
         "image": image_str,
         "command": command,

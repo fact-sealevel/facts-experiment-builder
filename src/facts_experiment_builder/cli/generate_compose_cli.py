@@ -61,7 +61,7 @@ def _configure_feb_logging() -> None:
 )
 @click.option(
     "--custom-compose-path",
-    type=click.Path(),
+    type=click.Path(path_type=Path),
     default=None,
     help="Output path for compose file. If not provided, will use ../experiment_dir/experiment-compose.yaml. If provided, must include full path to file and use filename 'experiment-compose.yaml'",
 )
@@ -139,7 +139,7 @@ def main(
     )
     console.print("\n[primary]Next steps:[/primary]")
     console.print(
-        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path.relative_to(Path.cwd())} up[/accent]"
+        f"  [muted]1.[/muted] Run the experiment: [accent]docker compose -f {compose_path} up[/accent]"
     )
     console.rule(
         style="rule",

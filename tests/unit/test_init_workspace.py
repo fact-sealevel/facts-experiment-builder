@@ -6,6 +6,7 @@ import yaml
 from click.testing import CliRunner
 
 from facts_experiment_builder.application.init_workspace import (
+    GITIGNORE_ENTRIES,
     REGISTRY_DIR_NAME,
     REGISTRY_URL,
     WORKSPACE_MARKER_FILENAME,
@@ -118,7 +119,8 @@ def test_ensure_workspace_marker_already_exists(tmp_path):
 # ensure_gitignore
 # ---------------------------------------------------------------------------
 
-_GITIGNORE_ENTRY = f"{REGISTRY_DIR_NAME}/"
+_REGISTRY_ENTRY = f"{REGISTRY_DIR_NAME}/"
+_SIF_ENTRY = "apptainer_sif_files/"
 
 
 def test_ensure_gitignore_creates_file_when_absent(tmp_path):
@@ -126,7 +128,7 @@ def test_ensure_gitignore_creates_file_when_absent(tmp_path):
     assert result.status == StepStatus.CREATED
     gitignore = tmp_path / ".gitignore"
     assert gitignore.exists()
-    assert _GITIGNORE_ENTRY in gitignore.read_text().splitlines()
+    assert gitignore.read_text().splitlines() == [_REGISTRY_ENTRY, _SIF_ENTRY]
 
 
 def test_ensure_gitignore_appends_to_existing_file(tmp_path):
@@ -139,7 +141,8 @@ def test_ensure_gitignore_appends_to_existing_file(tmp_path):
     lines = gitignore.read_text().splitlines()
     assert "*.pyc" in lines
     assert "__pycache__/" in lines
-    assert _GITIGNORE_ENTRY in lines
+    assert _REGISTRY_ENTRY in lines
+    assert _SIF_ENTRY in lines
 
 
 def test_ensure_gitignore_appends_without_double_newline(tmp_path):
@@ -149,18 +152,43 @@ def test_ensure_gitignore_appends_without_double_newline(tmp_path):
     ensure_gitignore(tmp_path)
 
     content = gitignore.read_text()
-    assert content.count(_GITIGNORE_ENTRY) == 1
-    assert not content.startswith("\n")
+    assert content.splitlines() == ["*.pyc", _REGISTRY_ENTRY, _SIF_ENTRY]
 
 
 def test_ensure_gitignore_already_exists(tmp_path):
     gitignore = tmp_path / ".gitignore"
-    gitignore.write_text(f"*.pyc\n{_GITIGNORE_ENTRY}\n")
+    gitignore.write_text(f"*.pyc\n{_REGISTRY_ENTRY}\n{_SIF_ENTRY}\n")
 
     result = ensure_gitignore(tmp_path)
 
     assert result.status == StepStatus.ALREADY_EXISTS
-    assert gitignore.read_text().count(_GITIGNORE_ENTRY) == 1
+    assert gitignore.read_text().count(_REGISTRY_ENTRY) == 1
+    assert gitignore.read_text().count(_SIF_ENTRY) == 1
+
+
+def test_ensure_gitignore_adds_only_missing_entries(tmp_path):
+    """A workspace initialized before apptainer_sif_files/ was ignored gets only the
+    new entry on re-run."""
+    gitignore = tmp_path / ".gitignore"
+    gitignore.write_text(f"{_REGISTRY_ENTRY}\n")
+
+    result = ensure_gitignore(tmp_path)
+
+    assert result.status == StepStatus.CREATED
+    assert gitignore.read_text().splitlines() == [_REGISTRY_ENTRY, _SIF_ENTRY]
+
+
+def test_ensure_gitignore_empty_file_gets_no_leading_blank_line(tmp_path):
+    gitignore = tmp_path / ".gitignore"
+    gitignore.write_text("")
+
+    ensure_gitignore(tmp_path)
+
+    assert gitignore.read_text().splitlines() == [_REGISTRY_ENTRY, _SIF_ENTRY]
+
+
+def test_gitignore_entries_match_dir_names():
+    assert GITIGNORE_ENTRIES == (_REGISTRY_ENTRY, _SIF_ENTRY)
 
 
 # ---------------------------------------------------------------------------
@@ -185,7 +213,7 @@ def test_init_workspace_fresh(tmp_path):
 def test_init_workspace_idempotent(tmp_path):
     (tmp_path / "experiments").mkdir()
     (tmp_path / "facts-module-registry").mkdir()
-    (tmp_path / ".gitignore").write_text(f"{_GITIGNORE_ENTRY}\n")
+    (tmp_path / ".gitignore").write_text(f"{_REGISTRY_ENTRY}\n{_SIF_ENTRY}\n")
     marker_path = tmp_path / WORKSPACE_MARKER_FILENAME
     marker_path.write_text(
         yaml.dump(

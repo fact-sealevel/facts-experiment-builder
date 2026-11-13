@@ -13,9 +13,12 @@ from pathlib import Path
 
 import yaml
 
+from facts_experiment_builder.io.paths import SIF_DIR_NAME
+
 REGISTRY_URL = "https://github.com/fact-sealevel/facts-module-registry.git"
 REGISTRY_DIR_NAME = "facts-module-registry"
 WORKSPACE_MARKER_FILENAME = ".facts-workspace"
+GITIGNORE_ENTRIES = (f"{REGISTRY_DIR_NAME}/", f"{SIF_DIR_NAME}/")
 
 
 class StepStatus(Enum):
@@ -87,25 +90,32 @@ def ensure_registry_cloned(
 
 
 def ensure_gitignore(workspace_dir: Path) -> InitStepResult:
-    """Add facts-module-registry/ to .gitignore, creating the file if needed.
+    """Add facts-module-registry/ and apptainer_sif_files/ to .gitignore, creating the
+    file if needed.
 
-    Prevents the cloned registry from being accidentally staged if the user later runs
-    `git init` in their workspace.
+    Prevents the cloned registry and Apptainer image files from being accidentally
+    staged if the user later runs `git init` in their workspace. apptainer_sif_files/
+    doesn't exist until a generated Apptainer script runs; ignoring it before then is
+    harmless. Only missing entries are added, so re-running on an older workspace adds
+    any new ones.
     """
     gitignore_path = workspace_dir / ".gitignore"
-    entry = f"{REGISTRY_DIR_NAME}/"
 
     if gitignore_path.exists():
         existing = gitignore_path.read_text()
-        if entry in existing.splitlines():
+        present = existing.splitlines()
+        missing = [entry for entry in GITIGNORE_ENTRIES if entry not in present]
+        if not missing:
             return InitStepResult(
-                StepStatus.ALREADY_EXISTS, "Entry already present.", gitignore_path
+                StepStatus.ALREADY_EXISTS, "Entries already present.", gitignore_path
             )
-        separator = "" if existing.endswith("\n") else "\n"
-        gitignore_path.write_text(existing + separator + entry + "\n")
-        return InitStepResult(StepStatus.CREATED, "Entry added.", gitignore_path)
+        separator = "" if not existing or existing.endswith("\n") else "\n"
+        gitignore_path.write_text(existing + separator + "\n".join(missing) + "\n")
+        return InitStepResult(
+            StepStatus.CREATED, f"Added {', '.join(missing)}.", gitignore_path
+        )
 
-    gitignore_path.write_text(entry + "\n")
+    gitignore_path.write_text("\n".join(GITIGNORE_ENTRIES) + "\n")
     return InitStepResult(StepStatus.CREATED, "Created.", gitignore_path)
 
 

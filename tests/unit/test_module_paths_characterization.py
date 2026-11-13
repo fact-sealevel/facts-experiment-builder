@@ -1,7 +1,7 @@
 """Characterization tests for module-level host path resolution.
 
 These pin the observable behavior of resolving experiment-level path keys
-(shared-input-data, module-specific-input-data, output-data-location,
+(shared-input-data, module-specific-input-data, compose-output-data-location,
 experiment-specific-input-data) into per-module ResolvedPaths, so the refactor
 that resolves experiment-level paths once per experiment can be checked for
 behavior changes. Only `_resolve()` should need to change across the refactor.
@@ -15,6 +15,7 @@ import pytest
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_path_resolution import (
+    COMPOSE_OUTPUT_KEY,
     resolve_experiment_data_paths,
     resolve_module_paths,
 )
@@ -37,7 +38,7 @@ def _metadata(
     metadata: dict[str, Any] = {
         "shared-input-data": "/in/shared",
         "module-specific-input-data": "/in/module",
-        "output-data-location": "/out",
+        "compose-output-data-location": "/out",
     }
     metadata.update(paths)
     metadata[module_name] = section if section is not None else {}
@@ -51,7 +52,9 @@ def _resolve(
     known_module_names: list[str] | None = None,
 ):
     return resolve_module_paths(
-        data_paths=resolve_experiment_data_paths(metadata),
+        data_paths=resolve_experiment_data_paths(
+            metadata, output_key=COMPOSE_OUTPUT_KEY
+        ),
         module_metadata=metadata[module_name],
         module_name=module_name,
         module_definition=schema,
@@ -176,7 +179,7 @@ def test_experiment_specific_input_data_missing_is_none():
 
 def test_tilde_is_expanded():
     resolved = _resolve(
-        _metadata("m", **{"output-data-location": "~/out"}), "m", _schema("m")
+        _metadata("m", **{"compose-output-data-location": "~/out"}), "m", _schema("m")
     )
     assert resolved.output_data_location == os.path.expanduser("~") + "/out/m"
 
@@ -198,7 +201,7 @@ def test_relative_paths_resolve_against_cwd(monkeypatch, tmp_path):
             **{
                 "shared-input-data": "./data/shared",
                 "module-specific-input-data": "./data/module",
-                "output-data-location": "./out",
+                "compose-output-data-location": "./out",
             },
         ),
         "m",
@@ -219,9 +222,9 @@ def test_relative_paths_resolve_against_cwd(monkeypatch, tmp_path):
     [
         ("shared-input-data", "shared_input_data"),
         ("module-specific-input-data", "module_specific_input_data"),
-        ("output-data-location", "output_data_location"),
-        ("output-data-location", "output-path"),
-        ("output-data-location", "output_path"),
+        ("compose-output-data-location", "output_data_location"),
+        ("compose-output-data-location", "output-path"),
+        ("compose-output-data-location", "output_path"),
     ],
 )
 def test_alternative_key_spelling_counts_as_missing(primary, alternative):
@@ -245,7 +248,8 @@ def test_alternative_key_spelling_is_ignored_when_primary_present():
 
 
 @pytest.mark.parametrize(
-    "key", ["shared-input-data", "module-specific-input-data", "output-data-location"]
+    "key",
+    ["shared-input-data", "module-specific-input-data", "compose-output-data-location"],
 )
 def test_missing_required_key_raises_key_error(key):
     metadata = _metadata("m")
@@ -255,7 +259,8 @@ def test_missing_required_key_raises_key_error(key):
 
 
 @pytest.mark.parametrize(
-    "key", ["shared-input-data", "module-specific-input-data", "output-data-location"]
+    "key",
+    ["shared-input-data", "module-specific-input-data", "compose-output-data-location"],
 )
 def test_none_required_key_raises_value_error(key):
     with pytest.raises(ValueError, match=key):
@@ -263,7 +268,8 @@ def test_none_required_key_raises_value_error(key):
 
 
 @pytest.mark.parametrize(
-    "key", ["shared-input-data", "module-specific-input-data", "output-data-location"]
+    "key",
+    ["shared-input-data", "module-specific-input-data", "compose-output-data-location"],
 )
 def test_value_dict_for_required_key_raises_value_error(key):
     """{"value": ...} is not unwrapped for the three required keys (only for the

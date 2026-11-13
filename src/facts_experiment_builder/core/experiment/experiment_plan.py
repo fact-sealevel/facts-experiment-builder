@@ -11,41 +11,39 @@ from facts_experiment_builder.core.module.module_schema import (
 )
 from facts_experiment_builder.core.workflow import Workflow, workflows_from_metadata
 
-_REQUIRED_FIELDS = [
-    "experiment_name",
-    "pipeline-id",
-    "nsamps",
-    "scenario",
-    "pyear_start",
-    "pyear_end",
-    "pyear_step",
-    "baseyear",
-    "module-specific-input-data",
-    "shared-input-data",
-    "output-data-location",
-]
 
+def check_totaling_and_esl_have_workflows(
+    sealevel_module_names: list[str],
+    framework_module_names: list[str],
+    esl_module_names: list[str],
+    workflows: dict[str, Workflow],
+) -> None:
+    """Raise if facts-total or ESL modules cannot receive their inputs.
 
-def check_metadata_has_required_fields(metadata_obj, required_fields):
-    """This function accepts a list of required fields and a metadata object and subsets
-    the metadata to required fields."""
-    # Subset
-    required_fields_meta = {
-        k: v for k, v in metadata_obj.items() if k in required_fields
-    }
-
-    # R aise error if any are missing a value
-    for k, v in required_fields_meta.items():
-        if v is None:
-            raise ValueError(
-                f"A value for {k} is required but none was found. Check that all required fields in this experiment's experiment-config.yml have been completed."
-            )
+    facts-total and ESL services are built per workflow, and ESL reads the facts-total
+    output. Without sea-level modules there is nothing to total; without workflows no
+    facts-total service is built.
+    """
+    if esl_module_names and not sealevel_module_names:
+        raise ValueError(
+            f"Extreme sea-level module(s) {esl_module_names} require sea-level modules "
+            "in the sea-level step; they cannot be used without them or with supplied "
+            "totaled sea-level data. Remove the extreme sea-level step or add sea-level "
+            "modules and re-run setup-experiment."
+        )
+    if framework_module_names and not workflows:
+        raise ValueError(
+            "This experiment includes a totaling step but no workflows, so facts-total "
+            "(and any extreme sea-level module) would never run. Add a 'workflows' entry "
+            "to experiment-config.yml (e.g. 'all-modules: <sea-level modules>') or re-run "
+            "setup-experiment."
+        )
 
 
 @dataclass(frozen=True)
 class _ExperimentPlan:
-    """Result of phase 1 of gen compose: parsed experiment structure and module name
-    lists."""
+    """Result of phase 1 of generating services: parsed experiment structure and module
+    name lists."""
 
     experiment: FactsExperiment
     climate_module_name: str | None  # TODO rename to climate
@@ -59,16 +57,11 @@ class _ExperimentPlan:
 def _make_experiment_plan(
     metadata: dict[str, Any], schemas: dict[str, ModuleSchema]
 ) -> _ExperimentPlan:
-    """Phase 1 of generating compose:
+    """Phase 1 of generating services:
     Validate metadata and build a typed experiment plan.
 
     Ths fn is only data transformation, there should be no filesystem I/O.
     """
-    # This should raise an error if user has not completed necessary fields in experiment-config.yaml
-    check_metadata_has_required_fields(
-        metadata_obj=metadata, required_fields=_REQUIRED_FIELDS
-    )
-
     # Get the list of modules included in experiment from manifest in exp config
     # _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
     # Use list of modules to load schema for each module
@@ -102,9 +95,15 @@ def _make_experiment_plan(
     )
     # Make workflow obj from metadata
     workflows = workflows_from_metadata(metadata)
+    check_totaling_and_esl_have_workflows(
+        sealevel_module_names=sealevel_module_names,
+        framework_module_names=framework_module_names,
+        esl_module_names=esl_module_names,
+        workflows=workflows,
+    )
 
     # Make an ExperimentPlan obj
-    # (first component of generate compose, used to build module spec objs)
+    # (first component of generating services, used to build module spec objs)
     return _ExperimentPlan(
         experiment=experiment,
         climate_module_name=climate_module_name,

@@ -6,9 +6,34 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     unparse_module_list,
     validate_module_names,
 )
+from facts_experiment_builder.core.experiment.skeleton import ExperimentSkeleton
 from facts_experiment_builder.core.workflow import (
     WorkflowName,
 )
+
+
+def _resolve_workflows(
+    skeleton: ExperimentSkeleton,
+    total_all_modules: bool,
+) -> dict[str, str]:
+    """Return the experiment's workflows as {workflow name: comma-separated modules}.
+
+    - No totaling step (no sea-level modules, or supplied totaled data): {}.
+    - One sea-level module: {"all-modules": <module>}, created without prompting,
+      since that module is the only possible workflow.
+    - Multiple sea-level modules: workflows collected from the user via prompts.
+    """
+    if not skeleton.totaling_module:
+        return {}
+    if len(skeleton.sealevel_modules) == 1:
+        workflow_name, module_list_str = _create_all_modules_workflow(
+            complete_modules_list=skeleton.sealevel_modules,
+        )
+        return {workflow_name: module_list_str}
+    return _collect_workflows(
+        complete_modules_list=skeleton.sealevel_modules,
+        total_all_modules=total_all_modules,
+    )
 
 
 def _collect_workflows(

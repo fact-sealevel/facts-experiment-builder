@@ -117,9 +117,16 @@ experiment-specific-input-data:
                                                # optional — leave blank if not needed
 
 ##----- Outputs -----##
-output-data-location:
-        # Output path
-        "./experiments/my-ssp585-experiment/data/output"   # auto-set; adjust if needed
+# Where each run command writes this experiment's outputs. generate-compose uses
+# compose-output-data-location and generate-apptainer uses apptainer-output-data-location,
+# exactly as written. They default to the output-compose and output-apptainer
+# subdirectories of the experiment directory; change them to write outputs elsewhere.
+compose-output-data-location:
+        # Output path for generate-compose
+        "/abs/path/to/experiments/my-ssp585-experiment/output-compose"     # auto-set; adjust if needed
+apptainer-output-data-location:
+        # Output path for generate-apptainer
+        "/abs/path/to/experiments/my-ssp585-experiment/output-apptainer"   # auto-set; adjust if needed
 
 
 ##--------------------------------------------------------##
