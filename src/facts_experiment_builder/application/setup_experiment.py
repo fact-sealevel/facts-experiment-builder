@@ -28,8 +28,29 @@ from facts_experiment_builder.io.paths import (
     check_experiment_location,
     create_experiment_dir,
 )
+from facts_experiment_builder.io.write_readme import write_experiment_readme
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class SetupRecord:
+    """How setup-experiment was invoked, recorded in the experiment's README.md.
+
+    Attributes
+    ----------
+    command : str
+        The full setup command, every option with its value (defaults included),
+        ready to paste into a shell to recreate the experiment.
+    command_name : str
+        The command as invoked, e.g. ``feb setup-experiment`` or ``setup-experiment``.
+    feb_version : str
+        Installed facts-experiment-builder version.
+    """
+
+    command: str
+    command_name: str
+    feb_version: str
 
 
 @dataclass
@@ -126,6 +147,7 @@ def finalize_experiment_setup(
     projection_scale: str,
     module_registry: ModuleRegistry,
     experiment_repo: ExperimentRepository,
+    setup_record: SetupRecord | None = None,
 ) -> Path:
     """Complete an experiment setup and writes its configuration metadata to disk.
 
@@ -166,6 +188,9 @@ def finalize_experiment_setup(
     module_registry : ModuleRegistry
         Source of module metadata. Queried for the module registry version and schema of each module named in ``experiment_skeleton``.
     experiment_repo: ExperimentRepository
+    setup_record : SetupRecord, optional
+        How setup-experiment was invoked. When given, a README.md recording the
+        command is written to the experiment directory (unless one already exists).
     Returns
     -------
     Path
@@ -233,5 +258,17 @@ def finalize_experiment_setup(
         config_path=config_path,
         module_registry_version=version,
     )
+
+    if setup_record is not None:
+        write_experiment_readme(
+            readme_path=experiment_paths.readme_path,
+            experiment_name=experiment_name,
+            experiment_location=experiment_paths.experiment_dir,
+            date_created=experiment_obj.date_created,
+            command_name=setup_record.command_name,
+            setup_command=setup_record.command,
+            feb_version=setup_record.feb_version,
+            workflows=workflows_dict,
+        )
 
     return config_path
