@@ -1,0 +1,31 @@
+# {{ experiment_name }}
+
+- **experiment_name:** `{{ experiment_name }}`
+- **experiment_location:** `{{ experiment_location }}`
+- **created:** {{ date_created }} with `{{ command_name }}` (facts-experiment-builder {{ feb_version }})
+
+This file records how this experiment was set up. The experiment itself is defined in
+[`experiment-config.yaml`](experiment-config.yaml): edit that file, not this one.
+
+## Recreate this experiment
+
+Every option is listed with its value, defaults included, so the command recreates the
+same experiment even if a later FEB version changes a default.
+
+```bash
+{{ setup_command }}
+```
+{% if workflows %}
+
+Workflows in this experiment. If `setup-experiment` prompts for workflows, enter these
+(`all-modules` is created automatically):
+
+| Workflow | Modules |
+| --- | --- |
+{% for name, modules in workflows.items() %}
+| {{ name }} | {{ modules }} |
+{% endfor %}
+{% endif %}
+
+This recreates the experiment as `setup-experiment` created it. Values you filled in
+`experiment-config.yaml` afterwards are not part of this command.
