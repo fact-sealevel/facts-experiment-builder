@@ -4,7 +4,9 @@ This script uses Jinja2-based YAML generation from setup_experiment.py.
 """
 
 # from typing import TYPE_CHECKING
+import importlib.metadata
 import logging
+import shlex
 from pathlib import Path
 
 import click
@@ -12,6 +14,7 @@ from pydantic import ValidationError
 
 # ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.setup_experiment import (
+    SetupRecord,
     finalize_experiment_setup,
     prepare_experiment_setup,
 )
@@ -54,6 +57,51 @@ def configure_logging(debug_target):
         return
     name = None if debug_target == "all" else debug_target
     logging.getLogger(name).setLevel(logging.INFO)
+
+
+# Options that are host paths opened at setup time; recorded as resolved absolute paths
+# so the recorded command works from any directory.
+_PATH_PARAMS = {
+    "supplied_climate_step_data",
+    "supplied_totaled_sealevel_step_data",
+    "workspace_dir",
+    "module_registry",
+}
+
+
+def _setup_command(ctx: click.Context) -> str:
+    """Rebuild the full setup command from the parsed options.
+
+    Every option is written with its value, defaults included, one option per line,
+    so the command can be pasted to recreate the experiment. Options that cannot be
+    expressed on a command line are left out: unset options (None), empty
+    multi-value options, and flags that are off.
+    """
+    lines = [ctx.command_path]
+    for param in ctx.command.params:
+        value = ctx.params[param.name]
+        is_flag = getattr(param, "is_flag", False)
+        if value is None or value == () or (is_flag and not value):
+            continue
+        flag = param.opts[0]
+        if is_flag:
+            lines.append(flag)
+            continue
+        values = value if getattr(param, "multiple", False) else (value,)
+        for v in values:
+            if param.name in _PATH_PARAMS:
+                v = Path(v).resolve()
+            lines.append(f"{flag} {shlex.quote(str(v))}")
+    return " \\\n  ".join(lines)
+
+
+def _setup_record(ctx: click.Context) -> SetupRecord:
+    """Record how setup-experiment was invoked, for the experiment README."""
+    return SetupRecord(
+        command=_setup_command(ctx),
+        command_name=ctx.command_path,
+        feb_version=importlib.metadata.version("facts-experiment-builder"),
+    )
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -174,7 +222,9 @@ def configure_logging(debug_target):
     default=None,
     help="enable debug logging for a specific module only.",
 )
+@click.pass_context
 def main(
+    ctx,
     experiment_name,
     climate_step,
     supplied_climate_step_data,
@@ -287,6 +337,8 @@ def main(
             f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
         ) from e
 
+    # finalize_experiment_setup() never overwrites an existing README.md
+    readme_existed = path_obj.readme_path.exists()
     try:
         metadata_path = finalize_experiment_setup(
             experiment_name=experiment_name,
@@ -306,6 +358,7 @@ def main(
             projection_scale=projection_scale,
             module_registry=registry,  # registry passed as protocol
             experiment_repo=experiment_repository,
+            setup_record=_setup_record(ctx),
         )
     except ExperimentSetupError as e:
         console.print(f"[red]✗ Failed to set up experiment:[/red] {e}")
@@ -336,6 +389,14 @@ def main(
     console.print(
         f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
     )
+    if readme_existed:
+        console.print(
+            f"[muted]  Kept existing README file at {path_obj.readme_path} (not overwritten)[/muted]"
+        )
+    else:
+        console.print(
+            f"[success]✓ Created experiment README file at[/success] [secondary]{path_obj.readme_path}[/secondary]"
+        )
 
     # Summary
     console.rule(

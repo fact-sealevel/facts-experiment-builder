@@ -1,11 +1,15 @@
 """Minimal pytest suite for setup_experiment_cli."""
 
 import logging
+import os
+import shlex
 from pathlib import Path
+from unittest.mock import patch
 
 from click.testing import CliRunner
 
 from facts_experiment_builder.cli.setup_experiment_cli import (
+    _setup_command,
     configure_logging,
     main,
 )
@@ -301,3 +305,134 @@ def test_setup_experiment_fails_with_invalid_registry_path(tmp_path):
     print(f" --- output ---\n{result.output}\n --- output ---\n{result.exception}\n")
     assert result.exit_code != 0
     assert f"'{invalid_reg_path}' does not exist." in str(result.output)
+
+
+# --- Setup command recorded in the experiment README ---
+
+_PATH_OPTIONS = {"workspace_dir", "module_registry"}
+
+
+def _command_tokens(command: str) -> list[str]:
+    """Split a recorded command (one option per line, `\\` continuations) into args."""
+    return shlex.split(command.replace("\\\n", " "))
+
+
+def test_setup_command_includes_defaults_and_absolute_paths(tmp_path):
+    registry = tmp_path / "registry"
+    registry.mkdir()
+    ctx = main.make_context(
+        "setup-experiment",
+        [
+            "--experiment-name",
+            "test-exp",
+            "--sealevel-step",
+            "a,b",
+            "--scenario",
+            "ssp 585",
+            "--workspace-dir",
+            str(tmp_path),
+            "--module-registry",
+            str(registry),
+        ],
+    )
+
+    lines = _setup_command(ctx).split(" \\\n  ")
+
+    assert lines[0] == "setup-experiment"
+    # defaults are recorded too
+    assert "--total-all-modules True" in lines
+    assert "--projection-scale local" in lines
+    assert "--location-file location.lst" in lines
+    # quoted so it survives the shell
+    assert "--scenario 'ssp 585'" in lines
+    assert f"--module-registry {registry.resolve()}" in lines
+    # unset options and flags that are off are left out
+    assert not any(line.startswith("--climate-step") for line in lines)
+    assert "--debug" not in lines
+
+
+def test_setup_command_records_module_registry_from_env_var(tmp_path):
+    registry = tmp_path / "registry"
+    registry.mkdir()
+    # Click reads the env var at parse time, so it doesn't appear in the args.
+    with patch.dict(os.environ, {"FEB_MODULE_REGISTRY_DIR": str(registry)}):
+        ctx = main.make_context(
+            "setup-experiment",
+            ["--experiment-name", "test-exp", "--workspace-dir", str(tmp_path)],
+        )
+
+    assert f"--module-registry {registry.resolve()}" in _setup_command(ctx)
+
+
+def test_setup_command_round_trips_to_same_params(tmp_path):
+    registry = tmp_path / "registry"
+    registry.mkdir()
+    original = main.make_context(
+        "setup-experiment",
+        [
+            "--experiment-name",
+            "group/test-exp",
+            "--climate-step",
+            "fair-temperature",
+            "--sealevel-step",
+            "a,b",
+            "--module-regions",
+            "a=RGI01,RGI02",
+            "--module-regions",
+            "b=RGI03",
+            "--nsamps",
+            "50",
+            "--projection-scale",
+            "global",
+            "--workspace-dir",
+            str(tmp_path),
+            "--module-registry",
+            str(registry),
+        ],
+    )
+
+    tokens = _command_tokens(_setup_command(original))
+    assert tokens[0] == "setup-experiment"
+    recreated = main.make_context("setup-experiment", tokens[1:])
+
+    for name, value in original.params.items():
+        if name in _PATH_OPTIONS:
+            assert Path(recreated.params[name]) == Path(value).resolve(), name
+        else:
+            assert recreated.params[name] == value, name
+
+
+def test_setup_experiment_writes_readme(tmp_path, fake_registry, decline_extra_prompts):
+    registry = fake_registry(
+        {
+            "fair-temperature": {"module_name": "fair-temperature"},
+            "ipccar5-icesheets": {"module_name": "ipccar5-icesheets"},
+            "ipccar5-glaciers": {"module_name": "ipccar5-glaciers"},
+            "facts-total": {"module_name": "facts-total"},
+        }
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "--experiment-name",
+            "test-exp",
+            "--climate-step",
+            "fair-temperature",
+            "--sealevel-step",
+            "ipccar5-icesheets,ipccar5-glaciers",
+            "--workspace-dir",
+            str(tmp_path),
+            "--module-registry",
+            str(registry),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    readme = (tmp_path / "test-exp" / "README.md").read_text()
+    assert "- **experiment_name:** `test-exp`" in readme
+    assert f"- **experiment_location:** `{tmp_path / 'test-exp'}`" in readme
+    assert "--experiment-name test-exp" in readme
+    assert "--total-all-modules True" in readme
+    assert "Created experiment README file" in result.output
+    assert "| all-modules | ipccar5-icesheets, ipccar5-glaciers |" in readme
