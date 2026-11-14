@@ -4,6 +4,7 @@ import yaml
 
 from facts_experiment_builder.application.setup_experiment import (
     PrepareExperimentOutput,
+    SetupRecord,
     finalize_experiment_setup,
     prepare_experiment_setup,
 )
@@ -771,3 +772,93 @@ def test_hydrate_experiment_prefills_per_module_independently():
 
     climate_input = sealevel.module_specs_list[1].inputs["climate-data-file"]["value"]
     assert climate_input == "fair-temperature/climate.nc"
+
+
+# --- README written by finalize_experiment_setup ---
+
+
+def _finalize_with_record(tmp_path, setup_record):
+    """Run prepare + finalize for a small experiment; return its ExperimentPaths."""
+    experiment_name = "experiment_name"
+    workspace_dir = Path(tmp_path / "workspace")
+    workspace_dir.mkdir(exist_ok=True)
+    definitions = InMemoryModuleDefinitions(
+        {
+            "fair-temperature": make_schema("fair-temperature"),
+            "tlm-sterodynamics": make_schema(
+                "tlm-sterodynamics", uses_climate_file=True
+            ),
+            "larmip-ais": make_schema("larmip-ais", uses_climate_file=True),
+            "facts-total": make_schema("facts-total"),
+        }
+    )
+    output = prepare_experiment_setup(
+        experiment_name=experiment_name,
+        module_regions=None,
+        climate_step="fair-temperature",
+        supplied_climate_step_data=None,
+        sealevel_step="tlm-sterodynamics,larmip-ais",
+        supplied_totaled_sealevel_step_data=None,
+        extremesealevel_step=None,
+        workspace_dir=workspace_dir,
+    )
+    finalize_experiment_setup(
+        experiment_name,
+        output.experiment_paths,
+        output.experiment_skeleton,
+        {"all-modules": "tlm-sterodynamics,larmip-ais", "wf2": "larmip-ais"},
+        pipeline_id="abc123",
+        scenario="ssp585",
+        baseyear=2005,
+        pyear_end=2150,
+        pyear_step=10,
+        pyear_start=2020,
+        nsamps=50,
+        location_file="location.lst",
+        module_specific_input_data="path/to/data",
+        shared_input_data="path/to/shared/data",
+        projection_scale="local",
+        module_registry=definitions,
+        experiment_repo=StorageExperimentRepository(),
+        setup_record=setup_record,
+    )
+    return output.experiment_paths
+
+
+_RECORD = SetupRecord(
+    command="feb setup-experiment \\\n  --experiment-name experiment_name",
+    command_name="feb setup-experiment",
+    feb_version="9.9.9",
+)
+
+
+def test_finalize_experiment_setup_writes_readme_with_setup_record(tmp_path):
+    paths = _finalize_with_record(tmp_path, _RECORD)
+
+    readme = paths.readme_path.read_text()
+    assert "- **experiment_name:** `experiment_name`" in readme
+    assert f"- **experiment_location:** `{paths.experiment_dir}`" in readme
+    assert "`feb setup-experiment` (facts-experiment-builder 9.9.9)" in readme
+    assert _RECORD.command in readme
+    assert "| all-modules | tlm-sterodynamics,larmip-ais |" in readme
+    assert "| wf2 | larmip-ais |" in readme
+
+
+def test_finalize_experiment_setup_writes_no_readme_without_setup_record(tmp_path):
+    paths = _finalize_with_record(tmp_path, None)
+
+    assert paths.config_path.exists()
+    assert not paths.readme_path.exists()
+
+
+def test_finalize_experiment_setup_keeps_existing_readme(tmp_path):
+    # The experiment directory may already exist (create_experiment_dir uses
+    # exist_ok=True), with a README the user wrote.
+    existing_dir = tmp_path / "workspace" / "experiment_name"
+    existing_dir.mkdir(parents=True)
+    (existing_dir / "README.md").write_text("my notes\n")
+
+    paths = _finalize_with_record(tmp_path, _RECORD)
+
+    assert paths.config_path.exists()
+    assert paths.readme_path.read_text() == "my notes\n"
