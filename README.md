@@ -147,7 +147,9 @@ You can see the full list of options by running `uvx --from git+https://github.c
 
 If you included multiple modules at the sea-level step, you will see CLI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary](docs/FACTS_GLOSSARY.md) for more detail on this.
 
-Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yaml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
+Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yaml` file and a `README.md` file have been written. Congratulations - you have just created a FACTS2 experiment! 
+
+The experiment's `README.md` records how the experiment was created: when, with which version of FEB, and the full `setup-experiment` command, with every option and its value (defaults included). It also lists the experiment's workflows. To create the same experiment again, paste the command and enter those workflows if you're prompted. The README only records setup: values you fill in to `experiment-config.yaml` afterwards aren't in it, and `setup-experiment` never overwrites an existing `README.md`.
 
 Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [experiment configuration file overview](docs/EXPERIMENT-CONFIG-OVERVIEW.md) page. 
 
@@ -156,7 +158,7 @@ Inspect the experiment configuration file and ensure that all of the fields in t
 
 ## Run an experiment
 
-In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our newly-created experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
+In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our newly-created experiment's sub-directory (`./experiments/my_first_experiment`), along with a `README.md` recording how the experiment was created. As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
 
 FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we provide a [Docker Compose](https://docs.docker.com/compose/) implementation, shown below, and an [Apptainer](https://apptainer.org/) implementation (see [below](#run-with-apptainer)). If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
 
@@ -219,7 +221,7 @@ Options:
 > ```
 
 **`setup-experiment`**
-Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
+Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete. It also writes a `README.md` to the experiment directory that records the full `setup-experiment` command used (every option with its value, defaults included), the FEB version, the creation time and the experiment's workflows, so the experiment can be set up again. An existing `README.md` is never overwritten.
 
 Each step accepts either a module name or a path to pre-existing data:
 - `--climate-step` / `--supplied-climate-step-data`: run a climate module or provide climate output directly
@@ -228,16 +230,27 @@ Each step accepts either a module name or a path to pre-existing data:
 ```shell
 Usage: feb setup-experiment [OPTIONS]
 
-  Set up a new experiment with setup-experiment CLI command.
+  Set up a new FACTS experiment.
 
-  This function includes a number of steps:
+  Creates the experiment directory, <workspace-dir>/<experiment-name>, and
+  writes two files to it: experiment-config.yaml, which defines the
+  experiment, and README.md, which records the command that created it. Fill
+  in any values left empty in experiment-config.yaml, then run generate-
+  compose or generate-apptainer.
 
-      - Creates a sub-directory in experiments/ for this experiment. Raises
-      error if one already exists
-
-      - Check that all required arguments were received
-
-      - If facts-total passed, collects workflows with user prompts
+  Steps:
+    1. Check the experiment name and location. Fails if the parent directory
+       doesn't exist, the experiment would be outside the workspace, or the
+       experiment directory already has an experiment-config.yaml.
+    2. Check the step options: each step gets a module or supplied data, not
+       both, and an extreme sea-level step needs sea-level modules.
+    3. Load each module's definition from the module registry.
+    4. Collect workflows. With one sea-level module, the all-modules workflow
+       is created without prompting. With several, you are prompted for
+       workflows (all-modules is created first if --total-all-modules is set).
+    5. Create the experiment directory and write experiment-config.yaml, with a
+       copy of each module's definition, and README.md. An existing README.md
+       is never overwritten.
 
 Options:
   --experiment-name TEXT          Name of the experiment and parent directory,
@@ -247,7 +260,7 @@ Options:
                                   to create an experiment directory that holds
                                   config files and output data associated with
                                   the experiment.  [required]
-  --climate-step TEXT             Name of the temperature module
+  --climate-step TEXT             Name of the climate module
   --supplied-climate-step-data PATH
                                   Path to data to use in place of running a
                                   module in the climate step of the
@@ -288,9 +301,8 @@ Options:
                                   Example: --module-regions
                                   emulandice2-glaciers=RGI01,RGI02
   --workspace-dir DIRECTORY       Workspace directory, will default to current
-                                  working directory.  [default: /Users/emmamar
-                                  shall/Desktop/facts_work/facts_v2/facts-
-                                  experiment-builder]
+                                  working directory.  [default: <current
+                                  working directory>]
   --module-registry DIRECTORY     Path to the facts-module-registry directory
                                   to use in experiment setup.  [default:
                                   facts-module-registry]
