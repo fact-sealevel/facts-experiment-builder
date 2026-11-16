@@ -116,11 +116,12 @@ def make_inputs_section(experiment_obj: FactsExperiment) -> list:
 
 
 def make_outputs_section(experiment_obj) -> list:
-    # Outputs section (output-data-location)
-    outputs = []
-    if "output-data-location" in experiment_obj.paths:
-        outputs.append("output-data-location")
-    return outputs
+    # Outputs section (one output location per run command)
+    return [
+        key
+        for key in ("compose-output-data-location", "apptainer-output-data-location")
+        if key in experiment_obj.paths
+    ]
 
 
 def make_module_keys(

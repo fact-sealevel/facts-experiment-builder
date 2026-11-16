@@ -11,6 +11,7 @@ from facts_experiment_builder.application.module_service_spec_factory import (
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.core.module.module_service_path_resolution import (
+    COMPOSE_OUTPUT_KEY,
     resolve_experiment_data_paths,
 )
 
@@ -42,7 +43,7 @@ def _metadata(module_name: str, image: str = "repo/img:latest") -> dict:
     return {
         "shared-input-data": "/in/shared",
         "module-specific-input-data": "/in/module",
-        "output-data-location": "/out",
+        "compose-output-data-location": "/out",
         module_name: {"inputs": {}, "outputs": {}, "image": image},
     }
 
@@ -58,7 +59,9 @@ def _build(module_name: str, image: str = "repo/img:latest") -> tuple:
             module_name=module_name,
             known_module_names=[module_name],
             module_definition=schema,
-            data_paths=resolve_experiment_data_paths(metadata),
+            data_paths=resolve_experiment_data_paths(
+                metadata, output_key=COMPOSE_OUTPUT_KEY
+            ),
         )
     return result, schema
 

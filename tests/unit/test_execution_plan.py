@@ -233,3 +233,25 @@ def test_build_esl_specs_passes_through_provided_inputs(monkeypatch):
         captured["inputs"]["gesla-dir"] == "/data/module_specific_input_data/gesla_data"
     )
     assert "total-localsl-file" in captured["inputs"]
+
+
+def test_build_esl_specs_depends_on_workflow_local_total(monkeypatch):
+    """Each ESL service is named per workflow and depends on that workflow's
+    facts-total-local service, including for a single-module workflow (#146)."""
+    _patch_build_module_service_spec(monkeypatch, {})
+
+    module_name = "extremesealevel-pointsoverthreshold"
+    wf = Workflow(name="all-modules", module_names=["tlm-sterodynamics"])
+
+    specs = execution_plan_module._build_esl_specs_for_workflows(
+        esl_module_names=[module_name],
+        workflows={"all-modules": wf},
+        metadata={module_name: {"inputs": {}, "outputs": {}}},
+        projection_scale="local",
+        schemas={module_name: _make_esl_schema(module_name)},
+        data_paths=_DATA_PATHS,
+    )
+
+    assert set(specs) == {f"{module_name}-all-modules"}
+    _, depends_on = specs[f"{module_name}-all-modules"]
+    assert depends_on == "facts-total-all-modules-local"

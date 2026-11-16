@@ -276,3 +276,71 @@ def test_output_volume_mounts_shared_output_root(output_spec):
     service = output_spec.generate_compose_service()
     host_output_root = str(output_spec.output_paths.output_dir).rsplit("/", 1)[0]
     assert any(v.startswith(f"{host_output_root}:/mnt/out") for v in service["volumes"])
+
+
+@pytest.mark.parametrize(
+    "command, expected_first",
+    [
+        ("main", None),  # image default command: no subcommand argument
+        ("glaciers", "glaciers"),  # real subcommand is kept first
+        ("", None),
+    ],
+)
+def test_command_args_subcommand_shared_by_compose_and_apptainer(
+    output_spec, command, expected_first
+):
+    import dataclasses
+
+    spec = ModuleServiceSpec(
+        components=output_spec.components,
+        module_definition=dataclasses.replace(
+            output_spec.module_definition, command=command
+        ),
+    )
+    compose_command = spec.generate_compose_service()["command"]
+    apptainer_args = spec.generate_apptainer_service().args
+
+    assert compose_command == apptainer_args
+    assert "main" not in compose_command
+    if expected_first is None:
+        assert compose_command[0].startswith("--")
+    else:
+        assert compose_command[0] == expected_first
+
+
+def test_apptainer_env_matches_compose_environment(output_spec):
+    """Inputs declared with `envvar` reach Apptainer as env vars, exactly as Compose
+    receives them under `environment:`."""
+    import dataclasses
+
+    from facts_experiment_builder.core.module.arg_specs import InputArgSpec, MountSpec
+
+    schema = output_spec.module_definition
+    env_input = InputArgSpec(
+        name="forcing-head-path",
+        type="str",
+        source="module_inputs.inputs.forcing_head_path",
+        envvar="EMULANDICE_FORCING_HEAD_PATH",
+        mount=MountSpec(
+            container_path="/mnt/module_specific_in",
+            volume="module_specific_input",
+        ),
+    )
+    spec = ModuleServiceSpec(
+        components=dataclasses.replace(
+            output_spec.components,
+            inputs={"forcing_head_path": "forcing"},
+        ),
+        module_definition=dataclasses.replace(
+            schema,
+            arguments=schema.arguments.model_copy(
+                update={"inputs": [*schema.arguments.inputs, env_input]}
+            ),
+        ),
+    )
+    compose_env = spec.generate_compose_service()["environment"]
+    apptainer = spec.generate_apptainer_service()
+    assert apptainer.env == compose_env
+    assert "EMULANDICE_FORCING_HEAD_PATH" in apptainer.env
+    # envvar inputs are passed as env, not as CLI args
+    assert not any(a.startswith("--forcing-head-path") for a in apptainer.args)
