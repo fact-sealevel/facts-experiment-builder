@@ -38,6 +38,9 @@ The primary configuration file for a FACTS experiment. Written by the `setup-exp
 
 This file is the human-editable artifact; once complete it drives `generate-compose`.
 
+### Experiment README (`README.md`)
+A record of how an experiment was created, written to the experiment directory by the `setup-experiment` CLI command next to `experiment-config.yaml`. Contains the experiment name and location, the creation time and FEB version, the full `setup-experiment` command with every option and its value (defaults included, path options as absolute paths), and the experiment's workflows. Pasting the command and entering the workflows when prompted sets up the same experiment again. FEB never reads this file, and `setup-experiment` never overwrites an existing one. Values filled in to `experiment-config.yaml` after setup are not recorded in it.
+
 ### experiment-compose.yaml
 A Docker Compose file generated from a completed `experiment-config.yaml` by the `generate-compose` CLI command. Contains one service definition per module (or per workflow for facts-total and ESL), with resolved image references, command arguments, volume mounts, and service dependencies. This file is used directly to run the experiment (e.g., `docker compose -f experiment-compose.yaml up`).
 

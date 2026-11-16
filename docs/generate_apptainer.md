@@ -57,6 +57,7 @@ workspace/
 └── experiments/
     └── my_first_experiment/
         ├── experiment-config.yaml    ← from setup-experiment
+        ├── README.md                 ← from setup-experiment
         ├── experiment-apptainer.sh   ← written by generate-apptainer
         └── output-apptainer/         ← apptainer-output-data-location (default)
             ├── <one directory per module>
