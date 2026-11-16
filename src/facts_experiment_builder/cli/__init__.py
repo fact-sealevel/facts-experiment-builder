@@ -3,6 +3,9 @@ import click
 from facts_experiment_builder.cli.check_data_cli import (
     main as check_data,
 )
+from facts_experiment_builder.cli.generate_apptainer_cli import (
+    main as generate_apptainer_group,
+)
 from facts_experiment_builder.cli.generate_compose_cli import (
     main as generate_compose_group,
 )
@@ -21,5 +24,6 @@ def main():
 main.add_command(init, name="init")
 main.add_command(setup_new_experiment_group, name="setup-experiment")
 main.add_command(generate_compose_group, name="generate-compose")
+main.add_command(generate_apptainer_group, name="generate-apptainer")
 main.add_command(list_modules, name="list-modules")
 main.add_command(check_data, name="check-data")

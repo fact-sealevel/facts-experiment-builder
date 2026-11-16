@@ -78,7 +78,9 @@ The section of `experiment-config.yaml` that declares the three root directories
 |---|---|
 | `shared-input-data` | Shared inputs used by multiple modules (location files, fingerprint data) |
 | `module-specific-input-data` | Per-module input data directories |
-| `output-data-location` | Root directory where all module outputs are written |
+| `compose-output-data-location` | Root directory where `generate-compose` runs write module outputs |
+| `apptainer-output-data-location` | Root directory where `generate-apptainer` runs write module outputs |
+| `output-data-location` | Deprecated name for `compose-output-data-location`, still read by `generate-compose` |
 
 ---
 

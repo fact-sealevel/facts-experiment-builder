@@ -78,7 +78,9 @@ PATH_KEYS_PRIMARY = [
     "module-specific-input-data",
     "experiment-specific-input-data",
     "supplied-totaled-sealevel-step-data",
-    "output-data-location",
+    "compose-output-data-location",
+    "apptainer-output-data-location",
+    "output-data-location",  # deprecated; read as compose-output-data-location
 ]
 
 _STRUCTURAL_KEYS: set[str] = (
