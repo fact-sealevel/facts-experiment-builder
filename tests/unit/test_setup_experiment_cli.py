@@ -9,7 +9,7 @@ from unittest.mock import patch
 from click.testing import CliRunner
 
 from facts_experiment_builder.cli.setup_experiment_cli import (
-    _setup_command,
+    _rebuild_setup_command,
     configure_logging,
     main,
 )
@@ -336,7 +336,7 @@ def test_setup_command_includes_defaults_and_absolute_paths(tmp_path):
         ],
     )
 
-    lines = _setup_command(ctx).split(" \\\n  ")
+    lines = _rebuild_setup_command(ctx).split(" \\\n  ")
 
     assert lines[0] == "setup-experiment"
     # defaults are recorded too
@@ -361,7 +361,7 @@ def test_setup_command_records_module_registry_from_env_var(tmp_path):
             ["--experiment-name", "test-exp", "--workspace-dir", str(tmp_path)],
         )
 
-    assert f"--module-registry {registry.resolve()}" in _setup_command(ctx)
+    assert f"--module-registry {registry.resolve()}" in _rebuild_setup_command(ctx)
 
 
 def test_setup_command_round_trips_to_same_params(tmp_path):
@@ -391,7 +391,7 @@ def test_setup_command_round_trips_to_same_params(tmp_path):
         ],
     )
 
-    tokens = _command_tokens(_setup_command(original))
+    tokens = _command_tokens(_rebuild_setup_command(original))
     assert tokens[0] == "setup-experiment"
     recreated = main.make_context("setup-experiment", tokens[1:])
 

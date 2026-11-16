@@ -3,7 +3,6 @@
 This script uses Jinja2-based YAML generation from setup_experiment.py.
 """
 
-# from typing import TYPE_CHECKING
 import importlib.metadata
 import logging
 import shlex
@@ -12,18 +11,12 @@ from pathlib import Path
 import click
 from pydantic import ValidationError
 
-# ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.setup_experiment import (
     SetupRecord,
     finalize_experiment_setup,
     prepare_experiment_setup,
 )
 
-# if TYPE_CHECKING:
-#     from facts_experiment_builder.core.experiment.experiment_skeleton import (
-#         ExperimentSkeleton,
-#     )
-# ---------------------- CLI imports ----------------------------
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
     _resolve_workflows,
@@ -35,7 +28,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
 )
 
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.skeleton import (
     ExperimentSkeleton,
 )
@@ -43,7 +35,6 @@ from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
 
-# ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.io.paths import ExperimentPaths
 
@@ -68,7 +59,7 @@ _PATH_PARAMS = {
 }
 
 
-def _setup_command(ctx: click.Context) -> str:
+def _rebuild_setup_command(ctx: click.Context) -> str:
     """Rebuild the full setup command from the parsed options.
 
     Every option is written with its value, defaults included, one option per line,
@@ -94,10 +85,10 @@ def _setup_command(ctx: click.Context) -> str:
     return " \\\n  ".join(lines)
 
 
-def _setup_record(ctx: click.Context) -> SetupRecord:
+def _create_setup_record(ctx: click.Context) -> SetupRecord:
     """Record how setup-experiment was invoked, for the experiment README."""
     return SetupRecord(
-        command=_setup_command(ctx),
+        command=_rebuild_setup_command(ctx),
         command_name=ctx.command_path,
         feb_version=importlib.metadata.version("facts-experiment-builder"),
     )
@@ -336,7 +327,7 @@ def main(
     # finalize_experiment_setup() never overwrites an existing README.md
     readme_existed = path_obj.readme_path.exists()
     try:
-        metadata_path = finalize_experiment_setup(
+        experiment_config_path = finalize_experiment_setup(
             experiment_name=experiment_name,
             experiment_paths=path_obj,
             experiment_skeleton=skeleton,
@@ -354,7 +345,7 @@ def main(
             projection_scale=projection_scale,
             module_registry=registry,  # registry passed as protocol
             experiment_repo=experiment_repository,
-            setup_record=_setup_record(ctx),
+            setup_record=_create_setup_record(ctx),
         )
     except ExperimentSetupError as e:
         console.print(f"[red]✗ Failed to set up experiment:[/red] {e}")
@@ -383,7 +374,7 @@ def main(
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
 
     console.print(
-        f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
+        f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{experiment_config_path}[/secondary]"
     )
     if readme_existed:
         console.print(
@@ -400,7 +391,9 @@ def main(
         title="[success]✨ Experiment directory setup complete![/success]",
     )
     console.print("\n[primary]Next steps:[/primary]")
-    console.print(f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]")
+    console.print(
+        f"  [muted]1.[/muted] Edit [secondary]{experiment_config_path}[/secondary]"
+    )
     console.print(
         "     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]"
     )
