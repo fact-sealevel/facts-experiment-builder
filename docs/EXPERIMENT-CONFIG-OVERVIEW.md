@@ -28,6 +28,7 @@ This example is based on a real experiment using `fair-temperature`, a set of se
 ```yaml
 # About this experiment:
 # Date created: 2026-05-31
+# See README.md in this directory for the command that created this experiment.
 experiment_name:
         my-ssp585-experiment
 

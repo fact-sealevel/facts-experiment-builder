@@ -10,6 +10,14 @@ When you create an experiment, you pass the name of the parent directory with th
 
 If you create an experiment with `feb setup-experiment`, the experiment-level sub-directory (`my_first_experiment`) is created automatically by the command. However, you can also manually create experiments by creating the named sub-directory and the `experiment-config.yaml` file that goes inside of it (which is also created by `feb setup-experiment`). 
 
+`feb setup-experiment` also writes a `README.md` to the experiment sub-directory. It records how the experiment was created: the full `setup-experiment` command, with every option and its value (defaults included), the FEB version, the creation time and the experiment's workflows. Use it to set up the same experiment again. The README is only a record: FEB doesn't read it, so an experiment created by hand doesn't need one.
+
+```shell
+./facts_workspace/experiments/my_first_experiment
+├── experiment-config.yaml    # defines the experiment; written by setup-experiment, completed by you
+└── README.md                 # how the experiment was created; written by setup-experiment
+```
+
 ## Example experiments
 
 The FACTS project supplies a number of example experiments which have been used for past reports and publications. They are stored in the [facts-experiment-catalog](https://github.com/fact-sealevel/facts-experiment-catalog). If you would like to run one of these example experiments, follow the steps below:

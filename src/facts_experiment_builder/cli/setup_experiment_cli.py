@@ -3,24 +3,20 @@
 This script uses Jinja2-based YAML generation from setup_experiment.py.
 """
 
-# from typing import TYPE_CHECKING
+import importlib.metadata
 import logging
+import shlex
 from pathlib import Path
 
 import click
 from pydantic import ValidationError
 
-# ---------------------- Application imports ----------------------------
 from facts_experiment_builder.application.setup_experiment import (
+    SetupRecord,
     finalize_experiment_setup,
     prepare_experiment_setup,
 )
 
-# if TYPE_CHECKING:
-#     from facts_experiment_builder.core.experiment.experiment_skeleton import (
-#         ExperimentSkeleton,
-#     )
-# ---------------------- CLI imports ----------------------------
 from facts_experiment_builder.cli.theme import console
 from facts_experiment_builder.cli.workflow_prompts import (
     _resolve_workflows,
@@ -32,7 +28,6 @@ from facts_experiment_builder.core.experiment.module_name_validation import (
     validate_module_names,
 )
 
-# ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment.skeleton import (
     ExperimentSkeleton,
 )
@@ -40,7 +35,6 @@ from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
 
-# ---------------------- IO imports ----------------------------
 from facts_experiment_builder.io.module_registry import FileSystemModuleRegistry
 from facts_experiment_builder.io.paths import ExperimentPaths
 
@@ -53,6 +47,51 @@ def configure_logging(debug_target):
         return
     name = None if debug_target == "all" else debug_target
     logging.getLogger(name).setLevel(logging.INFO)
+
+
+# Options that are host paths opened at setup time; recorded as resolved absolute paths
+# so the recorded command works from any directory.
+_PATH_PARAMS = {
+    "supplied_climate_step_data",
+    "supplied_totaled_sealevel_step_data",
+    "workspace_dir",
+    "module_registry",
+}
+
+
+def _rebuild_setup_command(ctx: click.Context) -> str:
+    """Rebuild the full setup command from the parsed options.
+
+    Every option is written with its value, defaults included, one option per line,
+    so the command can be pasted to recreate the experiment. Options that cannot be
+    expressed on a command line are left out: unset options (None), empty
+    multi-value options, and flags that are off.
+    """
+    lines = [ctx.command_path]
+    for param in ctx.command.params:
+        value = ctx.params[param.name]
+        is_flag = getattr(param, "is_flag", False)
+        if value is None or value == () or (is_flag and not value):
+            continue
+        flag = param.opts[0]
+        if is_flag:
+            lines.append(flag)
+            continue
+        values = value if getattr(param, "multiple", False) else (value,)
+        for v in values:
+            if param.name in _PATH_PARAMS:
+                v = Path(v).resolve()
+            lines.append(f"{flag} {shlex.quote(str(v))}")
+    return " \\\n  ".join(lines)
+
+
+def _create_setup_record(ctx: click.Context) -> SetupRecord:
+    """Record how setup-experiment was invoked, for the experiment README."""
+    return SetupRecord(
+        command=_rebuild_setup_command(ctx),
+        command_name=ctx.command_path,
+        feb_version=importlib.metadata.version("facts-experiment-builder"),
+    )
 
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
@@ -173,7 +212,9 @@ def configure_logging(debug_target):
     default=None,
     help="enable debug logging for a specific module only.",
 )
+@click.pass_context
 def main(
+    ctx,
     experiment_name,
     climate_step,
     supplied_climate_step_data,
@@ -198,12 +239,99 @@ def main(
     debug,
     debug_target,
 ):
-    """Set up a new experiment with setup-experiment CLI command.
+    """Set up a new FACTS experiment.
 
-    This function includes a number of steps: \n
-        - Creates a sub-directory in experiments/ for this experiment. Raises error if it already contains an experiment-config.yaml \n
-        - Check that all required arguments were received \n
-        - If facts-total passed, collects workflows with user prompts
+    Creates the experiment directory, <workspace-dir>/<experiment-name>, and writes
+    two files to it: experiment-config.yaml, which defines the experiment, and
+    README.md, which records the command that created it. Fill in any values left
+    empty in experiment-config.yaml, then run generate-compose or generate-apptainer.
+
+    \b
+    Steps:
+      1. Check the experiment name and location. Fails if the parent directory
+         doesn't exist, the experiment would be outside the workspace, or the
+         experiment directory already has an experiment-config.yaml.
+      2. Check the step options: each step gets a module or supplied data, not
+         both, and an extreme sea-level step needs sea-level modules.
+      3. Load each module's definition from the module registry.
+      4. Collect workflows. With one sea-level module, the all-modules workflow
+         is created without prompting. With several, you are prompted for
+         workflows (all-modules is created first if --total-all-modules is set).
+      5. Create the experiment directory and write experiment-config.yaml, with a
+         copy of each module's definition, and README.md. An existing README.md
+         is never overwritten.
+
+    \f
+
+    Parameters
+    ----------
+    ctx : click.Context
+        Click context, used to rebuild the full command for README.md.
+    experiment_name : str
+        Experiment directory relative to `workspace_dir`, usually with a parent
+        directory, e.g. ``experiments/my_first_experiment``. The parent must exist.
+    climate_step : str or None
+        Climate module to run. Exactly one of `climate_step` and
+        `supplied_climate_step_data` is required, unless
+        `supplied_totaled_sealevel_step_data` is given.
+    supplied_climate_step_data : str or None
+        Path to climate data to use instead of running a climate module.
+    sealevel_step : str or None
+        Comma-separated sea-level modules. Not allowed with
+        `supplied_totaled_sealevel_step_data`. Without either, the sea-level and
+        totaling steps are skipped.
+    supplied_totaled_sealevel_step_data : str or None
+        Path to totaled sea-level data. Replaces the climate, sea-level and
+        totaling steps.
+    total_all_modules : bool
+        With several sea-level modules, create the all-modules workflow before
+        prompting for more. Has no effect with zero or one sea-level module.
+    extremesealevel_step : str or None
+        Extreme sea-level module, or ``NONE``. Requires `sealevel_step`.
+    pipeline_id, scenario : str or None
+        Experiment parameters written to experiment-config.yaml. Left empty when
+        not given.
+    baseyear, pyear_start, pyear_end, pyear_step, nsamps : int or None
+        Experiment parameters written to experiment-config.yaml. Left empty when
+        not given.
+    location_file : str
+        Location file name, in the shared input data directory. Default
+        ``location.lst``.
+    module_specific_input_data, shared_input_data : str or None
+        Absolute paths to the input data directories, written to
+        experiment-config.yaml. Left empty when not given.
+    projection_scale : {'global', 'local'}
+        ``global`` for global outputs only, ``local`` for local and global outputs.
+    module_regions : tuple of str
+        Regions per module, each ``module-name=REGION1,REGION2``. Repeatable.
+    module_registry : pathlib.Path
+        facts-module-registry directory. Also read from
+        ``FEB_MODULE_REGISTRY_DIR``.
+    workspace_dir : pathlib.Path
+        Workspace directory, resolved to an absolute path. Defaults to the current
+        directory.
+    debug : bool
+        Set all loggers to INFO.
+    debug_target : str or None
+        Set one logger, by name, to INFO. Takes precedence over `debug`.
+
+    Raises
+    ------
+    SystemExit
+        Exit code 1, after printing a one-line error, when the experiment's parent
+        directory doesn't exist, the experiment would be outside the workspace, or
+        the experiment already has an experiment-config.yaml
+        (:class:`ExperimentSetupError` subclasses).
+    ValueError
+        If the step options conflict or are missing (see step 2), a module
+        definition fails validation, or a module name isn't in the registry.
+    ModuleYamlNotFoundError
+        If the registry has no module YAML for a requested module.
+
+    See Also
+    --------
+    prepare_experiment_setup : Steps 1 and 2; creates nothing on disk.
+    finalize_experiment_setup : Step 5.
     """
     if debug_target:
         configure_logging(debug_target)
@@ -283,8 +411,10 @@ def main(
             f"{e}\nCheck for typos or run 'uv run list-modules' to see available modules."
         ) from e
 
+    # finalize_experiment_setup() never overwrites an existing README.md
+    readme_existed = path_obj.readme_path.exists()
     try:
-        metadata_path = finalize_experiment_setup(
+        experiment_config_path = finalize_experiment_setup(
             experiment_name=experiment_name,
             experiment_paths=path_obj,
             experiment_skeleton=skeleton,
@@ -302,6 +432,7 @@ def main(
             projection_scale=projection_scale,
             module_registry=registry,  # registry passed as protocol
             experiment_repo=experiment_repository,
+            setup_record=_create_setup_record(ctx),
         )
     except ExperimentSetupError as e:
         console.print(f"[red]✗ Failed to set up experiment:[/red] {e}")
@@ -330,8 +461,16 @@ def main(
     console.print("[primary]Step 5: Writing metadata file using...[/primary]")
 
     console.print(
-        f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{metadata_path}[/secondary]"
+        f"[success]✓ Created experiment-config.yaml at[/success] [secondary]{experiment_config_path}[/secondary]"
     )
+    if readme_existed:
+        console.print(
+            f"[muted]  Kept existing README file at {path_obj.readme_path} (not overwritten)[/muted]"
+        )
+    else:
+        console.print(
+            f"[success]✓ Created experiment README file at[/success] [secondary]{path_obj.readme_path}[/secondary]"
+        )
 
     # Summary
     console.rule(
@@ -339,7 +478,9 @@ def main(
         title="[success]✨ Experiment directory setup complete![/success]",
     )
     console.print("\n[primary]Next steps:[/primary]")
-    console.print(f"  [muted]1.[/muted] Edit [secondary]{metadata_path}[/secondary]")
+    console.print(
+        f"  [muted]1.[/muted] Edit [secondary]{experiment_config_path}[/secondary]"
+    )
     console.print(
         "     [muted]Fill in all placeholder values (pipeline-id, scenario, paths, etc.)[/muted]"
     )
