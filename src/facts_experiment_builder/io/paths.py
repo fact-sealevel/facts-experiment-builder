@@ -13,7 +13,7 @@ _COMPOSE_FILENAME = "experiment-compose.yaml"
 _APPTAINER_FILENAME = "experiment-apptainer.sh"
 _COMPOSE_OUTPUT_DIRNAME = "output-compose"
 _APPTAINER_OUTPUT_DIRNAME = "output-apptainer"
-
+_README_FILENAME = "README.md"
 # Workspace directory for Apptainer image files, shared by all experiments. Created by
 # the generated Apptainer script when it runs.
 SIF_DIR_NAME = "apptainer_sif_files"
