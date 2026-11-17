@@ -95,10 +95,10 @@ def _collect_workflow_output_paths_by_type(
     """Collect container paths for workflow module outputs that match the given
     output_type and have pass_to_total=True in their module schema.
 
-    For each module in the workflow, reads config.module_sections[mod].outputs; each value must be a
-    dict with "value" and "output_type". If a module schema is present in `schemas`,
-    only outputs whose OutputFileSpec has pass_to_total=True are included. Outputs from
-    modules not found in `schemas` are included for backward compatibility.
+    For each module in the workflow, reads config.module_sections[mod].outputs; each
+    value must be a dict with "value" and "output_type". If a module schema is present
+    in `schemas`, only outputs whose OutputFileSpec has pass_to_total=True are included.
+    Outputs from modules not found in `schemas` are included for backward compatibility.
     """
     paths: list[str] = []
     prefix = container_prefix.rstrip("/")
@@ -145,8 +145,8 @@ def _build_facts_total_section_for_workflow(
     facts_total_image: str,
     output_type: str,
 ) -> dict[str, Any]:
-    """Build the synthetic module section for a facts-total workflow service with
-    empty inputs.item and type-specific output-path."""
+    """Build the synthetic module section for a facts-total workflow service with empty
+    inputs.item and type-specific output-path."""
     return {
         "inputs": {"item": []},
         "outputs": {"output-path": wf.total_output_filename_for_type(output_type)},

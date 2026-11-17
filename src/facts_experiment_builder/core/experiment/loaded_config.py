@@ -91,8 +91,8 @@ class LoadedExperimentConfig:
     without coercion, and are None if their key is missing. Path values are checked and
     expanded later by resolve_experiment_data_paths().
 
-    Keys in the file that are not captured as fields, module sections or
-    module_schemas are kept in other_top_level_values, so nothing loaded is dropped.
+    Keys in the file that are not captured as fields, module sections or module_schemas
+    are kept in other_top_level_values, so nothing loaded is dropped.
     """
 
     experiment_name: str
@@ -135,22 +135,13 @@ class LoadedExperimentConfig:
     # values from the raw mapping keep doing so without the raw mapping itself.
     other_top_level_values: dict[str, Any] = field(default_factory=dict)
 
-    # Supplied totaled sea-level step data, when the totaling step is bypassed
-    # with pre-existing data instead of sea-level modules.
-    supplied_totaled_sealevel_step_data: Any = None
-    # Top-level keys not modelled above (and not module sections/schemas), e.g.
-    # schema-specific top-level params. Transitional: lets consumers that derived
-    # values from the raw mapping keep doing so without the raw mapping itself.
-    unmodelled_values: dict[str, Any] = field(default_factory=dict)
-
     def __post_init__(self) -> None:
         """Validate the loaded values, raising ValueError naming the YAML key at fault.
 
-        Checks that every required field has a value, the integer fields hold
-        ints (bool is not accepted), the string fields hold strings, and
-        workflows / module_schemas hold mappings when present. Other values are
-        taken as loaded; path values are expanded later by
-        resolve_experiment_data_paths().
+        Checks that every required field has a value, the integer fields hold ints (bool
+        is not accepted), the string fields hold strings, and workflows / module_schemas
+        hold mappings when present. Other values are taken as loaded; path values are
+        expanded later by resolve_experiment_data_paths().
         """
         missing = [
             key for name, key in _REQUIRED_FIELDS.items() if getattr(self, name) is None

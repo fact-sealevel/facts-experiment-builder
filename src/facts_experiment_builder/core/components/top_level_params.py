@@ -28,10 +28,9 @@ class TopLevelParams:
     def from_loaded_config(cls, config: "LoadedExperimentConfig") -> "TopLevelParams":
         """Build from a LoadedExperimentConfig's typed fields.
 
-        Equivalent to from_config() on the loaded mapping: every field here is
-        one of the config's captured fields. location_file falls back to a
-        snake_case 'location_file' key in other_top_level_values, as
-        from_config() allows.
+        Equivalent to from_config() on the loaded mapping: every field here is one of
+        the config's captured fields. location_file falls back to a snake_case
+        'location_file' key in other_top_level_values, as from_config() allows.
         """
         return cls(
             pipeline_id=config.pipeline_id,
