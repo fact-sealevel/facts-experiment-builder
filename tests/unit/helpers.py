@@ -1,3 +1,6 @@
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.experiment.skeleton import ExperimentSkeleton
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 
@@ -70,3 +73,8 @@ def make_config_raw(**overrides) -> dict:
         "apptainer-output-data-location": "/out/apptainer",
     }
     return {**defaults, **overrides}
+
+
+def make_loaded_config(**overrides) -> LoadedExperimentConfig:
+    """A LoadedExperimentConfig built from make_config_raw(**overrides)."""
+    return LoadedExperimentConfig.from_dict(make_config_raw(**overrides))

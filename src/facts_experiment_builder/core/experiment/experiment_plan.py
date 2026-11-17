@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import Any
 
 # ---------------------- Core imports ----------------------------
 from facts_experiment_builder.core.experiment import (
@@ -9,7 +8,10 @@ from facts_experiment_builder.core.module.module_schema import (
     ModuleSchema,
     collect_metadata_param_keys,
 )
-from facts_experiment_builder.core.workflow import Workflow, workflows_from_metadata
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
+from facts_experiment_builder.core.workflow import Workflow, workflows_from_mapping
 
 
 def check_totaling_and_esl_have_workflows(
@@ -55,24 +57,23 @@ class _ExperimentPlan:
 
 
 def _make_experiment_plan(
-    metadata: dict[str, Any], schemas: dict[str, ModuleSchema]
+    config: LoadedExperimentConfig, schemas: dict[str, ModuleSchema]
 ) -> _ExperimentPlan:
     """Phase 1 of generating services:
-    Validate metadata and build a typed experiment plan.
+    Build a typed experiment plan from a loaded experiment config.
 
     Ths fn is only data transformation, there should be no filesystem I/O.
     """
     # Get the list of modules included in experiment from manifest in exp config
-    # _manifest_module_names = _extract_all_module_names_from_manifest(metadata)
     # Use list of modules to load schema for each module
     list_of_schemas = list(schemas.values())
     # Get keys for top level params and fingerprint params from each module in experiment
     _top_level_keys = set(collect_metadata_param_keys(list_of_schemas, "top_level"))
     _fp_keys = set(collect_metadata_param_keys(list_of_schemas, "fingerprint_params"))
 
-    # Create FactsExperiment obj from metadata dict
-    experiment = FactsExperiment.from_metadata_dict(
-        metadata,
+    # Create FactsExperiment obj from the loaded config
+    experiment = FactsExperiment.from_loaded_config(
+        config,
         top_level_keys=_top_level_keys,
         fingerprint_keys=_fp_keys,
     )
@@ -93,8 +94,8 @@ def _make_experiment_plan(
         if experiment.extreme_sealevel_step.is_present
         else []
     )
-    # Make workflow obj from metadata
-    workflows = workflows_from_metadata(metadata)
+    # Make workflow objects from the config's workflows mapping
+    workflows = workflows_from_mapping(config.workflows)
     check_totaling_and_esl_have_workflows(
         sealevel_module_names=sealevel_module_names,
         framework_module_names=framework_module_names,

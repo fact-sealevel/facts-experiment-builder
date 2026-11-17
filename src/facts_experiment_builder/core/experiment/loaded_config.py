@@ -24,6 +24,45 @@ _REQUIRED_FIELDS = {
     "shared_input_data": "shared-input-data",
 }
 _INT_FIELDS = ("nsamps", "baseyear", "pyear_start", "pyear_end", "pyear_step")
+# Required fields whose values must be strings.
+_STR_FIELDS = (
+    "experiment_name",
+    "pipeline_id",
+    "scenario",
+    "module_specific_input_data",
+    "shared_input_data",
+)
+# Optional fields that must be strings when present.
+_OPTIONAL_STR_FIELDS = ("climate_module", "projection_scale", "location_file")
+# Raw experiment-config.yaml keys modelled as typed fields above (or read as
+# module sections / module_schemas). Anything else in the file lands in
+# LoadedExperimentConfig.unmodelled_values.
+_MODELLED_KEYS = {
+    "experiment_name",
+    "projection_scale",
+    "pipeline-id",
+    "nsamps",
+    "scenario",
+    "baseyear",
+    "pyear_start",
+    "pyear_end",
+    "pyear_step",
+    "location-file",
+    "climate_module",
+    "sealevel_modules",
+    "framework_modules",
+    "esl_modules",
+    "workflows",
+    "module-specific-input-data",
+    "shared-input-data",
+    "experiment-specific-input-data",
+    "supplied-totaled-sealevel-step-data",
+    "compose-output-data-location",
+    "apptainer-output-data-location",
+    "output-data-location",
+    "module_registry_version",
+    "module_schemas",
+}
 
 
 def _str_list(value: Any) -> list[str]:
@@ -52,8 +91,8 @@ class LoadedExperimentConfig:
     without coercion, and are None if their key is missing. Path values are checked and
     expanded later by resolve_experiment_data_paths().
 
-    `raw` is the full loaded mapping. Functions deeper in the generate pipeline still
-    take the metadata dict, so callers pass `raw` to them for now.
+    Keys in the file that are not modelled as fields, module sections or
+    module_schemas are kept in unmodelled_values, so nothing loaded is dropped.
     """
 
     experiment_name: str
@@ -77,18 +116,39 @@ class LoadedExperimentConfig:
     shared_input_data: str
     experiment_specific_input_data: Any
     # Output locations: each run command requires its own (see
-    # module_service_path_resolution.output_location_key()).
+    # module_service_path_resolution.output_location(), which reads these fields).
     compose_output_data_location: str | None
     apptainer_output_data_location: str | None
     output_data_location: str | None  # deprecated; read as the Compose location
 
+    # Retained for provenance: not read yet; intended to be written as a comment
+    # into files produced by generate-compose / generate-apptainer.
     module_registry_version: str | None
     module_sections: dict[str, dict[str, Any]]
     module_schemas: dict[str, Any] | None
 
+    # The full loaded mapping. Retained for now: the service-spec building
+    # chain (prepare_plan -> _build_module_specs / build_experiment_execution_plan)
+    # still consumes per-module sections from it.
     raw: dict[str, Any] = field(repr=False)
 
+    # Supplied totaled sea-level step data, when the totaling step is bypassed
+    # with pre-existing data instead of sea-level modules.
+    supplied_totaled_sealevel_step_data: Any = None
+    # Top-level keys not modelled above (and not module sections/schemas), e.g.
+    # schema-specific top-level params. Transitional: lets consumers that derived
+    # values from the raw mapping keep doing so without the raw mapping itself.
+    unmodelled_values: dict[str, Any] = field(default_factory=dict)
+
     def __post_init__(self) -> None:
+        """Validate the loaded values, raising ValueError naming the YAML key at fault.
+
+        Checks that every required field has a value, the integer fields hold
+        ints (bool is not accepted), the string fields hold strings, and
+        workflows / module_schemas hold mappings when present. Other values are
+        taken as loaded; path values are expanded later by
+        resolve_experiment_data_paths().
+        """
         missing = [
             key for name, key in _REQUIRED_FIELDS.items() if getattr(self, name) is None
         ]
@@ -107,6 +167,33 @@ class LoadedExperimentConfig:
         if not_int:
             raise ValueError(
                 f"experiment-config.yaml values must be integers: {', '.join(not_int)}."
+            )
+        not_str = [
+            f"{_REQUIRED_FIELDS[name]} ({getattr(self, name)!r})"
+            for name in _STR_FIELDS
+            if not isinstance(getattr(self, name), str)
+        ]
+        not_str += [
+            f"{name} ({getattr(self, name)!r})"
+            for name in _OPTIONAL_STR_FIELDS
+            if getattr(self, name) is not None
+            and not isinstance(getattr(self, name), str)
+        ]
+        if not_str:
+            raise ValueError(
+                f"experiment-config.yaml values must be strings: {', '.join(not_str)}."
+            )
+        if not isinstance(self.workflows, dict):
+            raise ValueError(
+                "experiment-config.yaml 'workflows' must be a mapping of workflow "
+                f"names to module lists, got {self.workflows!r}."
+            )
+        if self.module_schemas is not None and not isinstance(
+            self.module_schemas, dict
+        ):
+            raise ValueError(
+                "experiment-config.yaml 'module_schemas' must be a mapping of "
+                f"module names to schemas, got {self.module_schemas!r}."
             )
 
     @classmethod
@@ -154,6 +241,14 @@ class LoadedExperimentConfig:
             },
             module_schemas=raw.get("module_schemas"),
             raw=raw,
+            supplied_totaled_sealevel_step_data=raw.get(
+                "supplied-totaled-sealevel-step-data"
+            ),
+            unmodelled_values={
+                k: v
+                for k, v in raw.items()
+                if k not in _MODELLED_KEYS and k not in module_names
+            },
         )
 
     @property

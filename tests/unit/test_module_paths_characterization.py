@@ -19,6 +19,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
     resolve_experiment_data_paths,
     resolve_module_paths,
 )
+from tests.unit.helpers import make_loaded_config
 
 
 def _schema(module_name: str, input_dir_name: str | None = None) -> ModuleSchema:
@@ -51,9 +52,21 @@ def _resolve(
     schema: ModuleSchema,
     known_module_names: list[str] | None = None,
 ):
+    # Build the typed config from the path keys this file's metadata carries;
+    # a deleted/None path key now fails at load (ValueError naming the key),
+    # which is what the generate pipeline already surfaces via repository.get().
+    path_overrides = {
+        k: metadata.get(k)
+        for k in (
+            "shared-input-data",
+            "module-specific-input-data",
+            "compose-output-data-location",
+            "experiment-specific-input-data",
+        )
+    }
     return resolve_module_paths(
         data_paths=resolve_experiment_data_paths(
-            metadata, output_key=COMPOSE_OUTPUT_KEY
+            make_loaded_config(**path_overrides), output_key=COMPOSE_OUTPUT_KEY
         ),
         module_metadata=metadata[module_name],
         module_name=module_name,
@@ -232,7 +245,7 @@ def test_alternative_key_spelling_counts_as_missing(primary, alternative):
     metadata = _metadata("m")
     del metadata[primary]
     metadata[alternative] = "/alt"
-    with pytest.raises(KeyError, match=primary):
+    with pytest.raises(ValueError, match=primary):
         _resolve(metadata, "m", _schema("m"))
 
 
@@ -251,10 +264,10 @@ def test_alternative_key_spelling_is_ignored_when_primary_present():
     "key",
     ["shared-input-data", "module-specific-input-data", "compose-output-data-location"],
 )
-def test_missing_required_key_raises_key_error(key):
+def test_missing_required_key_raises_value_error(key):
     metadata = _metadata("m")
     del metadata[key]
-    with pytest.raises(KeyError, match=key):
+    with pytest.raises(ValueError, match=key):
         _resolve(metadata, "m", _schema("m"))
 
 

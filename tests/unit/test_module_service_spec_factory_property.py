@@ -14,6 +14,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
     COMPOSE_OUTPUT_KEY,
     resolve_experiment_data_paths,
 )
+from tests.unit.helpers import make_loaded_config
 
 
 # ---------------------------------------------------------------------------
@@ -60,7 +61,17 @@ def _build(module_name: str, image: str = "repo/img:latest") -> tuple:
             known_module_names=[module_name],
             module_definition=schema,
             data_paths=resolve_experiment_data_paths(
-                metadata, output_key=COMPOSE_OUTPUT_KEY
+                make_loaded_config(
+                    **{
+                        k: metadata[k]
+                        for k in (
+                            "shared-input-data",
+                            "module-specific-input-data",
+                            "compose-output-data-location",
+                        )
+                    }
+                ),
+                output_key=COMPOSE_OUTPUT_KEY,
             ),
         )
     return result, schema

@@ -6,7 +6,7 @@ from facts_experiment_builder.core.workflow import (
     _VALID_WORKFLOW_NAME,
     Workflow,
     WorkflowName,
-    workflows_from_metadata,
+    workflows_from_mapping,
 )
 
 valid_names = st.from_regex(_VALID_WORKFLOW_NAME, fullmatch=True)
@@ -177,20 +177,20 @@ def test_total_output_filename_includes_wf_name():
     assert wf.total_output_filename == "wf1_total.nc"
 
 
-# --- workflows_from_metadata ---
+# --- workflows_from_mapping ---
 
 
 @given(st.one_of(st.none(), st.text(), st.lists(st.text()), st.integers()))
-def test_workflows_from_metadata_non_dict_workflows_gives_empty_dict(bad_workflows):
-    """When metadata['workflows'] is missing or not a dict, returns {}."""
-    assert workflows_from_metadata({"workflows": bad_workflows}) == {}
+def test_workflows_from_mapping_non_dict_workflows_gives_empty_dict(bad_workflows):
+    """When the workflows value is missing or not a dict, returns {}."""
+    assert workflows_from_mapping(bad_workflows) == {}
 
 
 @given(st.dictionaries(valid_names, valid_module_list_value, max_size=5))
-def test_workflows_from_metadata_all_valid_entries_round_trip(raw):
+def test_workflows_from_mapping_all_valid_entries_round_trip(raw):
     """Every valid (name, value) pair survives and matches Workflow.from_dict
     directly."""
-    result = workflows_from_metadata({"workflows": raw})
+    result = workflows_from_mapping(raw)
     assert result.keys() == raw.keys()
     for name, value in raw.items():
         assert result[name] == Workflow.from_dict(name, value)
@@ -204,17 +204,17 @@ def test_workflows_from_metadata_all_valid_entries_round_trip(raw):
         max_size=3,
     ),
 )
-def test_workflows_from_metadata_invalid_keys_are_skipped(
+def test_workflows_from_mapping_invalid_keys_are_skipped(
     valid_entries, invalid_key_entries
 ):
     """Falsy or non-string keys are dropped; valid string keys are kept."""
     raw = {**valid_entries, **invalid_key_entries}
-    result = workflows_from_metadata({"workflows": raw})
+    result = workflows_from_mapping(raw)
     assert result.keys() == valid_entries.keys()
 
 
 @given(st.dictionaries(valid_names, valid_module_list_value, min_size=1, max_size=3))
-def test_workflows_from_metadata_any_invalid_value_raises_and_discards_whole_batch(
+def test_workflows_from_mapping_any_invalid_value_raises_and_discards_whole_batch(
     valid_entries,
 ):
     """One entry with an invalid value (e.g. duplicate module names) raises,
@@ -223,4 +223,4 @@ def test_workflows_from_metadata_any_invalid_value_raises_and_discards_whole_bat
     bad_name = "this-one-is-bad"
     raw = {**valid_entries, bad_name: "dup,dup"}
     with pytest.raises(ValueError):
-        workflows_from_metadata({"workflows": raw})
+        workflows_from_mapping(raw)
