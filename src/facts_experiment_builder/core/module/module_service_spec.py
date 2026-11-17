@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from facts_experiment_builder.core.components.top_level_params import TopLevelParams
+
 from facts_experiment_builder.core.module.arg_specs import (
     BaseArgSpec,
     OtherOutputSpec,
@@ -532,22 +533,6 @@ class ModuleServiceSpec:
             output_dir=self.components.output_paths.output_dir,
             host_outputs=self.host_output_paths(),
         )
-
-    def generate_asyncflow_config(self) -> dict[str, Any]:
-        """Generate AsyncFlow configuration.
-
-        Returns:
-            Dictionary representing AsyncFlow configuration
-        """
-        raise NotImplementedError(
-            "AsyncFlow configuration generation is not implemented"
-        )
-        # TODO: Implement AsyncFlow configuration generation
-        # This is a placeholder for future implementation
-        # return {
-        #    'module_name': self.module_name,
-        #     'image': f"{self.image.image_url}:{self.image.image_tag}",
-        # }
 
 
 def _resolve_module_inputs_dict(

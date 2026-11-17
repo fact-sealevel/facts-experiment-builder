@@ -13,7 +13,7 @@ EXPERIMENT_NAME="experiments/snapshot"
 OUTPUT_DIR="<TMP>/workspace/experiments/snapshot/output-apptainer"
 SHARED_IN="<TMP>/workspace/data/shared"
 MODULE_IN="<TMP>/workspace/data/module"
-SIF_DIR="<TMP>/workspace/apptainer_experiments/sif"
+SIF_DIR="<TMP>/workspace/apptainer_sif_files"
 
 # --- Global params -----------------------------------------------------------
 PYEAR_START=2020

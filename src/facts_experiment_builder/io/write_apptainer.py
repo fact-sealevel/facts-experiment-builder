@@ -6,7 +6,7 @@ from typing import Any
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
 from facts_experiment_builder.application.backend import RunInfo
-
+from facts_experiment_builder.io.paths import SIF_DIR_NAME
 
 def _build_template_context(
     stages: Any,
@@ -23,7 +23,7 @@ def _build_template_context(
             (experiment name, years, scenario, nsamps, pipeline-id); info.data_paths,
             the same paths used to build the module specs, gives OUTPUT_DIR,
             SHARED_IN and MODULE_IN; the SIF directory is
-            <info.workspace_dir>/apptainer_experiments/sif
+            <info.workspace_dir>/SIF_DIR_NAME
         climate_service_name: Name of the climate service, or None if there is none
         mkdir_dirs: Output directories the script creates before running services
 
@@ -37,7 +37,7 @@ def _build_template_context(
     # so OUTPUT_DIR etc. always match the binds.
     data_paths = info.data_paths
     config = info.config
-    sif_dir = str(info.workspace_dir / "apptainer_experiments" / "sif")
+    sif_dir = info.workspace_dir / SIF_DIR_NAME
 
     climate_wait_files: list[str] = list(
         dict.fromkeys(f for spec in stages.stage2 for f in spec.wait_for_files)

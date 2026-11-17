@@ -214,6 +214,41 @@ def test_create_experiment_dir_does_not_create_output_dirs(workspace):
     assert not paths.apptainer_output_dir.exists()
 
 
+def test_error_raises_if_workspace_dir_not_absolute(tmp_path):
+    """The workspace_dir must be an absolute path, not relative"""
+
+    with pytest.raises(ValueError, match="must be True"):
+        ExperimentPaths(
+            workspace_dir=Path("relative/path/to/workspace"),  # relative path
+            experiment_name=ExperimentName.parse("my_experiment"),
+        )
+
+
+def test_create_experiment_dir_raises_if_parent_not_found(workspace, monkeypatch):
+    """If the parent directory is removed after check_experiment_location() passes
+    but before mkdir() runs, the FileNotFoundError from mkdir() is raised as
+    ExperimentParentNotFoundError."""
+    paths = _paths(workspace)
+
+    def check_then_remove_parent(experiment_paths: ExperimentPaths) -> None:
+        check_experiment_location(experiment_paths)  # the real check passes
+        experiment_paths.parent_dir.rmdir()  # then the parent disappears
+
+    monkeypatch.setattr(
+        "facts_experiment_builder.io.paths.check_experiment_location",
+        check_then_remove_parent,
+    )
+
+    with pytest.raises(ExperimentParentNotFoundError) as exc_info:
+        create_experiment_dir(paths)
+
+    # Raised "from None": the FileNotFoundError is not chained onto the error.
+    assert exc_info.value.__cause__ is None
+    assert exc_info.value.__suppress_context__
+    assert not paths.parent_dir.exists()
+    assert not paths.experiment_dir.exists()
+
+
 # ---------------------------------------------------------------------------
 # prepare_experiment_setup() / finalize_experiment_setup()
 # ---------------------------------------------------------------------------

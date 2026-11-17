@@ -14,14 +14,15 @@
 
 
 ## Overview
-`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that are used to run the experiment. If you are familiar with FACTS1, a FACTS2 `experiment-config.yaml` is similar to a `config.yaml` file that was used to define experiments in the previous framework. FEB offers a command line interface (CLI) with five main commands: 
+`facts-experiment-builder` (FEB) is a package for configuring and managing FACTS2 experiments. A FACTS2 experiment consists of running one or more modules from the [FACTS2 ecosystem](https://github.com/fact-sealevel). It has two key types of artifacts: an experiment configuration file, which represents the full, scientific specification of the experiment, and execution scripts that are used to run the experiment. If you are familiar with FACTS1, a FACTS2 `experiment-config.yaml` is similar to a `config.yaml` file that was used to define experiments in the previous framework. FEB offers a command line interface (CLI) with six main commands: 
 - `feb init` to set up a workspace,
 - `feb setup-experiment` to configure an experiment and write an experiment configuration file, 
-- `feb generate-compose` to generate an executable experiment script from that configuration file, 
+- `feb generate-compose` to generate an executable Docker Compose file from that configuration file, 
+- `feb generate-apptainer` to generate an executable Apptainer bash script from that configuration file, 
 - `feb check-data` to verify that all expected module input files are present, and 
 - `feb list-modules` to see all available modules in your registry. 
 
-An experiment execution file is created with `feb generate-compose`. This contains all of the information required to run an experiment in a given execution environment. For now, we provide a Docker Compose implementation (`experiment-compose.yaml`). In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) or [Apptainer](https://apptainer.org/) implementation that should be more suitable for HPC systems.
+An experiment execution file contains all of the information required to run an experiment in a given execution environment. We provide two: a Docker Compose file (`experiment-compose.yaml`), created with `feb generate-compose`, and an [Apptainer](https://apptainer.org/) bash script (`experiment-apptainer.sh`), created with `feb generate-apptainer`, for systems without Docker, such as HPC clusters. In the future, we plan to include an [Async-Flow](https://radical-cybertools.github.io/radical.asyncflow/) implementation.
 
 For more information on FACTS, see [https://fact-sealevel.github.io/](https://fact-sealevel.github.io/).
 
@@ -44,6 +45,7 @@ Other important pages:
 - [FEB Setup Guide](docs/SETUP.md)
 - [Experiment config file overview](docs/EXPERIMENT-CONFIG-OVERVIEW.md)
 - [Experiment compose file overview](docs/EXPERIMENT-COMPOSE-OVERVIEW.md)
+- [`generate-apptainer` user guide](docs/generate_apptainer.md)
 - [FACTS Glossary](docs/FACTS_GLOSSARY.md)
 - [Information for module contributors](docs/CONTRIBUTOR_DOCS.md)
 
@@ -51,7 +53,7 @@ Other important pages:
 
 ## Requirements
 
-- **[Docker](https://docs.docker.com/get-started/get-docker/)** — required to run experiments. Install Docker Desktop (Mac/Windows) or Docker Engine (Linux) before proceeding to the "Run an experiment" step.
+- **[Docker](https://docs.docker.com/get-started/get-docker/)** or **[Apptainer](https://apptainer.org/)** — required to run experiments. For Docker, install Docker Desktop (Mac/Windows) or Docker Engine (Linux) before proceeding to the "Run an experiment" step. Apptainer is only needed on the machine where you run an experiment's Apptainer script (see the [`generate-apptainer` user guide](docs/generate_apptainer.md)).
 - **A Python package manager** — to install and run FEB. We recommend [uv](https://docs.astral.sh/uv/getting-started/installation/) (see the Installation section below), but `pip` / `pipx` work equally well if you prefer them.
 - **git** — required by `feb init` to clone the module registry.
 
@@ -145,7 +147,9 @@ You can see the full list of options by running `uvx --from git+https://github.c
 
 If you included multiple modules at the sea-level step, you will see CLI prompts asking if you'd like to specify additional *workflows*. Workflows are collections of modules within an experiment that are summed to produce comprehensive distributions of projected future sea-level change - head to the [glossary](docs/FACTS_GLOSSARY.md) for more detail on this.
 
-Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yaml` file has been written. Congratulations - you have just created a FACTS2 experiment! 
+Once you've completed the workflows section, you'll see messages with information about the experiment and stating that an `experiment-config.yaml` file and a `README.md` file have been written. Congratulations - you have just created a FACTS2 experiment! 
+
+The experiment's `README.md` records how the experiment was created: when, with which version of FEB, and the full `setup-experiment` command, with every option and its value (defaults included). It also lists the experiment's workflows. To create the same experiment again, paste the command and enter those workflows if you're prompted. The README only records setup: values you fill in to `experiment-config.yaml` afterwards aren't in it, and `setup-experiment` never overwrites an existing `README.md`.
 
 Inspect the experiment configuration file and ensure that all of the fields in the top section of required arguments are completed. For more detail, see our [experiment configuration file overview](docs/EXPERIMENT-CONFIG-OVERVIEW.md) page. 
 
@@ -154,9 +158,9 @@ Inspect the experiment configuration file and ensure that all of the fields in t
 
 ## Run an experiment
 
-In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our newly-created experiment's sub-directory (`./experiments/my_first_experiment`). As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
+In the previous section, we created an experiment with the `feb setup-experiment` command, which generated a file, `experiment-config.yaml`, in our newly-created experiment's sub-directory (`./experiments/my_first_experiment`), along with a `README.md` recording how the experiment was created. As stated above, the experiment configuration file acts as the core artifact that fully specifies the experiment, it does not actually *run* an experiment. 
 
-FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we only provide a [Docker Compose](https://docs.docker.com/compose/) implementation. If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
+FACTS2 plans to offer multiple implementations to run experiments in different computational environments. For now, we provide a [Docker Compose](https://docs.docker.com/compose/) implementation, shown below, and an [Apptainer](https://apptainer.org/) implementation (see [below](#run-with-apptainer)). If you don't have Docker installed on your machine, follow Docker's installation [instructions](https://docs.docker.com/get-started/get-docker/). 
 
 facts-experiment-builder provides a command, `feb generate-compose`, to generate an executable Docker Compose file from an `experiment-config.yaml` that wil be used to run your experiment. The command writes the file, `experiment-compose.yaml`, to your experiment's sub-directory just like `experiment-config.yaml`. For more detail on the experiment compose file, see the [overview](docs/EXPERIMENT-COMPOSE-OVERVIEW.md) page.
 
@@ -171,10 +175,25 @@ Inspect the compose file and when you are ready to run the experiment, execute i
 docker compose -f ./experiments/my_first_experiment/experiment-compose.yaml up
 ```
 
-**Not yet implemented: async-flow or apptainer equivalent of `generate-compose`.**
+### Run with Apptainer
+
+On systems without Docker, such as HPC clusters, use `feb generate-apptainer` instead. It writes `experiment-apptainer.sh` to the experiment's sub-directory:
+```shell
+uvx --from git+https://github.com/fact-sealevel/facts-experiment-builder@main feb generate-apptainer \
+--experiment-name experiments/my_first_experiment
+```
+
+Run the script with `bash` on a machine with Apptainer installed:
+```shell
+bash ./experiments/my_first_experiment/experiment-apptainer.sh
+```
+
+See the [`generate-apptainer` user guide](docs/generate_apptainer.md) for what the script does, where outputs go, and how to run it on a different machine from the one that generated it.
+
+**Not yet implemented: async-flow equivalent of `generate-compose`.**
 
 ## Features
-facts-experiment-builder is a command line application with five main commands:
+facts-experiment-builder is a command line application with six main commands:
 
 **`init`**
 Initialize a FACTS workspace in the current directory. Creates the `experiments/` subdirectory, clones the module registry, and writes a `.facts-workspace` marker. Safe to re-run.
@@ -202,7 +221,7 @@ Options:
 > ```
 
 **`setup-experiment`**
-Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete.
+Initialize a new experiment by calling this command and providing an experiment name and the modules (or pre-existing data) for each step. `facts-experiment-builder` creates a sub-directory to hold run files and outputs associated with this experiment. It also generates and prepopulates an `experiment-config.yaml` based on the arguments provided by the user. The user must then enter any remaining fields in `experiment-config.yaml` before it is considered complete. It also writes a `README.md` to the experiment directory that records the full `setup-experiment` command used (every option with its value, defaults included), the FEB version, the creation time and the experiment's workflows, so the experiment can be set up again. An existing `README.md` is never overwritten.
 
 Each step accepts either a module name or a path to pre-existing data:
 - `--climate-step` / `--supplied-climate-step-data`: run a climate module or provide climate output directly
@@ -211,16 +230,27 @@ Each step accepts either a module name or a path to pre-existing data:
 ```shell
 Usage: feb setup-experiment [OPTIONS]
 
-  Set up a new experiment with setup-experiment CLI command.
+  Set up a new FACTS experiment.
 
-  This function includes a number of steps:
+  Creates the experiment directory, <workspace-dir>/<experiment-name>, and
+  writes two files to it: experiment-config.yaml, which defines the
+  experiment, and README.md, which records the command that created it. Fill
+  in any values left empty in experiment-config.yaml, then run generate-
+  compose or generate-apptainer.
 
-      - Creates a sub-directory in experiments/ for this experiment. Raises
-      error if one already exists
-
-      - Check that all required arguments were received
-
-      - If facts-total passed, collects workflows with user prompts
+  Steps:
+    1. Check the experiment name and location. Fails if the parent directory
+       doesn't exist, the experiment would be outside the workspace, or the
+       experiment directory already has an experiment-config.yaml.
+    2. Check the step options: each step gets a module or supplied data, not
+       both, and an extreme sea-level step needs sea-level modules.
+    3. Load each module's definition from the module registry.
+    4. Collect workflows. With one sea-level module, the all-modules workflow
+       is created without prompting. With several, you are prompted for
+       workflows (all-modules is created first if --total-all-modules is set).
+    5. Create the experiment directory and write experiment-config.yaml, with a
+       copy of each module's definition, and README.md. An existing README.md
+       is never overwritten.
 
 Options:
   --experiment-name TEXT          Name of the experiment and parent directory,
@@ -230,7 +260,7 @@ Options:
                                   to create an experiment directory that holds
                                   config files and output data associated with
                                   the experiment.  [required]
-  --climate-step TEXT             Name of the temperature module
+  --climate-step TEXT             Name of the climate module
   --supplied-climate-step-data PATH
                                   Path to data to use in place of running a
                                   module in the climate step of the
@@ -271,9 +301,8 @@ Options:
                                   Example: --module-regions
                                   emulandice2-glaciers=RGI01,RGI02
   --workspace-dir DIRECTORY       Workspace directory, will default to current
-                                  working directory.  [default: /Users/emmamar
-                                  shall/Desktop/facts_work/facts_v2/facts-
-                                  experiment-builder]
+                                  working directory.  [default: <current
+                                  working directory>]
   --module-registry DIRECTORY     Path to the facts-module-registry directory
                                   to use in experiment setup.  [default:
                                   facts-module-registry]
@@ -292,25 +321,36 @@ Usage: feb generate-compose [OPTIONS]
   Generate Docker Compose file from experiment metadata.
 
 Options:
-  --experiment-name TEXT       Name of the experiment, including parent
-                               directory, if applicable.  [required]
-  --custom-output-path PATH    Output path for compose file. If not provided,
-                               will use ../experiment_dir/experiment-
-                               compose.yaml. If provided, must include full
-                               path to file and use filename 'experiment-
-                               compose.yaml'
-  --workspace-dir PATH         Workspace directory, will default to current
-                               working directory.  [default: /Users/emmamarsha
-                               ll/Desktop/facts_work/facts_v2/facts-
-                               experiment-builder; required]
-  --debug                      Enable debug mode
-  --module-registry DIRECTORY  Path to the facts-module-registry directory to
-                               use in generate-compose. MUst be same as that
-                               used in setup-experiment. Default value points
-                               to the registry that is created if running from
-                               facts2-workspace after running `feb init`.
-                               [default: facts-module-registry]
-  -h, --help                   Show this message and exit.
+  --experiment-name TEXT      Name of the experiment, including parent
+                              directory, if applicable.  [required]
+  --custom-compose-path PATH  Output path for compose file. If not provided,
+                              will use ../experiment_dir/experiment-
+                              compose.yaml. If provided, must include full
+                              path to file and use filename 'experiment-
+                              compose.yaml'
+  --workspace-dir PATH        Workspace directory, will default to current
+                              working directory.  [default: <current
+                              directory>; required]
+  --debug                     Enable debug mode
+  -h, --help                  Show this message and exit.
+```
+
+**`generate-apptainer`**
+From a completed `experiment-config.yaml`, this command generates a bash script, `experiment-apptainer.sh`, that runs the experiment with Apptainer instead of Docker Compose. See the [`generate-apptainer` user guide](docs/generate_apptainer.md) for details.
+
+```shell
+Usage: feb generate-apptainer [OPTIONS]
+
+  Generate Apptainer bash script from experiment metadata.
+
+Options:
+  --experiment-name TEXT     Name of the experiment, including parent
+                             directory if applicable.  [required]
+  --workspace-dir DIRECTORY  Workspace directory; defaults to current working
+                             directory.  [default: <current directory>]
+  --custom-script-path PATH  Output path override for the generated script.
+  --debug                    Enable debug mode.
+  -h, --help                 Show this message and exit.
 ```
 
 **`list-modules`**
