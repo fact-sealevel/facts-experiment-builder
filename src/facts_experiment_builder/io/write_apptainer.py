@@ -8,6 +8,7 @@ from jinja2 import Environment, PackageLoader, StrictUndefined
 from facts_experiment_builder.application.backend import RunInfo
 from facts_experiment_builder.io.paths import SIF_DIR_NAME
 
+
 def _build_template_context(
     stages: Any,
     info: RunInfo,
