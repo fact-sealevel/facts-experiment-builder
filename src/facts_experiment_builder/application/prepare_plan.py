@@ -14,6 +14,7 @@ from facts_experiment_builder.application.execution_plan import (
     _ModuleSpecs,
     build_experiment_execution_plan,
 )
+from facts_experiment_builder.application.log_levels import SUCCESS
 from facts_experiment_builder.application.module_service_spec_factory import (
     build_module_service_spec,
 )
@@ -35,11 +36,9 @@ from facts_experiment_builder.core.module.module_service_spec import (
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-_SUCCESS = 25  # custom level between INFO (20) and WARNING (30); must match CLI handler
-
 
 def _log_success(msg: str, *args: object) -> None:
-    logger.log(_SUCCESS, msg, *args)
+    logger.log(SUCCESS, msg, *args)
 
 
 def _validate_climate_file_inputs(
