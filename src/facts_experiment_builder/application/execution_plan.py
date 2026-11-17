@@ -11,6 +11,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
 from facts_experiment_builder.application.module_service_spec_factory import (
     build_module_service_spec,
@@ -81,7 +84,7 @@ class _ExecutionPlan:
 
 
 def _collect_workflow_output_paths_by_type(
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     wf: Workflow,
     output_type: str,
     schemas: dict[str, "ModuleSchema"],
@@ -91,16 +94,16 @@ def _collect_workflow_output_paths_by_type(
     """Collect container paths for workflow module outputs that match the given
     output_type and have pass_to_total=True in their module schema.
 
-    For each module in the workflow, reads metadata[mod].outputs; each value must be a
-    dict with "value" and "output_type". If a module schema is present in `schemas`,
-    only outputs whose OutputFileSpec has pass_to_total=True are included. Outputs from
-    modules not found in `schemas` are included for backward compatibility.
+    For each module in the workflow, reads config.module_sections[mod].outputs; each
+    value must be a dict with "value" and "output_type". If a module schema is present
+    in `schemas`, only outputs whose OutputFileSpec has pass_to_total=True are included.
+    Outputs from modules not found in `schemas` are included for backward compatibility.
     """
     paths: list[str] = []
     prefix = container_prefix.rstrip("/")
 
     for mod in wf.module_names:
-        out_section = metadata.get(mod, {}) or {}
+        out_section = config.module_sections.get(mod, {}) or {}
         if not isinstance(out_section, dict):
             continue
         outputs = out_section.get("outputs") or {}
@@ -141,8 +144,8 @@ def _build_facts_total_section_for_workflow(
     facts_total_image: str,
     output_type: str,
 ) -> dict[str, Any]:
-    """Build the synthetic metadata section for a facts-total workflow service with
-    empty inputs.item and type-specific output-path."""
+    """Build the synthetic module section for a facts-total workflow service with empty
+    inputs.item and type-specific output-path."""
     return {
         "inputs": {"item": []},
         "outputs": {"output-path": wf.total_output_filename_for_type(output_type)},
@@ -156,31 +159,31 @@ def _build_facts_total_section_for_workflow(
 
 def _populate_section_with_global_outputs(
     section: dict[str, Any],
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     wf: Workflow,
     schemas: dict[str, "ModuleSchema"],
 ) -> None:
     """Extend section["inputs"]["item"] with container paths for outputs with
     output_type "global"."""
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global", schemas)
+    paths = _collect_workflow_output_paths_by_type(config, wf, "global", schemas)
     section["inputs"]["item"].extend(paths)
 
 
 def _populate_section_with_local_outputs(
     section: dict[str, Any],
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     wf: Workflow,
     schemas: dict[str, "ModuleSchema"],
 ) -> None:
     """Extend section["inputs"]["item"] with container paths for outputs with
     output_type "local"."""
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "local", schemas)
+    paths = _collect_workflow_output_paths_by_type(config, wf, "local", schemas)
     section["inputs"]["item"].extend(paths)
 
 
 def _build_facts_total_specs_for_workflows(
     plan: _ExperimentPlan,
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     schemas: dict[str, ModuleSchema],
     data_paths: ExperimentDataPaths,
 ) -> dict[str, tuple[ModuleServiceSpec, Workflow]]:
@@ -213,17 +216,16 @@ def _build_facts_total_specs_for_workflows(
             )
             if output_type == "global":
                 _populate_section_with_global_outputs(
-                    section, metadata, wf, schemas=schemas
+                    section, config, wf, schemas=schemas
                 )
             else:
                 _populate_section_with_local_outputs(
-                    section, metadata, wf, schemas=schemas
+                    section, config, wf, schemas=schemas
                 )
             service_name = wf.facts_total_service_name_for_type(output_type)
-            metadata_copy = dict(metadata)
-            metadata_copy[service_name] = section
             spec = build_module_service_spec(
-                metadata=metadata_copy,
+                section,
+                config=config,
                 module_name=service_name,
                 known_module_names=known_module_names,
                 module_definition=facts_total_schema,
@@ -236,7 +238,7 @@ def _build_facts_total_specs_for_workflows(
 def _build_esl_specs_for_workflows(
     esl_module_names: list[str],
     workflows: dict[str, Workflow],
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     projection_scale: str | None,
     schemas: dict[str, ModuleSchema],
     data_paths: ExperimentDataPaths,
@@ -266,7 +268,7 @@ def _build_esl_specs_for_workflows(
                 "Check the module's YAML for an `inputs` entry with `mount.volume: output`."
             )
 
-        base_section = metadata.get(module_name) or {}
+        base_section = config.module_sections.get(module_name) or {}
         if not isinstance(base_section, dict):
             base_section = {}
         for _wf_name, wf in workflows.items():
@@ -275,16 +277,17 @@ def _build_esl_specs_for_workflows(
             for key in total_localsl_keys:
                 base_inputs[key] = wf.total_localsl_path_under_output
             base_outputs = base_section.get("outputs") or {}
+            # No YAML section exists for this per-workflow service: clone the
+            # module's real section, repointing its totaling inputs at this
+            # workflow's total and its output at the service's output root.
             synthetic_section = {
                 **base_section,
                 "inputs": base_inputs,
                 "outputs": {**base_outputs, "output-dir": "."},
             }
-            metadata_copy = dict(metadata)
-            metadata_copy[service_name] = synthetic_section
-
             esl_spec = build_module_service_spec(
-                metadata=metadata_copy,
+                synthetic_section,
+                config=config,
                 module_name=service_name,
                 known_module_names=known_module_names,
                 module_definition=schema,
@@ -298,7 +301,7 @@ def _build_esl_specs_for_workflows(
 def build_experiment_execution_plan(
     specs: _ModuleSpecs,
     plan: _ExperimentPlan,
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     schemas: dict[str, ModuleSchema],
     data_paths: ExperimentDataPaths,
 ) -> _ExecutionPlan:
@@ -321,7 +324,7 @@ def build_experiment_execution_plan(
     facts_total_specs: dict[str, tuple[ModuleServiceSpec, Workflow]] = {}
     if plan.workflows:
         facts_total_specs = _build_facts_total_specs_for_workflows(
-            plan=plan, metadata=metadata, schemas=schemas, data_paths=data_paths
+            plan=plan, config=config, schemas=schemas, data_paths=data_paths
         )
 
     esl_specs: dict[str, tuple[ModuleServiceSpec, str]] = {}
@@ -329,7 +332,7 @@ def build_experiment_execution_plan(
         esl_specs = _build_esl_specs_for_workflows(
             esl_module_names=plan.esl_module_names,
             workflows=plan.workflows,
-            metadata=metadata,
+            config=config,
             projection_scale=plan.experiment.projection_scale,
             schemas=schemas,
             data_paths=data_paths,

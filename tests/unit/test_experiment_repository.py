@@ -58,6 +58,10 @@ def test_storage_exp_repo_get_returns_loaded_config(tmp_path):
 
     assert isinstance(loaded_config, LoadedExperimentConfig)
     assert loaded_config.experiment_name == "test_experiment"
-    # Keys without a typed field are still available on raw.
-    assert loaded_config.raw["top_level_params"]["param1"] == "value1"
-    assert loaded_config.raw["top_level_params"]["param2"] == "value2"
+    # Keys without a typed field are still available on other_top_level_values.
+    assert (
+        loaded_config.other_top_level_values["top_level_params"]["param1"] == "value1"
+    )
+    assert (
+        loaded_config.other_top_level_values["top_level_params"]["param2"] == "value2"
+    )

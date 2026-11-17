@@ -14,7 +14,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
     APPTAINER_OUTPUT_KEY,
     COMPOSE_OUTPUT_KEY,
     LEGACY_OUTPUT_KEY,
-    output_location_key,
+    output_location,
 )
 from facts_experiment_builder.application.setup_experiment import (
     finalize_experiment_setup,
@@ -27,47 +27,67 @@ from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
 from facts_experiment_builder.io.paths import ExperimentPaths
-from tests.unit.helpers import InMemoryModuleDefinitions, make_schema
+from tests.unit.helpers import (
+    InMemoryModuleDefinitions,
+    make_loaded_config,
+    make_schema,
+)
 
 _EXPERIMENT_NAME = "experiments/output_test"
 _MODULE = "fair-temperature"
 
 # ---------------------------------------------------------------------------
-# output_location_key()
+# output_location()
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.parametrize("key", [COMPOSE_OUTPUT_KEY, APPTAINER_OUTPUT_KEY])
-def test_each_command_reads_its_own_key(key):
-    metadata = {COMPOSE_OUTPUT_KEY: "/c", APPTAINER_OUTPUT_KEY: "/a"}
-    assert output_location_key(metadata, key) == key
+@pytest.mark.parametrize(
+    "key,expected", [(COMPOSE_OUTPUT_KEY, "/c"), (APPTAINER_OUTPUT_KEY, "/a")]
+)
+def test_each_command_reads_its_own_key(key, expected):
+    config = make_loaded_config(
+        **{COMPOSE_OUTPUT_KEY: "/c", APPTAINER_OUTPUT_KEY: "/a"}
+    )
+    assert output_location(config, key) == expected
 
 
 def test_compose_falls_back_to_deprecated_key_with_a_warning(caplog):
     with caplog.at_level(logging.WARNING):
-        key = output_location_key({LEGACY_OUTPUT_KEY: "/old"}, COMPOSE_OUTPUT_KEY)
-    assert key == LEGACY_OUTPUT_KEY
+        location = output_location(
+            make_loaded_config(**{COMPOSE_OUTPUT_KEY: None, LEGACY_OUTPUT_KEY: "/old"}),
+            COMPOSE_OUTPUT_KEY,
+        )
+    assert location == "/old"
     assert "deprecated" in caplog.text
     assert COMPOSE_OUTPUT_KEY in caplog.text
 
 
 def test_compose_key_wins_over_deprecated_key_without_a_warning(caplog):
-    metadata = {COMPOSE_OUTPUT_KEY: "/new", LEGACY_OUTPUT_KEY: "/old"}
     with caplog.at_level(logging.WARNING):
-        key = output_location_key(metadata, COMPOSE_OUTPUT_KEY)
-    assert key == COMPOSE_OUTPUT_KEY
+        location = output_location(
+            make_loaded_config(
+                **{COMPOSE_OUTPUT_KEY: "/new", LEGACY_OUTPUT_KEY: "/old"}
+            ),
+            COMPOSE_OUTPUT_KEY,
+        )
+    assert location == "/new"
     assert caplog.text == ""
 
 
 def test_apptainer_does_not_fall_back_to_deprecated_key():
     with pytest.raises(ValueError, match=APPTAINER_OUTPUT_KEY):
-        output_location_key({LEGACY_OUTPUT_KEY: "/old"}, APPTAINER_OUTPUT_KEY)
+        output_location(
+            make_loaded_config(
+                **{APPTAINER_OUTPUT_KEY: None, LEGACY_OUTPUT_KEY: "/old"}
+            ),
+            APPTAINER_OUTPUT_KEY,
+        )
 
 
 @pytest.mark.parametrize("key", [COMPOSE_OUTPUT_KEY, APPTAINER_OUTPUT_KEY])
 def test_missing_key_raises_value_error_naming_it(key):
     with pytest.raises(ValueError, match=key):
-        output_location_key({}, key)
+        output_location(make_loaded_config(**{key: None}), key)
 
 
 # ---------------------------------------------------------------------------

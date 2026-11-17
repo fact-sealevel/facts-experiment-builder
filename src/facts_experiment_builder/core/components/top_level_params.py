@@ -5,7 +5,12 @@ without importing upward into the experiment layer.
 """
 
 from dataclasses import dataclass, fields
-from typing import Any
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from facts_experiment_builder.core.experiment.loaded_config import (
+        LoadedExperimentConfig,
+    )
 
 
 @dataclass
@@ -20,21 +25,24 @@ class TopLevelParams:
     location_file: str | None = None
 
     @classmethod
-    def from_config(cls, metadata: dict[str, Any]) -> "TopLevelParams":
-        """Build from a loaded experiment-config.yaml dict.
+    def from_loaded_config(cls, config: "LoadedExperimentConfig") -> "TopLevelParams":
+        """Build from a LoadedExperimentConfig's typed fields.
 
-        Config keys may be kebab-case ("pipeline-id") or snake_case ("pipeline_id"). A
-        config only contains the top-level params its modules reference, so any param
-        not present is left as None.
+        Equivalent to from_config() on the loaded mapping: every field here is one of
+        the config's captured fields. location_file falls back to a snake_case
+        'location_file' key in other_top_level_values, as from_config() allows.
         """
-        values = {}
-        for f in fields(cls):
-            kebab = f.name.replace("_", "-")
-            if kebab in metadata:
-                values[f.name] = metadata[kebab]
-            elif f.name in metadata:
-                values[f.name] = metadata[f.name]
-        return cls(**values)
+        return cls(
+            pipeline_id=config.pipeline_id,
+            scenario=config.scenario,
+            baseyear=config.baseyear,
+            pyear_start=config.pyear_start,
+            pyear_end=config.pyear_end,
+            pyear_step=config.pyear_step,
+            nsamps=config.nsamps,
+            location_file=config.location_file
+            or config.other_top_level_values.get("location_file"),
+        )
 
 
 TOP_LEVEL_PARAM_NAMES: frozenset[str] = frozenset(

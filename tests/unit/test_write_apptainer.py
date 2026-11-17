@@ -91,7 +91,7 @@ _BASE_METADATA = {
 }
 
 _DATA_PATHS = resolve_experiment_data_paths(
-    _BASE_METADATA, output_key=APPTAINER_OUTPUT_KEY
+    LoadedExperimentConfig.from_dict(_BASE_METADATA), output_key=APPTAINER_OUTPUT_KEY
 )
 
 
@@ -273,11 +273,14 @@ def test_path_vars_come_from_data_paths_not_metadata():
     """OUTPUT_DIR / SHARED_IN / MODULE_IN use RunInfo.data_paths, the same source as the
     module binds, even if the loaded config says something else."""
     data_paths = resolve_experiment_data_paths(
-        {
-            "apptainer-output-data-location": "/apptainer/out",
-            "shared-input-data": "/apptainer/shared",
-            "module-specific-input-data": "/apptainer/module",
-        },
+        LoadedExperimentConfig.from_dict(
+            {
+                **_BASE_METADATA,
+                "apptainer-output-data-location": "/apptainer/out",
+                "shared-input-data": "/apptainer/shared",
+                "module-specific-input-data": "/apptainer/module",
+            }
+        ),
         output_key=APPTAINER_OUTPUT_KEY,
     )
     result = _render(data_paths=data_paths)

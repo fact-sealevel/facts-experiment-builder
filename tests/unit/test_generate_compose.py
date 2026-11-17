@@ -12,6 +12,7 @@ from facts_experiment_builder.application.prepare_plan import (
 )
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from tests.unit.helpers import make_loaded_config
 
 
 def _make_climate_schema(input_name: str) -> ModuleSchema:
@@ -45,29 +46,40 @@ def _make_climate_schema(input_name: str) -> ModuleSchema:
 def test_validate_climate_file_inputs_passes_with_standard_key():
     """Validation succeeds when the module's climate input key is provided in metadata."""
     schema = _make_climate_schema("climate-data-file")
-    metadata = {
-        "test-module": {"inputs": {"climate-data-file": "fair-temperature/climate.nc"}}
-    }
-    _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
+    config = make_loaded_config(
+        sealevel_modules=["test-module"],
+        **{
+            "test-module": {
+                "inputs": {"climate-data-file": "fair-temperature/climate.nc"}
+            }
+        },
+    )
+    _validate_climate_file_inputs(config, ["test-module"], {"test-module": schema})
 
 
 def test_validate_climate_file_inputs_passes_with_nonstandard_key():
     """Validation succeeds when the module uses a non-standard climate input name."""
     schema = _make_climate_schema("input-data-file")
-    metadata = {
-        "test-module": {"inputs": {"input-data-file": "fair-temperature/climate.nc"}}
-    }
-    _validate_climate_file_inputs(metadata, ["test-module"], {"test-module": schema})
+    config = make_loaded_config(
+        sealevel_modules=["test-module"],
+        **{
+            "test-module": {
+                "inputs": {"input-data-file": "fair-temperature/climate.nc"}
+            }
+        },
+    )
+    _validate_climate_file_inputs(config, ["test-module"], {"test-module": schema})
 
 
 def test_validate_climate_file_inputs_raises_when_nonstandard_key_missing():
     """Validation raises when a module with a non-standard climate input name has no value."""
     schema = _make_climate_schema("input-data-file")
-    metadata = {"test-module": {"inputs": {}}}
+    config = make_loaded_config(
+        sealevel_modules=["test-module"],
+        **{"test-module": {"inputs": {}}},
+    )
     with pytest.raises(ValueError, match="test-module"):
-        _validate_climate_file_inputs(
-            metadata, ["test-module"], {"test-module": schema}
-        )
+        _validate_climate_file_inputs(config, ["test-module"], {"test-module": schema})
 
 
 def test_check_module_schemas_present_raises_when_key_missing():

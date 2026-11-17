@@ -3,7 +3,12 @@
 import logging
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from facts_experiment_builder.core.experiment.loaded_config import (
+        LoadedExperimentConfig,
+    )
 
 from facts_experiment_builder.core.components.metadata_bundle import is_metadata_value
 from facts_experiment_builder.core.components.top_level_params import (  # noqa: F401 (re-export)
@@ -210,75 +215,81 @@ class FactsExperiment:
         }
 
     @classmethod
-    def from_metadata_dict(
+    def from_loaded_config(
         cls,
-        metadata: dict[str, Any],
+        config: "LoadedExperimentConfig",
         top_level_keys: set[str] | None = None,
         fingerprint_keys: set[str] | None = None,
     ) -> "FactsExperiment":
-        """Build a FactsExperiment from the metadata dict shape (e.g. from YAML).
+        """Build a FactsExperiment from a LoadedExperimentConfig.
 
-        Args:
-            metadata: Raw dict loaded from experiment-config.yaml.
-            top_level_keys: Set of top-level param key names derived from module schemas.
-                When omitted, infers by treating any non-structural, non-dict key as a
-                top-level param (scalars, None, and clue/value bundles).
-            fingerprint_keys: Set of fingerprint param key names derived from module schemas.
-                When omitted, defaults to an empty set.
+        The typed counterpart of the former from_metadata_dict() for callers
+        that load through ExperimentRepository.get(). top_level_keys /
+        fingerprint_keys behave as explicit key sets: values are looked up in
+        the config's typed fields (under either spelling, e.g.
+        "pipeline-id"/"pipeline_id") and then in config.other_top_level_values.
+        When top_level_keys is omitted, keys are inferred by treating any
+        non-structural, non-dict captured/other-top-level value as a top-level
+        param. A captured key present but blank in the YAML is dropped (None
+        conflates missing with blank; LoadedExperimentConfig already rejects
+        blank required fields at load).
         """
-        experiment_name = metadata.get("experiment_name", "")
+        # Every captured key, under the spelling(s) it may be requested by.
+        values: dict[str, Any] = dict(config.other_top_level_values)
+        values.update(
+            {
+                "experiment_name": config.experiment_name,
+                "pipeline-id": config.pipeline_id,
+                "pipeline_id": config.pipeline_id,
+                "scenario": config.scenario,
+                "nsamps": config.nsamps,
+                "baseyear": config.baseyear,
+                "pyear_start": config.pyear_start,
+                "pyear_end": config.pyear_end,
+                "pyear_step": config.pyear_step,
+                "location-file": config.location_file,
+                "location_file": config.location_file
+                or config.other_top_level_values.get("location_file"),
+                "projection_scale": config.projection_scale,
+                "shared-input-data": config.shared_input_data,
+                "module-specific-input-data": config.module_specific_input_data,
+                "experiment-specific-input-data": config.experiment_specific_input_data,
+                "supplied-totaled-sealevel-step-data": config.supplied_totaled_sealevel_step_data,
+                "compose-output-data-location": config.compose_output_data_location,
+                "apptainer-output-data-location": config.apptainer_output_data_location,
+                "output-data-location": config.output_data_location,
+            }
+        )
+        values = {k: v for k, v in values.items() if v is not None}
 
         if top_level_keys is not None:
             _top_level_keys = top_level_keys
         else:
             _top_level_keys = {
                 k
-                for k, v in metadata.items()
+                for k, v in values.items()
                 if k not in _STRUCTURAL_KEYS and _is_top_level_param_value(v)
             }
         _fp_keys = fingerprint_keys if fingerprint_keys is not None else set()
+        top_level_params = {k: values[k] for k in _top_level_keys if k in values}
+        fingerprint_params = {k: values[k] for k in _fp_keys if k in values}
 
-        top_level_params = {k: metadata[k] for k in _top_level_keys if k in metadata}
-        fingerprint_params = {k: metadata[k] for k in _fp_keys if k in metadata}
-
-        # Then, build a manifest of the modules included in the experiment
         manifest = {
-            "climate_module": metadata.get("climate_module"),
-            "sealevel_modules": metadata.get("sealevel_modules", []),
-            "framework_modules": metadata.get("framework_modules", []),
-            "esl_modules": metadata.get("esl_modules", []),
+            "climate_module": config.climate_module,
+            "sealevel_modules": config.sealevel_modules,
+            "framework_modules": config.framework_modules,
+            "esl_modules": list(config.esl_modules),
         }
-
-        if isinstance(manifest["sealevel_modules"], str):
-            manifest["sealevel_modules"] = [manifest["sealevel_modules"]]
-        if isinstance(manifest["esl_modules"], str):
-            manifest["esl_modules"] = [manifest["esl_modules"]]
-
-        # Paths are not read here: experiment-level paths for generation are resolved
-        # once by resolve_experiment_data_paths(), so `paths` is left empty.
-        excluded = _top_level_keys | _fp_keys | _STRUCTURAL_KEYS
-
-        workflows = metadata.get("workflows")
-        if not isinstance(workflows, dict):
-            workflows = {}
-
-        module_sections = {
-            k: v
-            for k, v in metadata.items()
-            if k not in excluded and isinstance(v, dict)
-        }
-
-        # Infer esl_modules from module sections when not set (backward compatibility)
+        module_sections = dict(config.module_sections)
         if not manifest["esl_modules"]:
             manifest["esl_modules"] = [
                 k
                 for k in module_sections
                 if isinstance(k, str) and k.startswith("extremesealevel-")
             ]
-
         extra = {
             k: v
-            for k, v in metadata.items()
+            for k, v in values.items()
             if k not in top_level_params
             and k not in manifest
             and k not in PATH_KEYS_PRIMARY
@@ -287,15 +298,11 @@ class FactsExperiment:
             and k != "experiment_name"
             and k != "workflows"
         }
-
         climate_step, sealevel_step, totaling_step, extreme_sealevel_step = (
             steps_from_metadata(manifest, module_sections)
         )
-
-        projection_scale = parse_projection_scale(metadata.get("projection_scale"))
-
         return cls(
-            experiment_name=experiment_name,
+            experiment_name=config.experiment_name,
             top_level_params=top_level_params,
             climate_step=climate_step,
             sealevel_step=sealevel_step,
@@ -304,6 +311,6 @@ class FactsExperiment:
             paths={},
             fingerprint_params=fingerprint_params,
             extra=extra,
-            workflows=workflows,
-            projection_scale=projection_scale,
+            workflows=config.workflows,
+            projection_scale=parse_projection_scale(config.projection_scale),
         )

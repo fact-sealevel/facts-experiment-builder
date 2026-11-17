@@ -19,6 +19,7 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
 from facts_experiment_builder.io.apptainer_service import to_apptainer_service
 from facts_experiment_builder.io.compose_service import to_compose_service
 from tests.unit.helpers import (
+    make_loaded_config,
     make_schema,
 )
 
@@ -67,23 +68,22 @@ def resolve_components():
         outputs={},
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
         output_container_base="output_container",
-        top_level_params=TopLevelParams.from_config(
-            {
-                "experiment_name": "test experiment",
-                "pipeline-id": "12345",
-                "scenario": "ssp126",
-                "nsamps": 50,
-                "location-file": "location.lst",
-            }
+        top_level_params=TopLevelParams(
+            pipeline_id="12345",
+            scenario="ssp126",
+            nsamps=50,
+            location_file="location.lst",
         ),
     )
 
 
-def test_top_level_params_from_config_reads_kebab_and_snake_keys():
-    params = TopLevelParams.from_config({"pipeline-id": "abc", "pyear_end": 2100})
+def test_top_level_params_from_loaded_config_reads_typed_fields():
+    params = TopLevelParams.from_loaded_config(
+        make_loaded_config(**{"pipeline-id": "abc", "pyear_end": 2100})
+    )
     assert params.pipeline_id == "abc"
     assert params.pyear_end == 2100
-    assert params.baseyear is None
+    assert params.baseyear == 2005  # make_loaded_config default
 
 
 def test_resolve_metadata_param(resolve_components):
@@ -265,7 +265,7 @@ def output_spec(tmp_path):
         ),
         image=ModuleContainerImage(image_url="img", image_tag="tag"),
         output_container_base=None,  # non-facts-total module
-        top_level_params=TopLevelParams.from_config({"pipeline-id": "12345"}),
+        top_level_params=TopLevelParams(pipeline_id="12345"),
     )
     return ModuleServiceSpec(components=components, module_definition=schema)
 

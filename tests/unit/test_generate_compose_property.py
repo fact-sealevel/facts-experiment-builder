@@ -23,6 +23,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
 from facts_experiment_builder.core.module.service_run import ServiceRun
 from facts_experiment_builder.core.workflow import Workflow
 from facts_experiment_builder.io.compose_backend import render_compose_services
+from tests.unit.helpers import make_loaded_config
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +72,13 @@ def _make_plan(
 
 
 def _fake_build_module_service_spec(
-    metadata, module_name, known_module_names, module_definition, data_paths
+    module_section,
+    *,
+    config,
+    module_name,
+    known_module_names,
+    module_definition,
+    data_paths,
 ):
     stub = MagicMock()
     stub.module_name = module_name
@@ -122,7 +129,7 @@ def test_sealevel_module_keys_match_plan(sealevel_names):
     with _mock_build_module_service_spec():
         result = _build_module_specs(
             plan=plan,
-            metadata={},
+            config=make_loaded_config(),
             schemas=schemas,
             known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,
@@ -141,7 +148,7 @@ def test_esl_module_keys_match_plan(esl_names):
     with _mock_build_module_service_spec():
         result = _build_module_specs(
             plan=plan,
-            metadata={},
+            config=make_loaded_config(),
             schemas=schemas,
             known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,
@@ -160,7 +167,7 @@ def test_climate_module_is_none_when_name_is_none(sealevel_names):
     with _mock_build_module_service_spec():
         result = _build_module_specs(
             plan=plan,
-            metadata={},
+            config=make_loaded_config(),
             schemas=schemas,
             known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,
@@ -179,7 +186,7 @@ def test_climate_module_present_when_name_is_not_none(climate_name):
     with _mock_build_module_service_spec():
         result = _build_module_specs(
             plan=plan,
-            metadata={},
+            config=make_loaded_config(),
             schemas=schemas,
             known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,
@@ -211,7 +218,7 @@ def test_per_workflow_framework_excluded_when_workflows_present(
     with _mock_build_module_service_spec():
         result = _build_module_specs(
             plan=plan,
-            metadata={},
+            config=make_loaded_config(),
             schemas=schemas,
             known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,
@@ -241,7 +248,7 @@ def test_per_workflow_framework_included_when_no_workflows(
     with _mock_build_module_service_spec():
         result = _build_module_specs(
             plan=plan,
-            metadata={},
+            config=make_loaded_config(),
             schemas=schemas,
             known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,

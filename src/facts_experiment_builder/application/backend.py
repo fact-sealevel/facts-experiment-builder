@@ -29,7 +29,7 @@ class ExecutionBackend(Protocol):
     """Protocol to turn an ExecutionGraph into a run file and write it."""
 
     # experiment-config.yaml key holding where this backend's runs write outputs, e.g.
-    # COMPOSE_OUTPUT_KEY; see module_service_path_resolution.output_location_key().
+    # COMPOSE_OUTPUT_KEY; see module_service_path_resolution.output_location().
     output_key: str
 
     def default_output_path(self, experiment_paths: ExperimentPaths) -> Path:

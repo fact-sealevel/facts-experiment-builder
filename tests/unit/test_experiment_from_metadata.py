@@ -1,18 +1,26 @@
-"""Tests for FactsExperiment.from_metadata_dict() on a loaded experiment-config.yaml."""
+"""Tests for FactsExperiment.from_loaded_config() on a loaded experiment-config.yaml."""
 
 import logging
 
 import pytest
 
 from facts_experiment_builder.core.experiment.experiment import FactsExperiment
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 
 
-def _loaded_config() -> dict:
+def _raw_config(**overrides) -> dict:
     """A config shaped like yaml.safe_load() of a template-written experiment-config."""
-    return {
+    raw = {
         "experiment_name": "experiments/my_experiment",
         "pipeline-id": "abc123",
         "scenario": "ssp585",
+        "nsamps": 10,
+        "baseyear": 2005,
+        "pyear_start": 2020,
+        "pyear_end": 2150,
+        "pyear_step": 10,
         "climate_module": "fair-temperature",
         "sealevel_modules": ["tlm-sterodynamics"],
         "framework_modules": ["facts-total"],
@@ -29,10 +37,16 @@ def _loaded_config() -> dict:
         "tlm-sterodynamics": {"inputs": {}, "outputs": {}},
         "facts-total": {"inputs": {}, "outputs": {}},
     }
+    raw.update(overrides)
+    return raw
 
 
-def test_from_metadata_dict_reads_manifest_workflows_and_projection_scale():
-    exp = FactsExperiment.from_metadata_dict(
+def _loaded_config(**overrides) -> LoadedExperimentConfig:
+    return LoadedExperimentConfig.from_dict(_raw_config(**overrides))
+
+
+def test_from_loaded_config_reads_manifest_workflows_and_projection_scale():
+    exp = FactsExperiment.from_loaded_config(
         _loaded_config(), top_level_keys={"pipeline-id", "scenario"}
     )
     assert exp.experiment_name == "experiments/my_experiment"
@@ -43,14 +57,14 @@ def test_from_metadata_dict_reads_manifest_workflows_and_projection_scale():
     assert exp.top_level_params == {"pipeline-id": "abc123", "scenario": "ssp585"}
 
 
-def test_from_metadata_dict_does_not_read_paths():
+def test_from_loaded_config_does_not_read_paths():
     """Experiment-level paths are resolved by resolve_experiment_data_paths(), not
     here."""
-    exp = FactsExperiment.from_metadata_dict(_loaded_config(), top_level_keys=set())
+    exp = FactsExperiment.from_loaded_config(_loaded_config(), top_level_keys=set())
     assert exp.paths == {}
 
 
-def test_from_metadata_dict_path_keys_are_not_params_sections_or_extra():
+def test_from_loaded_config_path_keys_are_not_params_sections_or_extra():
     path_keys = {
         "module-specific-input-data",
         "shared-input-data",
@@ -60,15 +74,14 @@ def test_from_metadata_dict_path_keys_are_not_params_sections_or_extra():
         "output-data-location",
     }
     # top_level_keys=None exercises the fallback that infers top-level params
-    exp = FactsExperiment.from_metadata_dict(_loaded_config(), top_level_keys=None)
+    exp = FactsExperiment.from_loaded_config(_loaded_config(), top_level_keys=None)
     assert not path_keys & set(exp.top_level_params)
     assert not path_keys & set(exp.extra)
 
 
 def _load_with_projection_scale(value) -> FactsExperiment:
-    config = _loaded_config()
-    config["projection_scale"] = value
-    return FactsExperiment.from_metadata_dict(config, top_level_keys=set())
+    config = _loaded_config(projection_scale=value)
+    return FactsExperiment.from_loaded_config(config, top_level_keys=set())
 
 
 @pytest.mark.parametrize(
@@ -81,26 +94,28 @@ def _load_with_projection_scale(value) -> FactsExperiment:
         (" local ", "local"),
     ],
 )
-def test_from_metadata_dict_reads_projection_scale_ignoring_case_and_whitespace(
+def test_from_loaded_config_reads_projection_scale_ignoring_case_and_whitespace(
     value, expected
 ):
     assert _load_with_projection_scale(value).projection_scale == expected
 
 
-def test_from_metadata_dict_defaults_missing_projection_scale_to_local():
-    config = _loaded_config()
-    del config["projection_scale"]
-    exp = FactsExperiment.from_metadata_dict(config, top_level_keys=set())
+def test_from_loaded_config_defaults_missing_projection_scale_to_local():
+    raw = _raw_config()
+    del raw["projection_scale"]
+    exp = FactsExperiment.from_loaded_config(
+        LoadedExperimentConfig.from_dict(raw), top_level_keys=set()
+    )
     assert exp.projection_scale == "local"
 
 
-def test_from_metadata_dict_defaults_empty_projection_scale_to_local():
+def test_from_loaded_config_defaults_empty_projection_scale_to_local():
     # `projection_scale:` with no value loads as None
     assert _load_with_projection_scale(None).projection_scale == "local"
 
 
 @pytest.mark.parametrize("value", ["both", "Both"])
-def test_from_metadata_dict_reads_deprecated_both_as_local_with_warning(caplog, value):
+def test_from_loaded_config_reads_deprecated_both_as_local_with_warning(caplog, value):
     with caplog.at_level(logging.WARNING):
         exp = _load_with_projection_scale(value)
     assert exp.projection_scale == "local"
@@ -110,7 +125,13 @@ def test_from_metadata_dict_reads_deprecated_both_as_local_with_warning(caplog, 
     )
 
 
-@pytest.mark.parametrize("value", ["regional", "", "  ", 1, {"value": "local"}])
-def test_from_metadata_dict_rejects_invalid_projection_scale(value):
+@pytest.mark.parametrize("value", ["regional", "", "  "])
+def test_from_loaded_config_rejects_invalid_projection_scale(value):
     with pytest.raises(ValueError, match="Invalid projection_scale"):
+        _load_with_projection_scale(value)
+
+
+@pytest.mark.parametrize("value", [1, {"value": "local"}])
+def test_from_loaded_config_rejects_non_string_projection_scale(value):
+    with pytest.raises(ValueError, match="must be strings"):
         _load_with_projection_scale(value)

@@ -11,7 +11,6 @@ from facts_experiment_builder.application.prepare_plan import prepare_execution_
 from facts_experiment_builder.application.storage import ExperimentRepository
 from facts_experiment_builder.core.experiment.name import ExperimentName
 from facts_experiment_builder.core.module.module_service_path_resolution import (
-    output_location_key,
     resolve_experiment_data_paths,
 )
 from facts_experiment_builder.io.paths import ExperimentPaths
@@ -76,9 +75,7 @@ def generate_run_file(
     )
 
     config = experiment_repo.get(config_path=config_path)
-    data_paths = resolve_experiment_data_paths(
-        config.raw, output_key=output_location_key(config.raw, backend.output_key)
-    )
+    data_paths = resolve_experiment_data_paths(config, output_key=backend.output_key)
     plan, execution_plan = prepare_execution_plan(config, data_paths)
     graph = build_execution_graph(execution_plan)
 

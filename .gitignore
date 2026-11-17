@@ -209,3 +209,4 @@ scripts/
 # Local planning notes, not part of the package
 plans/
 apptainer_sif_files/
+.claude/
