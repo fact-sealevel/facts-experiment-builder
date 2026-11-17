@@ -1,8 +1,25 @@
+from facts_experiment_builder.core.components.top_level_params import TopLevelParams
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
 )
 from facts_experiment_builder.core.experiment.skeleton import ExperimentSkeleton
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.arg_specs import (
+    ArgumentsSpec,
+    InputArgSpec,
+    MountSpec,
+)
+from facts_experiment_builder.core.module.module_inputs_outputs import (
+    ModuleInputPaths,
+    ModuleOutputPaths,
+)
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleContainerImage,
+    ModuleSchema,
+)
+from facts_experiment_builder.core.module.module_service_spec import (
+    ModuleServiceSpec,
+    ModuleServiceSpecComponents,
+)
 
 
 class InMemoryModuleDefinitions:
@@ -78,3 +95,50 @@ def make_config_raw(**overrides) -> dict:
 def make_loaded_config(**overrides) -> LoadedExperimentConfig:
     """A LoadedExperimentConfig built from make_config_raw(**overrides)."""
     return LoadedExperimentConfig.from_dict(make_config_raw(**overrides))
+
+
+def make_service_spec(
+    module_name: str,
+    uses_climate_file: bool = False,
+    output_dir: str = "/output",
+    image_url: str = "ghcr.io/fact-sealevel/my-module",
+    image_tag: str = "0.1.0",
+    climate_step_output: str | None = None,
+) -> ModuleServiceSpec:
+    inputs = []
+    if climate_step_output:
+        inputs.append(
+            InputArgSpec(
+                name="climate-data-file",
+                type="str",
+                source="module_inputs.inputs.climate_data_file",
+                climate_step_output=climate_step_output,
+                external_volume=True,
+                mount=MountSpec(
+                    container_path="/mnt/out", volume="output", transform="filename"
+                ),
+            )
+        )
+    schema = ModuleSchema(
+        module_name=module_name,
+        container_image=f"{image_url}:{image_tag}",
+        arguments=ArgumentsSpec(inputs=inputs),
+        volumes={},
+        uses_climate_file=uses_climate_file,
+    )
+    components = ModuleServiceSpecComponents(
+        module_name=module_name,
+        options={},
+        input_paths=ModuleInputPaths(
+            input_dir="/input",
+            module_specific_input_dir=f"/input/{module_name}",
+            shared_input_dir="/input/shared",
+        ),
+        output_paths=ModuleOutputPaths(output_dir=output_dir, output_type="global"),
+        fingerprint_params={},
+        inputs={},
+        outputs={},
+        image=ModuleContainerImage(image_url=image_url, image_tag=image_tag),
+        top_level_params=TopLevelParams(),
+    )
+    return ModuleServiceSpec(components=components, module_definition=schema)

@@ -15,9 +15,13 @@ from facts_experiment_builder.core.module.module_inputs_outputs import (
     ModuleInputPaths,
     ModuleOutputPaths,
 )
+from facts_experiment_builder.core.module.service_run import ServiceDependency
+from facts_experiment_builder.io.apptainer_service import to_apptainer_service
+from facts_experiment_builder.io.compose_service import to_compose_service
 from tests.unit.helpers import (
     make_loaded_config,
     make_schema,
+    make_service_spec,
 )
 
 
@@ -268,14 +272,14 @@ def output_spec(tmp_path):
 
 
 def test_output_file_arg_includes_module_subdir(output_spec):
-    service = output_spec.generate_compose_service()
+    service = to_compose_service(output_spec.to_service_run())
     assert "--output-gslr-file=/mnt/out/tlm-sterodynamics/gslr.nc" in service["command"]
 
 
 def test_output_volume_mounts_shared_output_root(output_spec):
-    service = output_spec.generate_compose_service()
+    run = output_spec.to_service_run()
     host_output_root = str(output_spec.output_paths.output_dir).rsplit("/", 1)[0]
-    assert any(v.startswith(f"{host_output_root}:/mnt/out") for v in service["volumes"])
+    assert any(v.startswith(f"{host_output_root}:/mnt/out") for v in run.binds)
 
 
 @pytest.mark.parametrize(
@@ -297,8 +301,8 @@ def test_command_args_subcommand_shared_by_compose_and_apptainer(
             output_spec.module_definition, command=command
         ),
     )
-    compose_command = spec.generate_compose_service()["command"]
-    apptainer_args = spec.generate_apptainer_service().args
+    compose_command = to_compose_service(spec.to_service_run())["command"]
+    apptainer_args = to_apptainer_service(spec.to_service_run()).args
 
     assert compose_command == apptainer_args
     assert "main" not in compose_command
@@ -338,9 +342,47 @@ def test_apptainer_env_matches_compose_environment(output_spec):
             ),
         ),
     )
-    compose_env = spec.generate_compose_service()["environment"]
-    apptainer = spec.generate_apptainer_service()
+    compose_env = to_compose_service(spec.to_service_run())["environment"]
+    apptainer = to_apptainer_service(spec.to_service_run())
     assert apptainer.env == compose_env
     assert "EMULANDICE_FORCING_HEAD_PATH" in apptainer.env
     # envvar inputs are passed as env, not as CLI args
     assert not any(a.startswith("--forcing-head-path") for a in apptainer.args)
+
+
+def test_to_service_run_is_backend_neutral():
+    run = make_service_spec("my-module").to_service_run()
+    assert run.name == "my-module"
+    assert run.image.image_url == "ghcr.io/fact-sealevel/my-module"
+    assert run.image.image_tag == "0.1.0"
+    assert run.output_dir == "/output"
+
+
+def test_dependencies_climate_edge_only_with_climate_service():
+    spec = make_service_spec("sea-module", uses_climate_file=True)
+    assert spec.dependencies() == []
+    assert spec.dependencies(climate_service_name="fair-temperature") == [
+        ServiceDependency(service="fair-temperature")
+    ]
+
+
+def test_dependencies_maps_fair_and_keeps_conditions():
+    import dataclasses
+
+    base = make_service_spec("sea-module")
+    spec = ModuleServiceSpec(
+        components=base.components,
+        module_definition=dataclasses.replace(
+            base.module_definition,
+            depends_on=[
+                "fair",
+                {"service": "other", "condition": "service_healthy"},
+                {"service": "plain"},
+            ],
+        ),
+    )
+    assert spec.dependencies(climate_service_name="fair-temperature") == [
+        ServiceDependency(service="fair-temperature"),
+        ServiceDependency(service="other", condition="service_healthy"),
+        ServiceDependency(service="plain"),
+    ]
