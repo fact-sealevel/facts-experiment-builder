@@ -135,6 +135,14 @@ class LoadedExperimentConfig:
     # values from the raw mapping keep doing so without the raw mapping itself.
     other_top_level_values: dict[str, Any] = field(default_factory=dict)
 
+    # Supplied totaled sea-level step data, when the totaling step is bypassed
+    # with pre-existing data instead of sea-level modules.
+    supplied_totaled_sealevel_step_data: Any = None
+    # Top-level keys not modelled above (and not module sections/schemas), e.g.
+    # schema-specific top-level params. Transitional: lets consumers that derived
+    # values from the raw mapping keep doing so without the raw mapping itself.
+    unmodelled_values: dict[str, Any] = field(default_factory=dict)
+
     def __post_init__(self) -> None:
         """Validate the loaded values, raising ValueError naming the YAML key at fault.
 
