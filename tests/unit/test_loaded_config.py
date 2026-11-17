@@ -83,7 +83,6 @@ def test_module_sections_hold_only_manifest_modules():
         "fair-temperature": {"inputs": {}},
         "tlm-sterodynamics": {"inputs": {"a": 1}},
     }
-    assert config.raw is raw
 
 
 @pytest.mark.parametrize("raw", [None, [], "text"])

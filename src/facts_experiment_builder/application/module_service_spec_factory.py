@@ -7,6 +7,9 @@ application layer rather than the core domain layer.
 from typing import Any
 
 from facts_experiment_builder.core.components.top_level_params import TopLevelParams
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.module.module_inputs_outputs import (
     build_module_input_paths,
     build_module_output_paths,
@@ -29,17 +32,22 @@ from facts_experiment_builder.io.module_dirs import ensure_module_output_dir
 
 
 def build_module_service_spec(
-    metadata: dict[str, Any],
+    module_section: dict[str, Any],
+    *,
+    config: LoadedExperimentConfig,
     module_name: str,
     known_module_names: list,
     module_definition: ModuleSchema,
     data_paths: ExperimentDataPaths,
 ) -> ModuleServiceSpec:
-    """Build a ModuleServiceSpec for the given module from experiment metadata and
-    module YAML.
+    """Build a ModuleServiceSpec for one module from its experiment-config section.
 
     Args:
-        metadata: Experiment metadata dictionary
+        module_section: This module's section of experiment-config.yaml
+            (config.module_sections[module_name] for a real module, or a
+            synthetic section for a per-workflow facts-total / ESL service).
+            Callers own the lookup: a missing section raises KeyError there.
+        config: Loaded experiment config (top-level params are read from it)
         module_name: Module name (e.g. 'fair-temperature', 'bamber19-icesheets')
         known_module_names: List of all known module names in the experiment
         module_definition: Loaded ModuleSchema for this module
@@ -50,7 +58,7 @@ def build_module_service_spec(
     """
     module_name_str = f"{module_name} module"
 
-    module_metadata = get_required_field(metadata, module_name, module_name_str)
+    module_metadata = module_section
 
     resolved_paths = resolve_module_paths(
         data_paths=data_paths,
@@ -121,7 +129,7 @@ def build_module_service_spec(
     image_data = get_required_field(module_metadata, "image", module_name_str)
     image = _parse_image(image_data, module_name_str)
 
-    top_level_params = TopLevelParams.from_config(metadata)
+    top_level_params = TopLevelParams.from_loaded_config(config)
     location_file = top_level_params.location_file
     module_fp_section = module_metadata.get("fingerprint_params") or {}
     fingerprint_params = _assemble_fingerprint_params(

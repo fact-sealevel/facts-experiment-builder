@@ -127,11 +127,6 @@ class LoadedExperimentConfig:
     module_sections: dict[str, dict[str, Any]]
     module_schemas: dict[str, Any] | None
 
-    # The full loaded mapping. Retained for now: the service-spec building
-    # chain (prepare_plan -> _build_module_specs / build_experiment_execution_plan)
-    # still consumes per-module sections from it.
-    raw: dict[str, Any] = field(repr=False)
-
     # Supplied totaled sea-level step data, when the totaling step is bypassed
     # with pre-existing data instead of sea-level modules.
     supplied_totaled_sealevel_step_data: Any = None
@@ -240,7 +235,6 @@ class LoadedExperimentConfig:
                 if isinstance(raw.get(name), dict)
             },
             module_schemas=raw.get("module_schemas"),
-            raw=raw,
             supplied_totaled_sealevel_step_data=raw.get(
                 "supplied-totaled-sealevel-step-data"
             ),
