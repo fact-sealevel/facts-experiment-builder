@@ -3,8 +3,9 @@ from pathlib import Path
 
 import click
 
-from facts_experiment_builder.application.generate_apptainer import generate_apptainer
+from facts_experiment_builder.application.generate_run_file import generate_run_file
 from facts_experiment_builder.cli.theme import console
+from facts_experiment_builder.io.apptainer_backend import ApptainerBackend
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
@@ -86,14 +87,15 @@ def main(
     console.print("[primary]Step 1:[/primary] Finding experiment metadata file...")
 
     try:
-        output = generate_apptainer(
+        output = generate_run_file(
             experiment_name=experiment_name,
             workspace_dir=workspace_dir,
             experiment_repo=experiment_repo,
-            custom_script_path=custom_script_path,
+            backend=ApptainerBackend(),
+            custom_output_path=custom_script_path,
         )
-        script_path = output.script_path
-    except (FileNotFoundError, ValueError, AssertionError) as e:
+        script_path = output.path
+    except (FileNotFoundError, ValueError) as e:
         console.print(f"[red]✗ Failed to generate Apptainer script:[/red] {e}")
         raise SystemExit(1)
 

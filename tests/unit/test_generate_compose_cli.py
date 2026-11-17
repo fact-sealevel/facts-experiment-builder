@@ -9,6 +9,7 @@ from facts_experiment_builder.cli.generate_compose_cli import (
     _SUCCESS,
     main,
 )
+from facts_experiment_builder.io.compose_backend import ComposeBackend
 
 runner = CliRunner()
 
@@ -38,18 +39,15 @@ def test_click_echo_handler_success_includes_checkmark():
 
 
 def test_custom_compose_path_is_passed_as_a_path(tmp_path):
-    """--custom-compose-path reaches generate_compose() as a Path, which it resolves."""
+    """--custom-compose-path reaches generate_run_file() as a Path, which it
+    resolves, along with a ComposeBackend."""
     custom = tmp_path / "custom" / "experiment-compose.yaml"
     custom.parent.mkdir()
 
-    with (
-        patch(
-            "facts_experiment_builder.cli.generate_compose_cli.generate_compose"
-        ) as mock_generate,
-        patch("facts_experiment_builder.cli.generate_compose_cli.write_compose_yaml"),
-    ):
-        mock_generate.return_value.compose_dict = {"services": {}}
-        mock_generate.return_value.compose_path = Path.cwd() / "experiment-compose.yaml"
+    with patch(
+        "facts_experiment_builder.cli.generate_compose_cli.generate_run_file"
+    ) as mock_generate:
+        mock_generate.return_value.path = Path.cwd() / "experiment-compose.yaml"
         result = runner.invoke(
             main,
             [
@@ -63,9 +61,10 @@ def test_custom_compose_path_is_passed_as_a_path(tmp_path):
         )
 
     assert result.exit_code == 0, result.output
-    passed = mock_generate.call_args.kwargs["custom_compose_path"]
-    assert isinstance(passed, Path)
-    assert passed == custom
+    kwargs = mock_generate.call_args.kwargs
+    assert isinstance(kwargs["backend"], ComposeBackend)
+    assert isinstance(kwargs["custom_output_path"], Path)
+    assert kwargs["custom_output_path"] == custom
 
 
 def test_compose_path_outside_current_directory_is_printed_as_is(tmp_path):
@@ -76,15 +75,13 @@ def test_compose_path_outside_current_directory_is_printed_as_is(tmp_path):
 
     with (
         patch(
-            "facts_experiment_builder.cli.generate_compose_cli.generate_compose"
+            "facts_experiment_builder.cli.generate_compose_cli.generate_run_file"
         ) as mock_generate,
-        patch("facts_experiment_builder.cli.generate_compose_cli.write_compose_yaml"),
         patch(
             "facts_experiment_builder.cli.generate_compose_cli.console"
         ) as mock_console,
     ):
-        mock_generate.return_value.compose_dict = {"services": {}}
-        mock_generate.return_value.compose_path = compose_path
+        mock_generate.return_value.path = compose_path
         result = runner.invoke(
             main, ["--experiment-name", "exp", "--workspace-dir", str(tmp_path)]
         )
