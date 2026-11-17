@@ -8,6 +8,9 @@ from facts_experiment_builder.application.generate_apptainer import _ApptainerSt
 from facts_experiment_builder.core.module.apptainer_service_spec import (
     ApptainerServiceSpec,
 )
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     APPTAINER_OUTPUT_KEY,
     resolve_experiment_data_paths,
@@ -98,14 +101,14 @@ _BASE_METADATA = {
 }
 
 _DATA_PATHS = resolve_experiment_data_paths(
-    _BASE_METADATA, output_key=APPTAINER_OUTPUT_KEY
+    LoadedExperimentConfig.from_dict(_BASE_METADATA), output_key=APPTAINER_OUTPUT_KEY
 )
 
 
 def _render(
     stages=None,
     execution_plan=None,
-    metadata=None,
+    config=None,
     data_paths=None,
     workspace_dir=None,
     mkdir_dirs=None,
@@ -115,7 +118,7 @@ def _render(
     return render_apptainer_script(
         stages=stages or _make_stages(stage1=[_make_apptainer_spec()]),
         execution_plan=execution_plan or _make_execution_plan(),
-        metadata=metadata or _BASE_METADATA,
+        config=config or LoadedExperimentConfig.from_dict(_BASE_METADATA),
         data_paths=data_paths or _DATA_PATHS,
         workspace_dir=workspace_dir or Path("/workspace"),
         mkdir_dirs=mkdir_dirs or ["/workspace/output/fair-temperature"],
@@ -271,7 +274,7 @@ def test_workflow_vars_appear_in_header():
     result = render_apptainer_script(
         stages=stages,
         execution_plan=_make_execution_plan(),
-        metadata=_BASE_METADATA,
+        config=LoadedExperimentConfig.from_dict(_BASE_METADATA),
         data_paths=_DATA_PATHS,
         workspace_dir=Path("/workspace"),
         mkdir_dirs=[],
@@ -281,15 +284,18 @@ def test_workflow_vars_appear_in_header():
     assert 'WORKFLOW2_NAME="wf2f"' in result
 
 
-def test_path_vars_come_from_data_paths_not_metadata():
+def test_path_vars_come_from_data_paths_not_config():
     """OUTPUT_DIR / SHARED_IN / MODULE_IN use data_paths, the same source as the module
-    binds, even if the raw metadata says something else."""
+    binds, even if the loaded config says something else."""
     data_paths = resolve_experiment_data_paths(
-        {
-            "apptainer-output-data-location": "/apptainer/out",
-            "shared-input-data": "/apptainer/shared",
-            "module-specific-input-data": "/apptainer/module",
-        },
+        LoadedExperimentConfig.from_dict(
+            {
+                **_BASE_METADATA,
+                "apptainer-output-data-location": "/apptainer/out",
+                "shared-input-data": "/apptainer/shared",
+                "module-specific-input-data": "/apptainer/module",
+            }
+        ),
         output_key=APPTAINER_OUTPUT_KEY,
     )
     result = _render(data_paths=data_paths)

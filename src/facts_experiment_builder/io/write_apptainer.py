@@ -6,6 +6,9 @@ from typing import Any
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
+from facts_experiment_builder.core.experiment.loaded_config import (
+    LoadedExperimentConfig,
+)
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
 )
@@ -15,7 +18,7 @@ from facts_experiment_builder.io.paths import SIF_DIR_NAME
 def _build_template_context(
     stages: Any,
     execution_plan: _ExecutionPlan,
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     data_paths: ExperimentDataPaths,
     workspace_dir: Path,
     mkdir_dirs: list[str],
@@ -27,9 +30,8 @@ def _build_template_context(
         stages: _ApptainerStages from generate_apptainer (typed Any here because
             generate_apptainer imports this module)
         execution_plan: Execution plan; only its climate_service_name is used
-        metadata: Loaded experiment-config.yaml; top-level params (experiment name,
-            years, scenario, nsamps, pipeline-id) are read from it, with "" for any
-            that are missing
+        config: Loaded experiment config; top-level params (experiment name,
+            years, scenario, nsamps, pipeline-id) are read from its typed fields
         data_paths: Experiment-level paths, the same ones used to build the module
             specs; give OUTPUT_DIR, SHARED_IN and MODULE_IN
         workspace_dir: Workspace root; the SIF directory is
@@ -56,18 +58,18 @@ def _build_template_context(
 
     return {
         "workspace_dir": str(workspace_dir),
-        "experiment_name": str(metadata.get("experiment_name", "")),
+        "experiment_name": str(config.experiment_name),
         "output_dir": output_dir,
         "shared_in": shared_in,
         "module_in": module_in,
         "sif_dir": sif_dir,
-        "pyear_start": str(metadata.get("pyear_start", "")),
-        "pyear_end": str(metadata.get("pyear_end", "")),
-        "pyear_step": str(metadata.get("pyear_step", "")),
-        "baseyear": str(metadata.get("baseyear", "")),
-        "scenario": str(metadata.get("scenario", "")),
-        "nsamps": str(metadata.get("nsamps", "")),
-        "pipeline_id": str(metadata.get("pipeline-id", "")),
+        "pyear_start": str(config.pyear_start),
+        "pyear_end": str(config.pyear_end),
+        "pyear_step": str(config.pyear_step),
+        "baseyear": str(config.baseyear),
+        "scenario": str(config.scenario),
+        "nsamps": str(config.nsamps),
+        "pipeline_id": str(config.pipeline_id),
         "workflow_vars": workflow_vars,
         "all_specs": stages.all_specs,
         "stage1": stages.stage1,
@@ -84,7 +86,7 @@ def _build_template_context(
 def render_apptainer_script(
     stages: Any,
     execution_plan: _ExecutionPlan,
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     data_paths: ExperimentDataPaths,
     workspace_dir: Path,
     mkdir_dirs: list[str],
@@ -99,7 +101,7 @@ def render_apptainer_script(
     Args:
         stages: _ApptainerStages from generate_apptainer
         execution_plan: Execution plan; only its climate_service_name is used
-        metadata: Loaded experiment-config.yaml, for the script's top-level params
+        config: Loaded experiment config, for the script's top-level params
         data_paths: Experiment-level paths used to build the module specs
         workspace_dir: Workspace root, used for WORKSPACE and the SIF directory
         mkdir_dirs: Output directories the script creates before running services
@@ -119,7 +121,7 @@ def render_apptainer_script(
     context = _build_template_context(
         stages=stages,
         execution_plan=execution_plan,
-        metadata=metadata,
+        config=config,
         data_paths=data_paths,
         workspace_dir=workspace_dir,
         mkdir_dirs=mkdir_dirs,

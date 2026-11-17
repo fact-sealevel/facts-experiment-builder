@@ -107,13 +107,12 @@ class Workflow:
         return f"facts-total/{self.total_output_filename_for_type('local')}"
 
 
-def workflows_from_metadata(metadata: dict) -> dict[str, Workflow]:
-    """Build dict[name, Workflow] from metadata['workflows'] (dict[str, str] or
-    similar).
+def workflows_from_mapping(raw) -> dict[str, Workflow]:
+    """Build dict[name, Workflow] from a workflows mapping (dict[str, str] or
+    similar), e.g. LoadedExperimentConfig.workflows.
 
-    Returns empty dict if workflows key is missing or not a dict.
+    Returns empty dict if raw is missing or not a dict.
     """
-    raw = metadata.get("workflows")
     if not isinstance(raw, dict):
         return {}
     result = {}
