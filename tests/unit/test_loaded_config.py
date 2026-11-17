@@ -116,3 +116,43 @@ def test_all_missing_required_keys_are_listed():
 def test_non_integer_int_field_raises(value):
     with pytest.raises(ValueError, match="must be integers: nsamps"):
         LoadedExperimentConfig.from_dict(make_config_raw(nsamps=value))
+
+
+@pytest.mark.parametrize(
+    "override",
+    [
+        {"experiment_name": 42},
+        {"scenario": ["ssp585"]},
+        {"climate_module": 7},
+        {"projection_scale": 1.5},
+        {"location-file": ["loc.lst"]},
+        {"workflows": "wf1"},
+        {"module_schemas": []},
+    ],
+)
+def test_wrong_type_field_raises(override):
+    with pytest.raises(ValueError):
+        LoadedExperimentConfig.from_dict(make_config_raw(**override))
+
+
+def test_supplied_totaled_sealevel_step_data_round_trips():
+    config = LoadedExperimentConfig.from_dict(
+        make_config_raw(**{"supplied-totaled-sealevel-step-data": "/data/total.nc"})
+    )
+    assert config.supplied_totaled_sealevel_step_data == "/data/total.nc"
+    assert (
+        LoadedExperimentConfig.from_dict(
+            make_config_raw()
+        ).supplied_totaled_sealevel_step_data
+        is None
+    )
+
+
+def test_other_top_level_values_hold_only_uncaptured_keys():
+    config = LoadedExperimentConfig.from_dict(
+        make_config_raw(
+            climate_module="fair-temperature",
+            **{"fair-temperature": {"inputs": {}}, "custom-param": "x"},
+        )
+    )
+    assert config.other_top_level_values == {"custom-param": "x"}

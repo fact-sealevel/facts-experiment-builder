@@ -14,7 +14,6 @@ from facts_experiment_builder.core.module.apptainer_service_spec import (
 )
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     APPTAINER_OUTPUT_KEY,
-    output_location_key,
     resolve_experiment_data_paths,
 )
 from facts_experiment_builder.core.module.module_service_spec import ModuleServiceSpec
@@ -173,9 +172,7 @@ def generate_apptainer(
     logger.info("Found experiment config file at provided path")
 
     config = experiment_repo.get(config_path=config_path)
-    data_paths = resolve_experiment_data_paths(
-        config.raw, output_key=output_location_key(config.raw, APPTAINER_OUTPUT_KEY)
-    )
+    data_paths = resolve_experiment_data_paths(config, output_key=APPTAINER_OUTPUT_KEY)
     plan, execution_plan = prepare_execution_plan(config, data_paths)
 
     stages = _build_apptainer_stages(execution_plan)
@@ -189,7 +186,7 @@ def generate_apptainer(
     script_content = render_apptainer_script(
         stages=stages,
         execution_plan=execution_plan,
-        metadata=config.raw,
+        config=config,
         data_paths=data_paths,
         workspace_dir=workspace_dir,
         mkdir_dirs=mkdir_dirs,

@@ -224,7 +224,7 @@ def prepare_execution_plan(
     metadata = config.raw
     known_module_names = list(schemas.keys())
 
-    plan = _make_experiment_plan(metadata, schemas)
+    plan = _make_experiment_plan(config, schemas)
     specs = _build_module_specs(
         plan=plan,
         metadata=metadata,

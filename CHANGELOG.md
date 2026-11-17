@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Plan construction, experiment-level path resolution, and Apptainer script rendering now read the typed `LoadedExperimentConfig` instead of the raw parsed YAML: `FactsExperiment.from_loaded_config()` and `workflows_from_mapping()` replace `FactsExperiment.from_metadata_dict()` and `workflows_from_metadata()`, `resolve_experiment_data_paths()` / `output_location()` read the config's typed path fields, and `render_apptainer_script()` takes the loaded config. Top-level config keys not captured as typed fields are retained on `other_top_level_values`. `LoadedExperimentConfig.raw` is retained for the service-spec building chain, which still consumes per-module sections from it. Generated outputs are unchanged. [PR #TBD](https://github.com/fact-sealevel/facts-experiment-builder/pull/TBD)
+- Malformed experiment configs are rejected at load over a wider set of fields: optional string fields (e.g. `climate-module`, `projection-scale`, `location-file`) and the `workflows` / `module-schemas` mappings are now type-checked in `LoadedExperimentConfig`, each raising `ValueError` naming the offending YAML key; a missing required path key (e.g. `shared-input-data`) now raises `ValueError` at load instead of `KeyError` later in path resolution. [PR #TBD](https://github.com/fact-sealevel/facts-experiment-builder/pull/TBD)
+
+
 
 
 ## [0.7.0] - 2026-11-16
