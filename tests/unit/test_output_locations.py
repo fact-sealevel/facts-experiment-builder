@@ -9,8 +9,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from facts_experiment_builder.application.generate_apptainer import generate_apptainer
-from facts_experiment_builder.application.generate_compose import generate_compose
+from facts_experiment_builder.application.generate_run_file import generate_run_file
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     APPTAINER_OUTPUT_KEY,
     COMPOSE_OUTPUT_KEY,
@@ -22,6 +21,8 @@ from facts_experiment_builder.application.setup_experiment import (
     prepare_experiment_setup,
 )
 from facts_experiment_builder.core.experiment.name import ExperimentName
+from facts_experiment_builder.io.apptainer_backend import ApptainerBackend
+from facts_experiment_builder.io.compose_backend import ComposeBackend
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
@@ -177,20 +178,22 @@ def _edit_config(config_path: Path, **changes) -> None:
 
 
 def _compose(workspace: Path) -> None:
-    generate_compose(
+    generate_run_file(
         experiment_name=_EXPERIMENT_NAME,
         workspace_dir=workspace,
         experiment_repo=StorageExperimentRepository(),
+        backend=ComposeBackend(),
     )
 
 
 def _apptainer_script(workspace: Path) -> str:
-    output = generate_apptainer(
+    output = generate_run_file(
         experiment_name=_EXPERIMENT_NAME,
         workspace_dir=workspace,
         experiment_repo=StorageExperimentRepository(),
+        backend=ApptainerBackend(),
     )
-    return output.script_path.read_text()
+    return output.path.read_text()
 
 
 def test_generate_commands_use_setup_defaults(workspace):

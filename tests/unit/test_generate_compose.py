@@ -2,8 +2,8 @@
 
 import pytest
 
-from facts_experiment_builder.application.generate_compose import (
-    _SUCCESS,
+from facts_experiment_builder.application.log_levels import SUCCESS
+from facts_experiment_builder.application.prepare_plan import (
     _log_success,
 )
 from facts_experiment_builder.application.prepare_plan import (
@@ -102,10 +102,10 @@ def test_check_module_schemas_present_passes_when_all_present():
 
 def test_log_success_emits_at_correct_level(caplog):
     with caplog.at_level(
-        _SUCCESS, logger="facts_experiment_builder.application.generate_compose"
+        SUCCESS, logger="facts_experiment_builder.application.prepare_plan"
     ):
         _log_success("Created %s module", "my-module")
 
     assert len(caplog.records) == 1
-    assert caplog.records[0].levelno == _SUCCESS
+    assert caplog.records[0].levelno == SUCCESS
     assert caplog.records[0].getMessage() == "Created my-module module"

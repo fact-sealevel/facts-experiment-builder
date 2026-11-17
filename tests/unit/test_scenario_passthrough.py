@@ -13,12 +13,13 @@ from pathlib import Path
 import pytest
 import yaml
 
-from facts_experiment_builder.application.generate_compose import generate_compose
+from facts_experiment_builder.application.generate_run_file import generate_run_file
 from facts_experiment_builder.application.setup_experiment import (
     finalize_experiment_setup,
     prepare_experiment_setup,
 )
 from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.io.compose_backend import ComposeBackend
 from facts_experiment_builder.io.experiment_repository import (
     StorageExperimentRepository,
 )
@@ -141,12 +142,13 @@ def test_setup_records_scenario_unchanged(workspace, scenario):
 def test_every_module_receives_scenario_unchanged(workspace, scenario):
     config_path = _setup_experiment(workspace, scenario)
     _fill_in_required_params(config_path)
-    output = generate_compose(
+    output = generate_run_file(
         experiment_name=_EXPERIMENT_NAME,
         workspace_dir=workspace,
         experiment_repo=StorageExperimentRepository(),
+        backend=ComposeBackend(),
     )
-    services = output.compose_dict["services"]
+    services = yaml.safe_load(output.path.read_text())["services"]
 
     scenario_args = {
         name: [arg for arg in svc["command"] if arg.startswith("--scenario=")]

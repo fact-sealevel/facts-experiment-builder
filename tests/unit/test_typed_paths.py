@@ -13,6 +13,7 @@ from facts_experiment_builder.core.module.module_service_spec import (
     ModuleServiceSpecComponents,
 )
 
+from facts_experiment_builder.io.compose_service import to_compose_service
 from facts_experiment_builder.core.typed_path import (
     ContainerPath,
     HostDirPath,
@@ -229,12 +230,12 @@ def test_envvar_arg_without_value_not_in_environment():
     assert "EMULANDICE_FORCING_HEAD_PATH" not in env
 
 
-def test_generate_compose_service_includes_environment():
-    """generate_compose_service() propagates environment to the compose dict."""
+def test_compose_service_includes_environment():
+    """to_compose_service() propagates environment to the compose dict."""
     spec = _make_spec_with_envvar_arg(
         "EMULANDICE_FORCING_HEAD_PATH", HostPath("/tmp/mod/forcing.csv")
     )
-    service = spec.generate_compose_service()
+    service = to_compose_service(spec.to_service_run())
     assert "environment" in service
     assert "EMULANDICE_FORCING_HEAD_PATH" in service["environment"]
 
