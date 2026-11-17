@@ -24,9 +24,17 @@ def test_valid_names_always_accepted(name):
     assert workflow_name.name == name
 
 
-@given(st.text(min_size=1).filter(lambda s: not _VALID_WORKFLOW_NAME.match(s)))
+@given(st.text(min_size=1).filter(lambda s: not _VALID_WORKFLOW_NAME.fullmatch(s)))
 def test_invalid_names_always_rejected(name):
     with pytest.raises(ValueError):
+        WorkflowName(name=name)
+
+
+@pytest.mark.parametrize("name", ["wf1\n", "wf1\n$(id)", "wf$(id)", "wf`id`"])
+def test_shell_metacharacters_and_trailing_newline_rejected(name):
+    """Names reach generated shell scripts. `wf1\\n` is the regex-anchor case: with
+    re.match, `$` accepts a single trailing newline, so fullmatch is required."""
+    with pytest.raises(ValueError, match="alphanumeric"):
         WorkflowName(name=name)
 
 
@@ -149,6 +157,14 @@ def test_workflow_rejects_duplicate_module_names():
         Workflow(name="wf1", module_names=["fittedismip-gris", "fittedismip-gris"])
 
 
+@pytest.mark.parametrize("name", ["wf1\n", "wf1\n$(id)", "wf 1", ""])
+def test_workflow_rejects_invalid_name_on_direct_construction(name):
+    """Workflow enforces the same name rule as WorkflowName, so names loaded from
+    YAML (which bypass the CLI prompt) are validated too."""
+    with pytest.raises(ValueError):
+        Workflow(name=name, module_names=["fittedismip-gris"])
+
+
 def test_to_module_list_str_returns_comma_separated_string():
     wf = Workflow(name="wf1", module_names=["fittedismip-gris", "tlm-sterodynamics"])
     assert wf.to_module_list_str() == "fittedismip-gris,tlm-sterodynamics"
@@ -224,3 +240,11 @@ def test_workflows_from_mapping_any_invalid_value_raises_and_discards_whole_batc
     raw = {**valid_entries, bad_name: "dup,dup"}
     with pytest.raises(ValueError):
         workflows_from_mapping(raw)
+
+
+@pytest.mark.parametrize("bad_key", ["wf1\n", "wf1\n$(id)", "wf 1"])
+def test_workflows_from_mapping_rejects_invalid_name_keys(bad_key):
+    """A string key that is non-empty but fails the name rule raises rather than
+    being skipped: skipping only covers falsy / non-string keys."""
+    with pytest.raises(ValueError, match="alphanumeric"):
+        workflows_from_mapping({bad_key: "fittedismip-gris"})

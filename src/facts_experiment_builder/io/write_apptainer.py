@@ -1,5 +1,6 @@
 """Render and write the Apptainer bash script from a Jinja2 template."""
 
+import shlex
 from pathlib import Path
 from typing import Any
 
@@ -118,6 +119,14 @@ def render_apptainer_script(
         lstrip_blocks=True,
         keep_trailing_newline=True,
     )
+    # Every config-derived value the template inserts as a shell word goes through
+    # this filter: shlex.quote makes it a single-quoted shell token, so paths,
+    # scenario, args, binds and env values cannot break out with $(...) or quotes.
+    # str() first: some values arrive as Paths or ints.
+    # The template also inserts service_name / pid_var unquoted, in comments and
+    # as shell identifiers. Those are safe without the filter: module names are
+    # registry keys and workflow names are regex-validated in core.workflow.
+    env.filters["shquote"] = lambda value: shlex.quote(str(value))
     context = _build_template_context(
         stages=stages,
         execution_plan=execution_plan,
