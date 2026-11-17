@@ -43,7 +43,7 @@ def _log_success(msg: str, *args: object) -> None:
 
 
 def _validate_climate_file_inputs(
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     sealevel_modules: list[str],
     schemas: dict[str, ModuleSchema],
 ) -> None:
@@ -61,7 +61,7 @@ def _validate_climate_file_inputs(
         if not module_schema.uses_climate_file:
             continue
 
-        module_inputs = metadata.get(module_name, {}).get("inputs", {})
+        module_inputs = config.module_sections.get(module_name, {}).get("inputs", {})
         climate_input_keys = module_schema.get_output_volume_input_keys()
 
         climate_file = next(
@@ -110,7 +110,7 @@ def check_module_schemas_present(
 
 def _build_module_specs(
     plan: _ExperimentPlan,
-    metadata: dict[str, Any],
+    config: LoadedExperimentConfig,
     schemas: dict,
     known_module_names: list,
     data_paths: ExperimentDataPaths,
@@ -125,7 +125,8 @@ def _build_module_specs(
     if plan.climate_module_name.upper() != "NONE":
         climate_module_name = plan.climate_module_name
         climate_module = build_module_service_spec(
-            metadata=metadata,
+            config.module_sections.get(climate_module_name, {}),
+            config=config,
             module_name=climate_module_name,
             known_module_names=known_module_names,
             module_definition=climate_module_definition,
@@ -136,14 +137,15 @@ def _build_module_specs(
         logger.info("No climate module specified (NONE)")
 
         _validate_climate_file_inputs(
-            metadata=metadata, sealevel_modules=sealevel_modules, schemas=schemas
+            config=config, sealevel_modules=sealevel_modules, schemas=schemas
         )
 
     for module_name in plan.sealevel_module_names:
         module_schema = schemas[module_name]
 
         sealevel_modules[module_name] = build_module_service_spec(
-            metadata=metadata,
+            config.module_sections.get(module_name, {}),
+            config=config,
             module_name=module_name,
             known_module_names=known_module_names,
             module_definition=module_schema,
@@ -156,7 +158,8 @@ def _build_module_specs(
             continue
         schema = schemas[module_name]
         framework_modules[module_name] = build_module_service_spec(
-            metadata=metadata,
+            config.module_sections.get(module_name, {}),
+            config=config,
             module_name=module_name,
             known_module_names=known_module_names,
             module_definition=schema,
@@ -168,7 +171,8 @@ def _build_module_specs(
     for module_name in plan.esl_module_names:
         schema = schemas[module_name]
         esl_modules[module_name] = build_module_service_spec(
-            metadata=metadata,
+            config.module_sections.get(module_name, {}),
+            config=config,
             module_name=module_name,
             known_module_names=known_module_names,
             module_definition=schema,
@@ -186,8 +190,8 @@ def _build_module_specs(
 
     if specs.is_empty:
         has_step_data = bool(
-            metadata.get("supplied-totaled-sealevel-step-data")
-            or metadata.get("experiment-specific-input-data")
+            config.supplied_totaled_sealevel_step_data
+            or config.experiment_specific_input_data
         )
         if not has_step_data:
             raise ValueError(
@@ -220,14 +224,12 @@ def prepare_execution_plan(
     schemas = {
         m: ModuleSchema.from_dict(config.module_schemas[m]) for m in set(module_names)
     }
-    # Functions below still take the metadata dict.
-    metadata = config.raw
     known_module_names = list(schemas.keys())
 
     plan = _make_experiment_plan(config, schemas)
     specs = _build_module_specs(
         plan=plan,
-        metadata=metadata,
+        config=config,
         schemas=schemas,
         known_module_names=known_module_names,
         data_paths=data_paths,
@@ -244,7 +246,7 @@ def prepare_execution_plan(
     execution_plan = build_experiment_execution_plan(
         specs=specs,
         plan=plan,
-        metadata=metadata,
+        config=config,
         schemas=schemas,
         data_paths=data_paths,
     )

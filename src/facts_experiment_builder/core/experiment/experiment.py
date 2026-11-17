@@ -227,15 +227,15 @@ class FactsExperiment:
         that load through ExperimentRepository.get(). top_level_keys /
         fingerprint_keys behave as explicit key sets: values are looked up in
         the config's typed fields (under either spelling, e.g.
-        "pipeline-id"/"pipeline_id") and then in config.unmodelled_values.
+        "pipeline-id"/"pipeline_id") and then in config.other_top_level_values.
         When top_level_keys is omitted, keys are inferred by treating any
-        non-structural, non-dict modelled/unmodelled value as a top-level
-        param. A modelled key present but blank in the YAML is dropped (None
+        non-structural, non-dict captured/other-top-level value as a top-level
+        param. A captured key present but blank in the YAML is dropped (None
         conflates missing with blank; LoadedExperimentConfig already rejects
         blank required fields at load).
         """
-        # Every modelled key, under the spelling(s) it may be requested by.
-        values: dict[str, Any] = dict(config.unmodelled_values)
+        # Every captured key, under the spelling(s) it may be requested by.
+        values: dict[str, Any] = dict(config.other_top_level_values)
         values.update(
             {
                 "experiment_name": config.experiment_name,
@@ -249,7 +249,7 @@ class FactsExperiment:
                 "pyear_step": config.pyear_step,
                 "location-file": config.location_file,
                 "location_file": config.location_file
-                or config.unmodelled_values.get("location_file"),
+                or config.other_top_level_values.get("location_file"),
                 "projection_scale": config.projection_scale,
                 "shared-input-data": config.shared_input_data,
                 "module-specific-input-data": config.module_specific_input_data,

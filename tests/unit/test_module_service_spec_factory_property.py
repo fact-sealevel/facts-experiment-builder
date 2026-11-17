@@ -56,7 +56,17 @@ def _build(module_name: str, image: str = "repo/img:latest") -> tuple:
         "facts_experiment_builder.application.module_service_spec_factory.ensure_module_output_dir"
     ):
         result = build_module_service_spec(
-            metadata=metadata,
+            metadata[module_name],
+            config=make_loaded_config(
+                **{
+                    k: metadata[k]
+                    for k in (
+                        "shared-input-data",
+                        "module-specific-input-data",
+                        "compose-output-data-location",
+                    )
+                }
+            ),
             module_name=module_name,
             known_module_names=[module_name],
             module_definition=schema,

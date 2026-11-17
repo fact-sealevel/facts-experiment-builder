@@ -83,7 +83,6 @@ def test_module_sections_hold_only_manifest_modules():
         "fair-temperature": {"inputs": {}},
         "tlm-sterodynamics": {"inputs": {"a": 1}},
     }
-    assert config.raw is raw
 
 
 @pytest.mark.parametrize("raw", [None, [], "text"])
@@ -148,11 +147,11 @@ def test_supplied_totaled_sealevel_step_data_round_trips():
     )
 
 
-def test_unmodelled_values_capture_only_unmodelled_keys():
+def test_other_top_level_values_hold_only_uncaptured_keys():
     config = LoadedExperimentConfig.from_dict(
         make_config_raw(
             climate_module="fair-temperature",
             **{"fair-temperature": {"inputs": {}}, "custom-param": "x"},
         )
     )
-    assert config.unmodelled_values == {"custom-param": "x"}
+    assert config.other_top_level_values == {"custom-param": "x"}

@@ -108,8 +108,8 @@ class Workflow:
 
 
 def workflows_from_mapping(raw) -> dict[str, Workflow]:
-    """Build dict[name, Workflow] from a workflows mapping (dict[str, str] or
-    similar), e.g. LoadedExperimentConfig.workflows.
+    """Build dict[name, Workflow] from a workflows mapping (dict[str, str] or similar),
+    e.g. LoadedExperimentConfig.workflows.
 
     Returns empty dict if raw is missing or not a dict.
     """

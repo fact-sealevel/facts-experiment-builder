@@ -10,6 +10,7 @@ from facts_experiment_builder.core.module.module_service_path_resolution import 
     ExperimentDataPaths,
 )
 from facts_experiment_builder.core.workflow import Workflow
+from tests.unit.helpers import make_loaded_config
 
 _DATA_PATHS = ExperimentDataPaths(
     shared_input_data="/in/shared",
@@ -19,22 +20,25 @@ _DATA_PATHS = ExperimentDataPaths(
 )
 
 
-def _make_workflow_metadata(mod: str = "tlm-sterodynamics") -> dict:
-    """Minimal metadata dict for _collect_workflow_output_paths_by_type tests."""
-    return {
-        mod: {
-            "outputs": {
-                "output-gslr-file": {
-                    "value": f"{mod}/gslr.nc",
-                    "output_type": "global",
-                },
-                "output-lslr-file": {
-                    "value": f"{mod}/lslr.nc",
-                    "output_type": "local",
-                },
+def _make_workflow_config(mod: str = "tlm-sterodynamics"):
+    """Minimal loaded config for _collect_workflow_output_paths_by_type tests."""
+    return make_loaded_config(
+        sealevel_modules=[mod],
+        **{
+            mod: {
+                "outputs": {
+                    "output-gslr-file": {
+                        "value": f"{mod}/gslr.nc",
+                        "output_type": "global",
+                    },
+                    "output-lslr-file": {
+                        "value": f"{mod}/lslr.nc",
+                        "output_type": "local",
+                    },
+                }
             }
-        }
-    }
+        },
+    )
 
 
 def _make_module_schema(mod: str, file_outputs: list) -> ModuleSchema:
@@ -83,9 +87,15 @@ def _patch_build_module_service_spec(monkeypatch, captured):
     (filesystem-touching) service-spec build pipeline."""
 
     def fake_build(
-        metadata, module_name, known_module_names, module_definition, data_paths
+        module_section,
+        *,
+        config,
+        module_name,
+        known_module_names,
+        module_definition,
+        data_paths,
     ):
-        captured["inputs"] = dict(metadata[module_name]["inputs"])
+        captured["inputs"] = dict(module_section["inputs"])
 
         class _Stub:
             pass
@@ -98,8 +108,8 @@ def _patch_build_module_service_spec(monkeypatch, captured):
 def test_collect_workflow_output_paths_global_only():
     """Only global outputs are collected when output_type='global'."""
     wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
-    metadata = _make_workflow_metadata()
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global", {})
+    config = _make_workflow_config()
+    paths = _collect_workflow_output_paths_by_type(config, wf, "global", {})
     assert len(paths) == 1
     assert "gslr.nc" in paths[0]
 
@@ -107,8 +117,8 @@ def test_collect_workflow_output_paths_global_only():
 def test_collect_workflow_output_paths_local_only():
     """Only local outputs are collected when output_type='local'."""
     wf = Workflow(name="wf1", module_names=["tlm-sterodynamics"])
-    metadata = _make_workflow_metadata()
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "local", {})
+    config = _make_workflow_config()
+    paths = _collect_workflow_output_paths_by_type(config, wf, "local", {})
     assert len(paths) == 1
     assert "lslr.nc" in paths[0]
 
@@ -117,18 +127,16 @@ def test_collect_workflow_output_paths_excludes_pass_to_total_false():
     """Outputs with pass_to_total=False in the schema are excluded."""
     mod = "emulandice-ais"
     wf = Workflow(name="wf1", module_names=[mod])
-    metadata = {
-        mod: {
-            "outputs": {
-                "output-gslr-file": {
-                    "value": f"{mod}/gslr.nc",
-                    "output_type": "global",
-                },
-                "output-gslr-wais-file": {
-                    "value": f"{mod}/gslr-wais.nc",
-                    "output_type": "global",
-                },
-            }
+    section = {
+        "outputs": {
+            "output-gslr-file": {
+                "value": f"{mod}/gslr.nc",
+                "output_type": "global",
+            },
+            "output-gslr-wais-file": {
+                "value": f"{mod}/gslr-wais.nc",
+                "output_type": "global",
+            },
         }
     }
     schema = _make_module_schema(
@@ -150,9 +158,8 @@ def test_collect_workflow_output_paths_excludes_pass_to_total_false():
             },
         ],
     )
-    paths = _collect_workflow_output_paths_by_type(
-        metadata, wf, "global", {mod: schema}
-    )
+    config = make_loaded_config(sealevel_modules=[mod], **{mod: section})
+    paths = _collect_workflow_output_paths_by_type(config, wf, "global", {mod: schema})
     assert len(paths) == 1
     assert "gslr.nc" in paths[0]
     assert "wais" not in paths[0]
@@ -162,15 +169,14 @@ def test_collect_workflow_output_paths_no_schema_includes_all():
     """When a module has no entry in schemas, all its outputs pass through."""
     mod = "unknown-module"
     wf = Workflow(name="wf1", module_names=[mod])
-    metadata = {
-        mod: {
-            "outputs": {
-                "output-a": {"value": f"{mod}/a.nc", "output_type": "global"},
-                "output-b": {"value": f"{mod}/b.nc", "output_type": "global"},
-            }
+    section = {
+        "outputs": {
+            "output-a": {"value": f"{mod}/a.nc", "output_type": "global"},
+            "output-b": {"value": f"{mod}/b.nc", "output_type": "global"},
         }
     }
-    paths = _collect_workflow_output_paths_by_type(metadata, wf, "global", {})
+    config = make_loaded_config(sealevel_modules=[mod], **{mod: section})
+    paths = _collect_workflow_output_paths_by_type(config, wf, "global", {})
     assert len(paths) == 2
 
 
@@ -190,12 +196,13 @@ def test_build_esl_specs_does_not_synthesize_missing_inputs(monkeypatch):
     module_name = "extremesealevel-pointsoverthreshold"
     schema = _make_esl_schema(module_name)
     wf = Workflow(name="wf1", module_names=[module_name])
-    metadata = {module_name: {"inputs": {}, "outputs": {}}}
-
     execution_plan_module._build_esl_specs_for_workflows(
         esl_module_names=[module_name],
         workflows={"wf1": wf},
-        metadata=metadata,
+        config=make_loaded_config(
+            esl_modules=[module_name],
+            **{module_name: {"inputs": {}, "outputs": {}}},
+        ),
         projection_scale=None,
         schemas={module_name: schema},
         data_paths=_DATA_PATHS,
@@ -213,17 +220,20 @@ def test_build_esl_specs_passes_through_provided_inputs(monkeypatch):
     module_name = "extremesealevel-pointsoverthreshold"
     schema = _make_esl_schema(module_name)
     wf = Workflow(name="wf1", module_names=[module_name])
-    metadata = {
-        module_name: {
-            "inputs": {"gesla-dir": "/data/module_specific_input_data/gesla_data"},
-            "outputs": {},
-        }
-    }
-
     execution_plan_module._build_esl_specs_for_workflows(
         esl_module_names=[module_name],
         workflows={"wf1": wf},
-        metadata=metadata,
+        config=make_loaded_config(
+            esl_modules=[module_name],
+            **{
+                module_name: {
+                    "inputs": {
+                        "gesla-dir": "/data/module_specific_input_data/gesla_data"
+                    },
+                    "outputs": {},
+                }
+            },
+        ),
         projection_scale=None,
         schemas={module_name: schema},
         data_paths=_DATA_PATHS,
@@ -246,7 +256,10 @@ def test_build_esl_specs_depends_on_workflow_local_total(monkeypatch):
     specs = execution_plan_module._build_esl_specs_for_workflows(
         esl_module_names=[module_name],
         workflows={"all-modules": wf},
-        metadata={module_name: {"inputs": {}, "outputs": {}}},
+        config=make_loaded_config(
+            esl_modules=[module_name],
+            **{module_name: {"inputs": {}, "outputs": {}}},
+        ),
         projection_scale="local",
         schemas={module_name: _make_esl_schema(module_name)},
         data_paths=_DATA_PATHS,
