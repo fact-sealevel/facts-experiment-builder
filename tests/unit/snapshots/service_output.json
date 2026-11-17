@@ -1,0 +1,342 @@
+{
+  "plain": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {},
+      "env": {}
+    }
+  },
+  "outputs": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [
+        "--output-gslr-file=/mnt/out/my-module/gslr.nc",
+        "--output-lslr-file=/mnt/out/my-module/lslr.nc"
+      ],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [
+        "--output-gslr-file=/mnt/out/my-module/gslr.nc",
+        "--output-lslr-file=/mnt/out/my-module/lslr.nc"
+      ],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {
+        "output-gslr-file": "/out/my-module/gslr.nc",
+        "output-lslr-file": "/out/my-module/lslr.nc"
+      },
+      "env": {}
+    }
+  },
+  "outputs-suppress-local": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [
+        "--output-gslr-file=/mnt/out/my-module/gslr.nc"
+      ],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [
+        "--output-gslr-file=/mnt/out/my-module/gslr.nc"
+      ],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {
+        "output-gslr-file": "/out/my-module/gslr.nc",
+        "output-lslr-file": "/out/my-module/lslr.nc"
+      },
+      "env": {}
+    }
+  },
+  "envvar": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no",
+      "environment": {
+        "EMULANDICE_FORCING_HEAD_PATH": "/mnt/module_specific_in/forcing"
+      }
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {},
+      "env": {
+        "EMULANDICE_FORCING_HEAD_PATH": "/mnt/module_specific_in/forcing"
+      }
+    }
+  },
+  "climate-dependent-with-climate-service": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [
+        "--climate-data-file=/mnt/out/climate.nc"
+      ],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no",
+      "depends_on": {
+        "fair-temperature": {
+          "condition": "service_completed_successfully"
+        }
+      }
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [
+        "--climate-data-file=/mnt/out/climate.nc"
+      ],
+      "wait_for_files": [
+        "/out/fair-temperature/climate.nc"
+      ],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {},
+      "env": {}
+    }
+  },
+  "climate-dependent-no-climate-service": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [
+        "--climate-data-file=/mnt/out/climate.nc"
+      ],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [
+        "--climate-data-file=/mnt/out/climate.nc"
+      ],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {},
+      "env": {}
+    }
+  },
+  "schema-depends-on": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [
+        "--climate-data-file=/mnt/out/climate.nc"
+      ],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no",
+      "depends_on": {
+        "fair-temperature": {
+          "condition": "service_healthy"
+        },
+        "other-plain": {
+          "condition": "service_completed_successfully"
+        },
+        "other-with-condition": {
+          "condition": "service_started"
+        },
+        "other-no-condition": {
+          "condition": "service_completed_successfully"
+        }
+      }
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [
+        "--climate-data-file=/mnt/out/climate.nc"
+      ],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {},
+      "env": {}
+    }
+  },
+  "facts-total-style": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/my-module:0.1.0",
+      "command": [
+        "--output-path=/mnt/total_out/facts-total/wf1_global_total.nc"
+      ],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/facts-total-wf1-global:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "facts-total-wf1-global",
+      "image_name": "my-module",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/facts-total-wf1-global:/mnt/module_specific_in"
+      ],
+      "args": [
+        "--output-path=/mnt/total_out/facts-total/wf1_global_total.nc"
+      ],
+      "wait_for_files": [],
+      "run_in_background": true,
+      "pid_var": "PID_FACTS_TOTAL_WF1_GLOBAL",
+      "output_dir": "/out/facts-total-wf1-global",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {
+        "output-path": "/out/facts-total-wf1-global/wf1_global_total.nc"
+      },
+      "env": {}
+    }
+  },
+  "image-no-registry": {
+    "compose": {
+      "image": "img:0.1.0",
+      "command": [],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "img",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "",
+      "host_outputs": {},
+      "env": {}
+    }
+  },
+  "image-trailing-slash": {
+    "compose": {
+      "image": "ghcr.io/fact-sealevel/img/:0.1.0",
+      "command": [],
+      "volumes": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "restart": "no"
+    },
+    "apptainer": {
+      "service_name": "my-module",
+      "image_name": "img",
+      "image_tag": "0.1.0",
+      "binds": [
+        "/out:/mnt/out",
+        "/in/module/my-module:/mnt/module_specific_in"
+      ],
+      "args": [],
+      "wait_for_files": [],
+      "run_in_background": false,
+      "pid_var": null,
+      "output_dir": "/out/my-module",
+      "registry": "ghcr.io/fact-sealevel",
+      "host_outputs": {},
+      "env": {}
+    }
+  }
+}

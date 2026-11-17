@@ -1,4 +1,5 @@
-"""Property tests for _build_module_specs() and render_compose_services()."""
+"""Property tests for _build_module_specs() and the Compose adapter's
+render_compose_services()."""
 
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
@@ -7,18 +8,21 @@ from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from facts_experiment_builder.application import prepare_plan
+from facts_experiment_builder.application.execution_graph import build_execution_graph
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
-from facts_experiment_builder.application.generate_compose import (
-    render_compose_services,
-)
 from facts_experiment_builder.application.prepare_plan import _build_module_specs
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleContainerImage,
+    ModuleSchema,
+)
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
 )
+from facts_experiment_builder.core.module.service_run import ServiceRun
 from facts_experiment_builder.core.workflow import Workflow
+from facts_experiment_builder.io.compose_backend import render_compose_services
 from tests.unit.helpers import make_loaded_config
 
 
@@ -93,14 +97,20 @@ def _mock_build_module_service_spec():
 
 
 def _stub_spec() -> MagicMock:
-    """Stub ModuleServiceSpec: generate_compose_service returns a fresh dict each call."""
+    """Stub ModuleServiceSpec: a minimal ServiceRun, no schema dependencies, and no
+    climate file."""
     stub = MagicMock()
-    stub.generate_compose_service.side_effect = lambda *a, **kw: {
-        "image": "img:tag",
-        "command": [],
-        "volumes": [],
-        "restart": "no",
-    }
+    stub.module_definition.uses_climate_file = False
+    stub.to_service_run.return_value = ServiceRun(
+        name="stub",
+        image=ModuleContainerImage(image_url="img", image_tag="tag"),
+        args=[],
+        binds=[],
+        env={},
+        output_dir="/out/stub",
+        host_outputs={},
+    )
+    stub.dependencies.return_value = []
     return stub
 
 
@@ -263,7 +273,7 @@ def test_standard_spec_names_appear_in_services(standard_names):
         suppress_output_types=set(),
     )
 
-    result = render_compose_services(exec_plan)
+    result = render_compose_services(build_execution_graph(exec_plan))
 
     assert set(standard_names) <= result.keys()
 
@@ -280,7 +290,7 @@ def test_facts_total_spec_names_appear_in_services(ft_names, wf_module_names):
         suppress_output_types=set(),
     )
 
-    result = render_compose_services(exec_plan)
+    result = render_compose_services(build_execution_graph(exec_plan))
 
     assert set(ft_names) <= result.keys()
 
@@ -296,7 +306,7 @@ def test_esl_spec_names_appear_in_services(esl_names):
         suppress_output_types=set(),
     )
 
-    result = render_compose_services(exec_plan)
+    result = render_compose_services(build_execution_graph(exec_plan))
 
     assert set(esl_names) <= result.keys()
 
@@ -321,7 +331,7 @@ def test_service_count_equals_sum_of_plan_specs(standard_names, ft_names, esl_na
         suppress_output_types=set(),
     )
 
-    result = render_compose_services(exec_plan)
+    result = render_compose_services(build_execution_graph(exec_plan))
 
     assert len(result) == len(all_names)
 
@@ -340,7 +350,7 @@ def test_facts_total_depends_on_matches_workflow_module_names(
         suppress_output_types=set(),
     )
 
-    result = render_compose_services(exec_plan)
+    result = render_compose_services(build_execution_graph(exec_plan))
 
     assert set(result[service_name]["depends_on"].keys()) == set(wf_module_names)
 
@@ -356,7 +366,7 @@ def test_esl_depends_on_is_exactly_the_dep_service(service_name, dep_service):
         suppress_output_types=set(),
     )
 
-    result = render_compose_services(exec_plan)
+    result = render_compose_services(build_execution_graph(exec_plan))
 
     assert result[service_name]["depends_on"] == {
         dep_service: {"condition": "service_completed_successfully"}

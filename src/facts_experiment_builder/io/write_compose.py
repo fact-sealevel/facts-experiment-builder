@@ -18,7 +18,8 @@ def make_compose_yaml(
     strings, numbers, bools) to get plain YAML out.
 
     Args:
-        content_dict: Compose content, e.g. {"services": {...}} from generate_compose()
+        content_dict: Compose content, e.g. {"services": {...}} from
+            render_compose_services()
         sort_keys: Sort mapping keys. Default False keeps insertion order, so
             services appear in the order they were built.
         indent: Spaces per nesting level

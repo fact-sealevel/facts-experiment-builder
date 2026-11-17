@@ -6,63 +6,55 @@ from typing import Any
 
 from jinja2 import Environment, PackageLoader, StrictUndefined
 
-from facts_experiment_builder.application.execution_plan import _ExecutionPlan
-from facts_experiment_builder.core.experiment.loaded_config import (
-    LoadedExperimentConfig,
-)
-from facts_experiment_builder.core.module.module_service_path_resolution import (
-    ExperimentDataPaths,
-)
+from facts_experiment_builder.application.backend import RunInfo
 from facts_experiment_builder.io.paths import SIF_DIR_NAME
 
 
 def _build_template_context(
     stages: Any,
-    execution_plan: _ExecutionPlan,
-    config: LoadedExperimentConfig,
-    data_paths: ExperimentDataPaths,
-    workspace_dir: Path,
+    info: RunInfo,
+    climate_service_name: str | None,
     mkdir_dirs: list[str],
-    workflow_vars: list[tuple[str, str]],
 ) -> dict[str, Any]:
     """Build the variables the apptainer_experiment.sh.j2 template renders.
 
     Args:
-        stages: _ApptainerStages from generate_apptainer (typed Any here because
-            generate_apptainer imports this module)
-        execution_plan: Execution plan; only its climate_service_name is used
-        config: Loaded experiment config; top-level params (experiment name,
-            years, scenario, nsamps, pipeline-id) are read from its typed fields
-        data_paths: Experiment-level paths, the same ones used to build the module
-            specs; give OUTPUT_DIR, SHARED_IN and MODULE_IN
-        workspace_dir: Workspace root; the SIF directory is
-            <workspace_dir>/apptainer_sif_files
+        stages: _ApptainerStages from io.apptainer_backend (typed Any here because
+            apptainer_backend imports this module)
+        info: Experiment-level values. info.config gives the top-level params
+            (experiment name, years, scenario, nsamps, pipeline-id); info.data_paths,
+            the same paths used to build the module specs, gives OUTPUT_DIR,
+            SHARED_IN and MODULE_IN; the SIF directory is
+            <info.workspace_dir>/SIF_DIR_NAME
+        climate_service_name: Name of the climate service, or None if there is none
         mkdir_dirs: Output directories the script creates before running services
-        workflow_vars: (workflow name, shell variable name) pairs, e.g.
-            ("wf1", "WORKFLOW1_NAME")
 
     Returns:
-        Template context dict. climate_wait_files lists each Stage 2 wait file once,
-        in stage order; has_workflows is True when there are facts-total services
-        (Stage 3).
+        Template context dict. workflow_vars pairs each of info.workflow_names with a
+        shell variable name, e.g. ("wf1", "WORKFLOW1_NAME"); climate_wait_files lists
+        each Stage 2 wait file once, in stage order; has_workflows is True when there
+        are facts-total services (Stage 3).
     """
     # Paths come from the same ExperimentDataPaths used to build the module specs,
     # so OUTPUT_DIR etc. always match the binds.
-    output_dir = data_paths.output_data_location
-    shared_in = data_paths.shared_input_data
-    module_in = data_paths.module_specific_input_base
-    sif_dir = str(workspace_dir / SIF_DIR_NAME)
+    data_paths = info.data_paths
+    config = info.config
+    sif_dir = info.workspace_dir / SIF_DIR_NAME
 
     climate_wait_files: list[str] = list(
         dict.fromkeys(f for spec in stages.stage2 for f in spec.wait_for_files)
     )
+    workflow_vars = [
+        (wf_name, f"WORKFLOW{i + 1}_NAME")
+        for i, wf_name in enumerate(info.workflow_names)
+    ]
 
     return {
-        "workspace_dir": str(workspace_dir),
+        "workspace_dir": str(info.workspace_dir),
         "experiment_name": str(config.experiment_name),
-        "output_dir": output_dir,
-        "shared_in": shared_in,
-        "module_in": module_in,
+        "output_dir": data_paths.output_data_location,
+        "shared_in": data_paths.shared_input_data,
+        "module_in": data_paths.module_specific_input_base,
         "sif_dir": sif_dir,
         "pyear_start": str(config.pyear_start),
         "pyear_end": str(config.pyear_end),
@@ -78,7 +70,7 @@ def _build_template_context(
         "stage3": stages.stage3,
         "stage4": stages.stage4,
         "climate_wait_files": climate_wait_files,
-        "climate_service_name": execution_plan.climate_service_name or "",
+        "climate_service_name": climate_service_name or "",
         "mkdir_dirs": mkdir_dirs,
         "has_workflows": bool(stages.stage3),
     }
@@ -86,12 +78,9 @@ def _build_template_context(
 
 def render_apptainer_script(
     stages: Any,
-    execution_plan: _ExecutionPlan,
-    config: LoadedExperimentConfig,
-    data_paths: ExperimentDataPaths,
-    workspace_dir: Path,
+    info: RunInfo,
+    climate_service_name: str | None,
     mkdir_dirs: list[str],
-    workflow_vars: list[tuple[str, str]],
 ) -> str:
     """Render the Apptainer bash script template to a string.
 
@@ -100,13 +89,11 @@ def render_apptainer_script(
     raises jinja2.UndefinedError instead of rendering as empty.
 
     Args:
-        stages: _ApptainerStages from generate_apptainer
-        execution_plan: Execution plan; only its climate_service_name is used
-        config: Loaded experiment config, for the script's top-level params
-        data_paths: Experiment-level paths used to build the module specs
-        workspace_dir: Workspace root, used for WORKSPACE and the SIF directory
+        stages: _ApptainerStages from io.apptainer_backend
+        info: Experiment-level values: config (top-level params), data_paths,
+            workspace_dir (WORKSPACE and the SIF directory) and workflow_names
+        climate_service_name: Name of the climate service, or None if there is none
         mkdir_dirs: Output directories the script creates before running services
-        workflow_vars: (workflow name, shell variable name) pairs
 
     Returns:
         The script's content. See _build_template_context() for how the arguments
@@ -129,12 +116,9 @@ def render_apptainer_script(
     env.filters["shquote"] = lambda value: shlex.quote(str(value))
     context = _build_template_context(
         stages=stages,
-        execution_plan=execution_plan,
-        config=config,
-        data_paths=data_paths,
-        workspace_dir=workspace_dir,
+        info=info,
+        climate_service_name=climate_service_name,
         mkdir_dirs=mkdir_dirs,
-        workflow_vars=workflow_vars,
     )
     return env.get_template("apptainer_experiment.sh.j2").render(**context)
 
