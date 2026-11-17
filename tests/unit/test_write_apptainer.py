@@ -1,7 +1,9 @@
 """Unit tests for write_apptainer (template rendering and file writing)."""
 
 import os
-
+import shlex
+import subprocess
+from pathlib import Path
 
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.generate_apptainer import _ApptainerStages
@@ -141,6 +143,59 @@ def test_rendered_script_has_set_euo_pipefail():
     assert "set -euo pipefail" in result
 
 
+def test_rendered_script_shell_quotes_config_values():
+    """Config-derived values are inserted as single-quoted shell tokens, so a
+    value containing $(...) or a quote stays literal when the script runs."""
+    config = LoadedExperimentConfig.from_dict(
+        {**_BASE_METADATA, "scenario": 'ssp$(touch /tmp/pwned) "x"'}
+    )
+    result = _render(config=config, workspace_dir=Path("/work space"))
+    assert "WORKSPACE='/work space'" in result
+    assert "SCENARIO='ssp$(touch /tmp/pwned) \"x\"'" in result
+
+
+def test_rendered_script_shell_quotes_args_binds_and_env():
+    spec = _make_apptainer_spec(
+        args=["--label=a b", "--evil=$(id)"],
+        binds=["/host dir/$(id):/mnt/in"],
+        env={"MSG": "a'b"},
+    )
+    result = _render(stages=_make_stages(stage1=[spec]))
+    assert "'--bind=/host dir/$(id):/mnt/in'" in result
+    assert "'--label=a b'" in result
+    assert "'--evil=$(id)'" in result
+    assert shlex.quote("--env=MSG=a'b") in result
+
+
+def test_rendered_script_with_hostile_values_is_valid_bash(tmp_path):
+    """Syntax check only (bash -n): the quoting must not break the script. It does
+    not prove the values are inert - the string assertions above cover that."""
+    spec = _make_apptainer_spec(
+        args=["--evil=$(id)", "--label=a b"],
+        binds=["/host dir/$(id):/mnt/in"],
+    )
+    result = _render(stages=_make_stages(stage1=[spec]))
+    script = tmp_path / "experiment-apptainer.sh"
+    script.write_text(result)
+    completed = subprocess.run(
+        ["bash", "-n", str(script)], capture_output=True, text=True
+    )
+    assert completed.returncode == 0, completed.stderr
+
+
+def test_stage3_failure_message_is_shell_quoted():
+    """The stage-3 `wait ... || echo` line inserts service_name; it must be a
+    single-quoted token like every other inserted value."""
+    spec = _make_apptainer_spec(
+        "facts-total-wf1-global", run_in_background=True, pid_var="PID_WF1_GLOBAL"
+    )
+    result = _render(stages=_make_stages(stage3=[spec]))
+    assert (
+        "wait $PID_WF1_GLOBAL || { echo 'ERROR: facts-total-wf1-global failed' >&2; exit 1; }"
+        in result
+    )
+
+
 def test_stage1_module_appears_in_output():
     spec = _make_apptainer_spec(
         "fair-temperature", args=["--pipeline-id=abc", "--nsamps=100"]
@@ -168,10 +223,10 @@ def test_service_env_is_set_before_run_and_reset_after():
         env={"EMULANDICE_FORCING_HEAD_PATH": "/mnt/module_specific_in/forcing"},
     )
     result = _render(stages=_make_stages(stage1=[spec]))
-    env_line = '"--env=EMULANDICE_FORCING_HEAD_PATH=/mnt/module_specific_in/forcing"'
+    env_line = "--env=EMULANDICE_FORCING_HEAD_PATH=/mnt/module_specific_in/forcing"
     block = result.split("# --- emulandice-gris ---")[1]
-    assert block.index(env_line) < block.index('run_service "emulandice-gris-')
-    assert block.index('run_service "emulandice-gris-') < block.index("ENV_ARGS=()")
+    assert block.index(env_line) < block.index("run_service emulandice-gris-")
+    assert block.index("run_service emulandice-gris-") < block.index("ENV_ARGS=()")
 
 
 def test_env_applies_only_to_its_own_service():
@@ -225,7 +280,7 @@ def test_pull_image_uses_versioned_sif_name():
     spec = _make_apptainer_spec("fair-temperature", image_tag="0.2.1")
     stages = _make_stages(stage1=[spec])
     result = _render(stages=stages)
-    assert 'pull_image "fair-temperature-0.2.1"' in result
+    assert "pull_image fair-temperature-0.2.1" in result
 
 
 def test_pull_image_uses_each_images_full_reference():
@@ -241,12 +296,10 @@ def test_pull_image_uses_each_images_full_reference():
     ]
     result = _render(stages=_make_stages(stage1=specs))
     assert (
-        'pull_image "fair-temperature-0.2.1" '
-        '"ghcr.io/fact-sealevel/fair-temperature:0.2.1"'
+        "pull_image fair-temperature-0.2.1 ghcr.io/fact-sealevel/fair-temperature:0.2.1"
     ) in result
     assert (
-        'pull_image "tlm-sterodynamics-1.0.0" '
-        '"docker.io/other-org/tlm-sterodynamics:1.0.0"'
+        "pull_image tlm-sterodynamics-1.0.0 docker.io/other-org/tlm-sterodynamics:1.0.0"
     ) in result
     assert "REGISTRY" not in result
 
@@ -255,7 +308,7 @@ def test_sif_dir_is_in_workspace_dir():
     from pathlib import Path
 
     result = _render(workspace_dir=Path("/workspace"))
-    assert 'SIF_DIR="/workspace/apptainer_sif_files"' in result
+    assert "SIF_DIR=/workspace/apptainer_sif_files" in result
 
 
 def test_run_service_uses_versioned_sif_name():
@@ -264,7 +317,7 @@ def test_run_service_uses_versioned_sif_name():
     )
     stages = _make_stages(stage1=[spec])
     result = _render(stages=stages)
-    assert 'run_service "fair-temperature-0.2.1"' in result
+    assert "run_service fair-temperature-0.2.1" in result
 
 
 def test_workflow_vars_appear_in_header():
@@ -280,8 +333,8 @@ def test_workflow_vars_appear_in_header():
         mkdir_dirs=[],
         workflow_vars=[("wf1f", "WORKFLOW1_NAME"), ("wf2f", "WORKFLOW2_NAME")],
     )
-    assert 'WORKFLOW1_NAME="wf1f"' in result
-    assert 'WORKFLOW2_NAME="wf2f"' in result
+    assert "WORKFLOW1_NAME=wf1f" in result
+    assert "WORKFLOW2_NAME=wf2f" in result
 
 
 def test_path_vars_come_from_data_paths_not_config():
@@ -299,9 +352,9 @@ def test_path_vars_come_from_data_paths_not_config():
         output_key=APPTAINER_OUTPUT_KEY,
     )
     result = _render(data_paths=data_paths)
-    assert 'OUTPUT_DIR="/apptainer/out"' in result
-    assert 'SHARED_IN="/apptainer/shared"' in result
-    assert 'MODULE_IN="/apptainer/module"' in result
+    assert "OUTPUT_DIR=/apptainer/out" in result
+    assert "SHARED_IN=/apptainer/shared" in result
+    assert "MODULE_IN=/apptainer/module" in result
     assert "/workspace/output" not in result.split("# --- Global params")[0]
 
 

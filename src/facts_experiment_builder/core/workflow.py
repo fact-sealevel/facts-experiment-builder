@@ -22,7 +22,8 @@ class WorkflowName:
     def __post_init__(self):
         if not self.name or not isinstance(self.name, str):
             raise ValueError("Workflow name must be a non-empty string")
-        if not _VALID_WORKFLOW_NAME.match(self.name):
+        # fullmatch, not match: with match(), `$` accepts a single trailing newline.
+        if not _VALID_WORKFLOW_NAME.fullmatch(self.name):
             raise ValueError(
                 "Workflow name must be alphanumeric or one of '-', '_' (no spaces or other special characters)"
             )
@@ -39,6 +40,10 @@ class Workflow:
     module_names: list[str]
 
     def __post_init__(self):
+        # The name is interpolated into generated shell scripts (service names,
+        # PID variable names), so every construction path - CLI prompt, YAML
+        # load, direct construction - must enforce the same character set.
+        WorkflowName(name=self.name)
         if not isinstance(self.module_names, list):
             raise ValueError(
                 f"Workflow module_names must be a list of strings, got: {self.module_names}"

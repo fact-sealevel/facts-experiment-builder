@@ -3,6 +3,7 @@ command, as written: compose-output-data-location for generate-compose and
 apptainer-output-data-location for generate-apptainer. setup-experiment writes
 defaults for both. generate-compose still reads the deprecated output-data-location."""
 
+import shlex
 import logging
 from pathlib import Path
 
@@ -202,7 +203,7 @@ def test_generate_commands_use_setup_defaults(workspace):
 
     # Module output dirs are created under each command's output location.
     assert (paths.compose_output_dir / _MODULE).is_dir()
-    assert f'OUTPUT_DIR="{paths.apptainer_output_dir}"' in script
+    assert f"OUTPUT_DIR={shlex.quote(str(paths.apptainer_output_dir))}" in script
 
 
 def test_generate_commands_use_edited_locations_as_written(workspace, tmp_path):
@@ -221,7 +222,7 @@ def test_generate_commands_use_edited_locations_as_written(workspace, tmp_path):
     script = _apptainer_script(workspace)
 
     assert (compose_out / _MODULE).is_dir()
-    assert f'OUTPUT_DIR="{apptainer_out}"' in script
+    assert f"OUTPUT_DIR={shlex.quote(str(apptainer_out))}" in script
     paths = _experiment_paths(workspace)
     assert not paths.compose_output_dir.exists()
     assert not paths.apptainer_output_dir.exists()

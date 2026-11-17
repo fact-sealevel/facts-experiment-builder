@@ -7,25 +7,25 @@ set -euo pipefail
 # =============================================================================
 
 # --- Paths -------------------------------------------------------------------
-WORKSPACE="{{ workspace_dir }}"
+WORKSPACE={{ workspace_dir | shquote }}
 DATA_DIR="${WORKSPACE}/data"
-EXPERIMENT_NAME="{{ experiment_name }}"
-OUTPUT_DIR="{{ output_dir }}"
-SHARED_IN="{{ shared_in }}"
-MODULE_IN="{{ module_in }}"
-SIF_DIR="{{ sif_dir }}"
+EXPERIMENT_NAME={{ experiment_name | shquote }}
+OUTPUT_DIR={{ output_dir | shquote }}
+SHARED_IN={{ shared_in | shquote }}
+MODULE_IN={{ module_in | shquote }}
+SIF_DIR={{ sif_dir | shquote }}
 
 # --- Global params -----------------------------------------------------------
-PYEAR_START={{ pyear_start }}
-PYEAR_END={{ pyear_end }}
-PYEAR_STEP={{ pyear_step }}
-BASEYEAR={{ baseyear }}
-SCENARIO="{{ scenario }}"
-NSAMPS={{ nsamps }}
-PIPELINE_ID="{{ pipeline_id }}"
+PYEAR_START={{ pyear_start | shquote }}
+PYEAR_END={{ pyear_end | shquote }}
+PYEAR_STEP={{ pyear_step | shquote }}
+BASEYEAR={{ baseyear | shquote }}
+SCENARIO={{ scenario | shquote }}
+NSAMPS={{ nsamps | shquote }}
+PIPELINE_ID={{ pipeline_id | shquote }}
 {% if workflow_vars %}
 {% for wf_name, var_name in workflow_vars %}
-{{ var_name }}="{{ wf_name }}"
+{{ var_name }}={{ wf_name | shquote }}
 {% endfor %}
 {% endif %}
 
@@ -87,13 +87,13 @@ wait_for_output() {
 mkdir -p \
     "${SIF_DIR}" \
 {% for d in mkdir_dirs %}
-    "{{ d }}"{{ " \\" if not loop.last else "" }}
+    {{ d | shquote }}{{ " \\" if not loop.last else "" }}
 {% endfor %}
 
 # --- Pull images -------------------------------------------------------------
 log "=== Pulling images ==="
 {% for spec in all_specs %}
-pull_image "{{ spec.service_name }}-{{ spec.image_tag }}" "{{ spec.image_ref }}"
+pull_image {{ (spec.service_name ~ "-" ~ spec.image_tag) | shquote }} {{ spec.image_ref | shquote }}
 {% endfor %}
 
 # =============================================================================
@@ -105,21 +105,21 @@ log "=== Stage 1: independent services ==="
 # --- {{ spec.service_name }} ---
 BINDS=(
 {% for bind in spec.binds %}
-    "--bind={{ bind }}"
+    {{ ("--bind=" ~ bind) | shquote }}
 {% endfor %}
 )
 {% if spec.env %}
 ENV_ARGS=(
 {% for name, value in spec.env.items() %}
-    "--env={{ name }}={{ value }}"
+    {{ ("--env=" ~ name ~ "=" ~ value) | shquote }}
 {% endfor %}
 )
 {% endif %}
-run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
+run_service {{ (spec.service_name ~ "-" ~ spec.image_tag) | shquote }} \
 {% for arg in spec.args[:-1] %}
-    "{{ arg }}" \
+    {{ arg | shquote }} \
 {% endfor %}
-    "{{ spec.args[-1] }}"
+    {{ spec.args[-1] | shquote }}
 {% if spec.env %}
 ENV_ARGS=()
 {% endif %}
@@ -131,28 +131,28 @@ ENV_ARGS=()
 # =============================================================================
 log "=== Stage 2: services depending on climate step ==="
 {% for file in climate_wait_files %}
-wait_for_output "{{ file }}" "{{ climate_service_name }}"
+wait_for_output {{ file | shquote }} {{ climate_service_name | shquote }}
 {% endfor %}
 {% for spec in stage2 %}
 
 # --- {{ spec.service_name }} ---
 BINDS=(
 {% for bind in spec.binds %}
-    "--bind={{ bind }}"
+    {{ ("--bind=" ~ bind) | shquote }}
 {% endfor %}
 )
 {% if spec.env %}
 ENV_ARGS=(
 {% for name, value in spec.env.items() %}
-    "--env={{ name }}={{ value }}"
+    {{ ("--env=" ~ name ~ "=" ~ value) | shquote }}
 {% endfor %}
 )
 {% endif %}
-run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
+run_service {{ (spec.service_name ~ "-" ~ spec.image_tag) | shquote }} \
 {% for arg in spec.args[:-1] %}
-    "{{ arg }}" \
+    {{ arg | shquote }} \
 {% endfor %}
-    "{{ spec.args[-1] }}"
+    {{ spec.args[-1] | shquote }}
 {% if spec.env %}
 ENV_ARGS=()
 {% endif %}
@@ -167,22 +167,22 @@ log "=== Stage 3: facts-total ==="
 
 BINDS=(
 {% for bind in stage3[0].binds %}
-    "--bind={{ bind }}"
+    {{ ("--bind=" ~ bind) | shquote }}
 {% endfor %}
 )
 {% for spec in stage3 %}
 {% if spec.env %}
 ENV_ARGS=(
 {% for name, value in spec.env.items() %}
-    "--env={{ name }}={{ value }}"
+    {{ ("--env=" ~ name ~ "=" ~ value) | shquote }}
 {% endfor %}
 )
 {% endif %}
-run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
+run_service {{ (spec.service_name ~ "-" ~ spec.image_tag) | shquote }} \
 {% for arg in spec.args[:-1] %}
-    "{{ arg }}" \
+    {{ arg | shquote }} \
 {% endfor %}
-    "{{ spec.args[-1] }}" &
+    {{ spec.args[-1] | shquote }} &
 {{ spec.pid_var }}=$!
 {% if spec.env %}
 ENV_ARGS=()
@@ -190,7 +190,7 @@ ENV_ARGS=()
 
 {% endfor %}
 {% for spec in stage3 %}
-wait ${{ spec.pid_var }} || { echo "ERROR: {{ spec.service_name }} failed" >&2; exit 1; }
+wait ${{ spec.pid_var }} || { echo {{ ("ERROR: " ~ spec.service_name ~ " failed") | shquote }} >&2; exit 1; }
 {% endfor %}
 
 {% endif %}
@@ -204,21 +204,21 @@ log "=== Stage 4: ESL ==="
 # --- {{ spec.service_name }} ---
 BINDS=(
 {% for bind in spec.binds %}
-    "--bind={{ bind }}"
+    {{ ("--bind=" ~ bind) | shquote }}
 {% endfor %}
 )
 {% if spec.env %}
 ENV_ARGS=(
 {% for name, value in spec.env.items() %}
-    "--env={{ name }}={{ value }}"
+    {{ ("--env=" ~ name ~ "=" ~ value) | shquote }}
 {% endfor %}
 )
 {% endif %}
-run_service "{{ spec.service_name }}-{{ spec.image_tag }}" \
+run_service {{ (spec.service_name ~ "-" ~ spec.image_tag) | shquote }} \
 {% for arg in spec.args[:-1] %}
-    "{{ arg }}" \
+    {{ arg | shquote }} \
 {% endfor %}
-    "{{ spec.args[-1] }}"
+    {{ spec.args[-1] | shquote }}
 {% if spec.env %}
 ENV_ARGS=()
 {% endif %}
