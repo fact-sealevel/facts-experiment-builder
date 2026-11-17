@@ -7,9 +7,7 @@ from pathlib import Path
 
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.generate_apptainer import _ApptainerStages
-from facts_experiment_builder.core.module.apptainer_service_spec import (
-    ApptainerServiceSpec,
-)
+from facts_experiment_builder.io.apptainer_service import ApptainerServiceSpec
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
 )
