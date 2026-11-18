@@ -108,6 +108,21 @@ def check_module_schemas_present(
         )
 
 
+def _load_module_schemas(config: LoadedExperimentConfig) -> dict[str, ModuleSchema]:
+    """Parse the module schemas stored in experiment-config.yaml, one per module.
+
+    Raises ValueError if the config has no module_schemas section or is missing one.
+    """
+    # Check first, so a config from an older setup-experiment gets an explanation
+    # instead of a KeyError from the lookup below.
+    check_module_schemas_present(config.module_schemas, config.module_names)
+    # set(): a module listed in more than one step only needs parsing once.
+    return {
+        m: ModuleSchema.from_dict(config.module_schemas[m])
+        for m in set(config.module_names)
+    }
+
+
 def _build_standard_specs(
     plan: _ExperimentPlan,
     config: LoadedExperimentConfig,
@@ -122,6 +137,8 @@ def _build_standard_specs(
     """
     known_module_names = list(schemas)
 
+    # Every climate and sea-level spec is built the same way, from the module's own
+    # section of experiment-config.yaml.
     def build(module_name: str) -> ModuleServiceSpec:
         spec = build_module_service_spec(
             config.module_sections.get(module_name, {}),
@@ -134,11 +151,15 @@ def _build_standard_specs(
         _log_success("Created %s module", module_name)
         return spec
 
+    # Insertion order is run order: the climate module goes in first, so it is the
+    # first service in the generated run file.
     specs: dict[str, ModuleServiceSpec] = {}
     if plan.climate_module_name.upper() != "NONE":
         specs[plan.climate_module_name] = build(plan.climate_module_name)
     else:
         logger.info("No climate module specified (NONE)")
+        # With no climate module to produce it, each climate-dependent sea-level module
+        # must name its climate file in experiment-config.yaml.
         _validate_climate_file_inputs(
             config=config,
             sealevel_modules=plan.sealevel_module_names,
@@ -163,17 +184,16 @@ def prepare_execution_plan(
     outputs. If there are no climate or sea-level modules, nothing is built: that is
     allowed only when the experiment supplies step data, and returns an empty plan.
     """
-    module_names = config.module_names
-    check_module_schemas_present(config.module_schemas, module_names)
-
-    schemas = {
-        m: ModuleSchema.from_dict(config.module_schemas[m]) for m in set(module_names)
-    }
+    schemas = _load_module_schemas(config)
+    # Which modules run in which step, plus the workflows.
     plan = _make_experiment_plan(config, schemas)
     workflow_names = list(plan.workflows)
 
+    # Climate and sea-level specs come first: facts-total and ESL are built from the
+    # sea-level modules' outputs.
     standard_specs = _build_standard_specs(plan, config, schemas, data_paths)
     if not standard_specs:
+        # Nothing to run is only valid when every step's data was supplied up front.
         has_step_data = bool(
             config.supplied_totaled_sealevel_step_data
             or config.experiment_specific_input_data
@@ -198,6 +218,8 @@ def prepare_execution_plan(
     climate_service_name = (
         plan.climate_module_name if plan.climate_module_name in standard_specs else None
     )
+    # Facts-total and ESL run once per workflow, so without workflows there are none.
+    # _make_experiment_plan() already rejects a totaling step with no workflows.
     facts_total_specs = (
         _build_facts_total_specs_for_workflows(
             plan=plan, config=config, schemas=schemas, data_paths=data_paths

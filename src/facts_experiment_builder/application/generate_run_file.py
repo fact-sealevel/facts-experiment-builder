@@ -76,6 +76,8 @@ def generate_run_file(
 
     config = experiment_repo.get(config_path=config_path)
     data_paths = resolve_experiment_data_paths(config, output_key=backend.output_key)
+    # Plan the services (backend-neutral specs), then order them into a graph that
+    # every backend reads.
     execution_plan = prepare_execution_plan(config, data_paths)
     graph = build_execution_graph(execution_plan)
 
