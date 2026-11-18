@@ -234,6 +234,7 @@ def make_execution_plan(
     facts_total_specs: dict | None = None,
     esl_specs: dict | None = None,
     climate_service_name: str | None = None,
+    workflow_names: list[str] | None = None,
 ) -> _ExecutionPlan:
     return _ExecutionPlan(
         standard_specs=standard_specs or {},
@@ -241,4 +242,5 @@ def make_execution_plan(
         esl_specs=esl_specs or {},
         climate_service_name=climate_service_name,
         suppress_output_types=set(),
+        workflow_names=workflow_names or [],
     )

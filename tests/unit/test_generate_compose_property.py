@@ -1,4 +1,4 @@
-"""Property tests for _build_module_specs() and the Compose adapter's
+"""Property tests for _build_standard_specs() and the Compose adapter's
 render_compose_services()."""
 
 from contextlib import contextmanager
@@ -10,7 +10,7 @@ from hypothesis import strategies as st
 from facts_experiment_builder.application import prepare_plan
 from facts_experiment_builder.application.execution_graph import build_execution_graph
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
-from facts_experiment_builder.application.prepare_plan import _build_module_specs
+from facts_experiment_builder.application.prepare_plan import _build_standard_specs
 from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import (
@@ -87,7 +87,7 @@ def _fake_build_module_service_spec(
 
 @contextmanager
 def _mock_build_module_service_spec():
-    """Context manager: stub build_module_service_spec for _build_module_specs tests."""
+    """Context manager: stub build_module_service_spec for _build_standard_specs tests."""
     with patch.object(
         prepare_plan,
         "build_module_service_spec",
@@ -115,146 +115,39 @@ def _stub_spec() -> MagicMock:
 
 
 # ---------------------------------------------------------------------------
-# _build_module_specs — structural invariants
+# _build_standard_specs — structural invariants
 # ---------------------------------------------------------------------------
 
 
-@given(sealevel_names=_nonempty_module_list)
-def test_sealevel_module_keys_match_plan(sealevel_names):
-    """specs.sealevel_modules has exactly the keys from plan.sealevel_module_names."""
-    plan = _make_plan(sealevel_module_names=sealevel_names)
-    schemas = {n: _minimal_schema(n) for n in sealevel_names}
-    schemas["NONE"] = _minimal_schema("NONE")
-
+def _standard_specs(plan, schemas):
     with _mock_build_module_service_spec():
-        result = _build_module_specs(
+        return _build_standard_specs(
             plan=plan,
             config=make_loaded_config(),
             schemas=schemas,
-            known_module_names=list(schemas.keys()),
             data_paths=_DATA_PATHS,
         )
-
-    assert set(result.sealevel_modules.keys()) == set(sealevel_names)
-
-
-@given(esl_names=_nonempty_module_list)
-def test_esl_module_keys_match_plan(esl_names):
-    """specs.esl_modules has exactly the keys from plan.esl_module_names."""
-    plan = _make_plan(esl_module_names=esl_names)
-    schemas = {n: _minimal_schema(n) for n in esl_names}
-    schemas["NONE"] = _minimal_schema("NONE")
-
-    with _mock_build_module_service_spec():
-        result = _build_module_specs(
-            plan=plan,
-            config=make_loaded_config(),
-            schemas=schemas,
-            known_module_names=list(schemas.keys()),
-            data_paths=_DATA_PATHS,
-        )
-
-    assert set(result.esl_modules.keys()) == set(esl_names)
 
 
 @given(sealevel_names=_nonempty_module_list)
-def test_climate_module_is_none_when_name_is_none(sealevel_names):
-    """specs.climate_module is None for any experiment where climate_module_name is NONE."""
+def test_sealevel_names_are_the_keys_without_a_climate_module(sealevel_names):
+    """Without a climate module, the specs are exactly the plan's sea-level modules."""
     plan = _make_plan(climate_module_name="NONE", sealevel_module_names=sealevel_names)
     schemas = {n: _minimal_schema(n) for n in sealevel_names}
-    schemas["NONE"] = _minimal_schema("NONE")
 
-    with _mock_build_module_service_spec():
-        result = _build_module_specs(
-            plan=plan,
-            config=make_loaded_config(),
-            schemas=schemas,
-            known_module_names=list(schemas.keys()),
-            data_paths=_DATA_PATHS,
-        )
-
-    assert result.climate_module is None
+    assert list(_standard_specs(plan, schemas)) == sealevel_names
 
 
-@given(climate_name=_module_name)
-def test_climate_module_present_when_name_is_not_none(climate_name):
-    """specs.climate_module is set when plan.climate_module_name is not 'NONE'."""
-    assume(climate_name.upper() != "NONE")
-    plan = _make_plan(climate_module_name=climate_name)
-    schemas = {climate_name: _minimal_schema(climate_name)}
-
-    with _mock_build_module_service_spec():
-        result = _build_module_specs(
-            plan=plan,
-            config=make_loaded_config(),
-            schemas=schemas,
-            known_module_names=list(schemas.keys()),
-            data_paths=_DATA_PATHS,
-        )
-
-    assert result.climate_module is not None
-
-
-@given(
-    framework_name=_module_name,
-    sealevel_names=_nonempty_module_list,
-    workflow_names=_nonempty_module_list,
-)
-def test_per_workflow_framework_excluded_when_workflows_present(
-    framework_name, sealevel_names, workflow_names
-):
-    """A per_workflow=True framework module is skipped when plan.workflows is non-empty."""
-    assume(framework_name not in sealevel_names)
-    workflows = {n: Workflow(name=n, module_names=[]) for n in workflow_names}
+@given(climate_name=_module_name, sealevel_names=_module_list)
+def test_climate_module_comes_first_when_present(climate_name, sealevel_names):
+    """The climate module's spec comes first, followed by the sea-level modules."""
+    assume(climate_name.upper() != "NONE" and climate_name not in sealevel_names)
     plan = _make_plan(
-        sealevel_module_names=sealevel_names,
-        framework_module_names=[framework_name],
-        workflows=workflows,
+        climate_module_name=climate_name, sealevel_module_names=sealevel_names
     )
-    schemas = {n: _minimal_schema(n) for n in sealevel_names}
-    schemas["NONE"] = _minimal_schema("NONE")
-    schemas[framework_name] = _minimal_schema(framework_name, per_workflow=True)
+    schemas = {n: _minimal_schema(n) for n in [climate_name, *sealevel_names]}
 
-    with _mock_build_module_service_spec():
-        result = _build_module_specs(
-            plan=plan,
-            config=make_loaded_config(),
-            schemas=schemas,
-            known_module_names=list(schemas.keys()),
-            data_paths=_DATA_PATHS,
-        )
-
-    assert framework_name not in result.framework_modules
-
-
-@given(
-    framework_name=_module_name,
-    sealevel_names=_nonempty_module_list,
-)
-def test_per_workflow_framework_included_when_no_workflows(
-    framework_name, sealevel_names
-):
-    """A per_workflow=True framework module IS included when plan.workflows is empty."""
-    assume(framework_name not in sealevel_names)
-    plan = _make_plan(
-        sealevel_module_names=sealevel_names,
-        framework_module_names=[framework_name],
-        workflows={},
-    )
-    schemas = {n: _minimal_schema(n) for n in sealevel_names}
-    schemas["NONE"] = _minimal_schema("NONE")
-    schemas[framework_name] = _minimal_schema(framework_name, per_workflow=True)
-
-    with _mock_build_module_service_spec():
-        result = _build_module_specs(
-            plan=plan,
-            config=make_loaded_config(),
-            schemas=schemas,
-            known_module_names=list(schemas.keys()),
-            data_paths=_DATA_PATHS,
-        )
-
-    assert framework_name in result.framework_modules
+    assert list(_standard_specs(plan, schemas)) == [climate_name, *sealevel_names]
 
 
 # ---------------------------------------------------------------------------
@@ -271,6 +164,7 @@ def test_standard_spec_names_appear_in_services(standard_names):
         esl_specs={},
         climate_service_name=standard_names[0],
         suppress_output_types=set(),
+        workflow_names=[],
     )
 
     result = render_compose_services(build_execution_graph(exec_plan))
@@ -288,6 +182,7 @@ def test_facts_total_spec_names_appear_in_services(ft_names, wf_module_names):
         esl_specs={},
         climate_service_name=None,
         suppress_output_types=set(),
+        workflow_names=[],
     )
 
     result = render_compose_services(build_execution_graph(exec_plan))
@@ -304,6 +199,7 @@ def test_esl_spec_names_appear_in_services(esl_names):
         esl_specs={n: (_stub_spec(), "dep-service") for n in esl_names},
         climate_service_name=None,
         suppress_output_types=set(),
+        workflow_names=[],
     )
 
     result = render_compose_services(build_execution_graph(exec_plan))
@@ -329,6 +225,7 @@ def test_service_count_equals_sum_of_plan_specs(standard_names, ft_names, esl_na
         esl_specs={n: (_stub_spec(), "dep") for n in esl_names},
         climate_service_name=standard_names[0] if standard_names else None,
         suppress_output_types=set(),
+        workflow_names=[],
     )
 
     result = render_compose_services(build_execution_graph(exec_plan))
@@ -348,6 +245,7 @@ def test_facts_total_depends_on_matches_workflow_module_names(
         esl_specs={},
         climate_service_name=None,
         suppress_output_types=set(),
+        workflow_names=[],
     )
 
     result = render_compose_services(build_execution_graph(exec_plan))
@@ -364,6 +262,7 @@ def test_esl_depends_on_is_exactly_the_dep_service(service_name, dep_service):
         esl_specs={service_name: (_stub_spec(), dep_service)},
         climate_service_name=None,
         suppress_output_types=set(),
+        workflow_names=[],
     )
 
     result = render_compose_services(build_execution_graph(exec_plan))
