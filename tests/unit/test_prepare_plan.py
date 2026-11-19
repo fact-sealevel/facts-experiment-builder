@@ -29,18 +29,21 @@ def _config(**overrides) -> LoadedExperimentConfig:
     )
 
 
-def _plan(**overrides) -> MagicMock:
-    plan = MagicMock(
-        climate_module_name="fair",
-        workflows={"wf1": MagicMock(), "wf2": MagicMock()},
-        suppress_output_types={"local"},
-    )
-    for key, value in overrides.items():
-        setattr(plan, key, value)
-    return plan
+_WORKFLOWS = {"wf1": MagicMock(), "wf2": MagicMock()}
 
 
-def _stub_planning(monkeypatch, plan, standard_specs, seen=None):
+def _experiment() -> MagicMock:
+    """A global-scale experiment with a climate module and no totaling or ESL step, so
+    the workflow check passes with or without workflows."""
+    experiment = MagicMock(projection_scale="global")
+    experiment.climate_step.module_name = "fair"
+    experiment.sealevel_step.module_names = []
+    experiment.totaling_step.is_present = False
+    experiment.extreme_sealevel_step.is_present = False
+    return experiment
+
+
+def _stub_planning(monkeypatch, standard_specs, workflows=_WORKFLOWS, seen=None):
     """Replace planning steps with stubs; record the data_paths each one is given."""
     seen = {} if seen is None else seen
 
@@ -51,7 +54,14 @@ def _stub_planning(monkeypatch, plan, standard_specs, seen=None):
 
         return fake
 
-    monkeypatch.setattr(prepare_plan, "_make_experiment_plan", lambda c, s: plan)
+    # Stub the experiment and workflows so these tests exercise only how
+    # prepare_execution_plan() combines the spec builders' results.
+    monkeypatch.setattr(
+        prepare_plan,
+        "FactsExperiment",
+        MagicMock(from_loaded_config=lambda *a, **k: _experiment()),
+    )
+    monkeypatch.setattr(prepare_plan, "workflows_from_mapping", lambda m: workflows)
     monkeypatch.setattr(
         prepare_plan, "_build_standard_specs", record("standard", standard_specs)
     )
@@ -71,7 +81,7 @@ def _stub_planning(monkeypatch, plan, standard_specs, seen=None):
 def test_data_paths_are_passed_through_unchanged(monkeypatch):
     """The caller's data_paths reach every spec builder, so a relocated output root
     (Apptainer) is not replaced by one resolved from metadata."""
-    seen = _stub_planning(monkeypatch, _plan(), {"fair": MagicMock()})
+    seen = _stub_planning(monkeypatch, {"fair": MagicMock()})
 
     prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)
 
@@ -84,7 +94,7 @@ def test_data_paths_are_passed_through_unchanged(monkeypatch):
 
 def test_plan_carries_specs_climate_name_and_workflow_names(monkeypatch):
     fair = MagicMock()
-    _stub_planning(monkeypatch, _plan(), {"fair": fair})
+    _stub_planning(monkeypatch, {"fair": fair})
 
     exec_plan = prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)
 
@@ -97,7 +107,7 @@ def test_plan_carries_specs_climate_name_and_workflow_names(monkeypatch):
 
 
 def test_without_workflows_no_facts_total_or_esl_specs_are_built(monkeypatch):
-    seen = _stub_planning(monkeypatch, _plan(workflows={}), {"fair": MagicMock()})
+    seen = _stub_planning(monkeypatch, {"fair": MagicMock()}, workflows={})
 
     exec_plan = prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)
 
@@ -107,7 +117,7 @@ def test_without_workflows_no_facts_total_or_esl_specs_are_built(monkeypatch):
 
 
 def test_no_modules_with_supplied_step_data_returns_empty_plan(monkeypatch):
-    seen = _stub_planning(monkeypatch, _plan(), {})
+    seen = _stub_planning(monkeypatch, {})
 
     exec_plan = prepare_plan.prepare_execution_plan(
         _config(**{"experiment-specific-input-data": "/in/exp"}), _DATA_PATHS
@@ -123,7 +133,7 @@ def test_no_modules_with_supplied_step_data_returns_empty_plan(monkeypatch):
 
 
 def test_no_modules_and_no_step_data_raises(monkeypatch):
-    _stub_planning(monkeypatch, _plan(), {})
+    _stub_planning(monkeypatch, {})
 
     with pytest.raises(ValueError, match="No modules could be created"):
         prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)

@@ -11,7 +11,6 @@ from facts_experiment_builder.application import prepare_plan
 from facts_experiment_builder.application.execution_graph import build_execution_graph
 from facts_experiment_builder.application.execution_plan import _ExecutionPlan
 from facts_experiment_builder.application.prepare_plan import _build_standard_specs
-from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.module.arg_specs import ArgumentsSpec
 from facts_experiment_builder.core.module.module_schema import (
     ModuleContainerImage,
@@ -49,25 +48,6 @@ def _minimal_schema(name: str, *, per_workflow: bool = False) -> ModuleSchema:
         arguments=ArgumentsSpec(),
         volumes={},
         per_workflow=per_workflow,
-    )
-
-
-def _make_plan(
-    *,
-    climate_module_name: str = "NONE",
-    sealevel_module_names: list[str] | None = None,
-    framework_module_names: list[str] | None = None,
-    esl_module_names: list[str] | None = None,
-    workflows: dict | None = None,
-) -> _ExperimentPlan:
-    return _ExperimentPlan(
-        experiment=MagicMock(),
-        climate_module_name=climate_module_name,
-        sealevel_module_names=sealevel_module_names or [],
-        framework_module_names=framework_module_names or [],
-        esl_module_names=esl_module_names or [],
-        suppress_output_types=set(),
-        workflows=workflows or {},
     )
 
 
@@ -119,10 +99,11 @@ def _stub_spec() -> MagicMock:
 # ---------------------------------------------------------------------------
 
 
-def _standard_specs(plan, schemas):
+def _standard_specs(climate_module, sealevel_modules, schemas):
     with _mock_build_module_service_spec():
         return _build_standard_specs(
-            plan=plan,
+            climate_module=climate_module,
+            sealevel_modules=sealevel_modules,
             config=make_loaded_config(),
             schemas=schemas,
             data_paths=_DATA_PATHS,
@@ -131,23 +112,22 @@ def _standard_specs(plan, schemas):
 
 @given(sealevel_names=_nonempty_module_list)
 def test_sealevel_names_are_the_keys_without_a_climate_module(sealevel_names):
-    """Without a climate module, the specs are exactly the plan's sea-level modules."""
-    plan = _make_plan(climate_module_name="NONE", sealevel_module_names=sealevel_names)
+    """Without a climate module, the specs are exactly the sea-level modules."""
     schemas = {n: _minimal_schema(n) for n in sealevel_names}
 
-    assert list(_standard_specs(plan, schemas)) == sealevel_names
+    assert list(_standard_specs(None, sealevel_names, schemas)) == sealevel_names
 
 
 @given(climate_name=_module_name, sealevel_names=_module_list)
 def test_climate_module_comes_first_when_present(climate_name, sealevel_names):
     """The climate module's spec comes first, followed by the sea-level modules."""
-    assume(climate_name.upper() != "NONE" and climate_name not in sealevel_names)
-    plan = _make_plan(
-        climate_module_name=climate_name, sealevel_module_names=sealevel_names
-    )
+    assume(climate_name not in sealevel_names)
     schemas = {n: _minimal_schema(n) for n in [climate_name, *sealevel_names]}
 
-    assert list(_standard_specs(plan, schemas)) == [climate_name, *sealevel_names]
+    assert list(_standard_specs(climate_name, sealevel_names, schemas)) == [
+        climate_name,
+        *sealevel_names,
+    ]
 
 
 # ---------------------------------------------------------------------------

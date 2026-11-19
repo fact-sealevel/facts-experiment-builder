@@ -10,7 +10,6 @@ import logging
 from dataclasses import dataclass
 from typing import Any
 
-from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
 )
@@ -43,8 +42,7 @@ class _ExecutionPlan:
 
     esl_specs: one spec per ESL module × workflow. Value is (spec,
         depends_on_service_name). ESL always runs per workflow because it reads the
-        workflow's facts-total output; _make_experiment_plan rejects ESL without
-        workflows.
+        workflow's facts-total output, so with no workflows there are no ESL specs.
 
     workflow_names: in experiment-config.yaml order.
     """
@@ -156,7 +154,9 @@ def _populate_section_with_local_outputs(
 
 
 def _build_facts_total_specs_for_workflows(
-    plan: _ExperimentPlan,
+    framework_module_names: list[str],
+    workflows: dict[str, Workflow],
+    projection_scale: str | None,
     config: LoadedExperimentConfig,
     schemas: dict[str, ModuleSchema],
     data_paths: ExperimentDataPaths,
@@ -171,15 +171,15 @@ def _build_facts_total_specs_for_workflows(
     known_module_names = list(schemas.keys())
 
     facts_total_name = next(
-        (m for m in plan.framework_module_names if schemas[m].per_workflow),
+        (m for m in framework_module_names if schemas[m].per_workflow),
         "facts-total",
     )
     facts_total_schema = schemas[facts_total_name]
     facts_total_container_image = facts_total_schema.container_image
 
-    for wf_name, wf in plan.workflows.items():
+    for wf_name, wf in workflows.items():
         for output_type in facts_total_schema.output_types:
-            if output_type == "local" and plan.experiment.projection_scale == "global":
+            if output_type == "local" and projection_scale == "global":
                 logger.info(
                     "Skipping local facts-total for %s (projection_scale=global)",
                     wf_name,
