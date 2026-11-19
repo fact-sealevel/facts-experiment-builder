@@ -2,8 +2,9 @@
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from facts_experiment_builder.application import prepare_plan
-from facts_experiment_builder.application.execution_plan import _ModuleSpecs
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
 )
@@ -19,61 +20,120 @@ _DATA_PATHS = ExperimentDataPaths(
     experiment_specific_input_data=None,
 )
 
-# No modules listed, so no schemas are parsed; module_schemas only needs to be non-empty.
-_CONFIG = LoadedExperimentConfig.from_dict(
-    make_config_raw(module_schemas={"unused": {}})
-)
 
-
-def _specs(**kwargs) -> _ModuleSpecs:
-    fields = dict(
-        climate_module=None, sealevel_modules={}, framework_modules={}, esl_modules={}
+def _config(**overrides) -> LoadedExperimentConfig:
+    # No modules listed, so no schemas are parsed; module_schemas only needs to be
+    # non-empty.
+    return LoadedExperimentConfig.from_dict(
+        make_config_raw(module_schemas={"unused": {}}, **overrides)
     )
-    fields.update(kwargs)
-    return _ModuleSpecs(**fields)
+
+
+_WORKFLOWS = {"wf1": MagicMock(), "wf2": MagicMock()}
+
+
+def _experiment() -> MagicMock:
+    """A global-scale experiment with a climate module and no totaling or ESL step, so
+    the workflow check passes with or without workflows."""
+    experiment = MagicMock(projection_scale="global")
+    experiment.climate_step.module_name = "fair"
+    experiment.sealevel_step.module_names = []
+    experiment.totaling_step.is_present = False
+    experiment.extreme_sealevel_step.is_present = False
+    return experiment
+
+
+def _stub_planning(monkeypatch, standard_specs, workflows=_WORKFLOWS, seen=None):
+    """Replace planning steps with stubs; record the data_paths each one is given."""
+    seen = {} if seen is None else seen
+
+    def record(name, result):
+        def fake(*args, **kwargs):
+            seen[name] = kwargs.get("data_paths", args[-1] if args else None)
+            return result
+
+        return fake
+
+    # Stub the experiment and workflows so these tests exercise only how
+    # prepare_execution_plan() combines the spec builders' results.
+    monkeypatch.setattr(
+        prepare_plan,
+        "FactsExperiment",
+        MagicMock(from_loaded_config=lambda *a, **k: _experiment()),
+    )
+    monkeypatch.setattr(prepare_plan, "workflows_from_mapping", lambda m: workflows)
+    monkeypatch.setattr(
+        prepare_plan, "_build_standard_specs", record("standard", standard_specs)
+    )
+    monkeypatch.setattr(
+        prepare_plan,
+        "_build_facts_total_specs_for_workflows",
+        record("facts_total", {"ft": MagicMock()}),
+    )
+    monkeypatch.setattr(
+        prepare_plan,
+        "_build_esl_specs_for_workflows",
+        record("esl", {"esl": MagicMock()}),
+    )
+    return seen
 
 
 def test_data_paths_are_passed_through_unchanged(monkeypatch):
-    """The caller's data_paths reach spec building and the execution plan, so a
-    relocated output root (Apptainer) is not replaced by one resolved from metadata."""
-    seen = {}
-    plan = MagicMock()
-    exec_plan = MagicMock()
+    """The caller's data_paths reach every spec builder, so a relocated output root
+    (Apptainer) is not replaced by one resolved from metadata."""
+    seen = _stub_planning(monkeypatch, {"fair": MagicMock()})
 
-    def fake_build_module_specs(**kwargs):
-        seen["specs"] = kwargs["data_paths"]
-        return _specs(sealevel_modules={"m": MagicMock()})
+    prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)
 
-    def fake_build_execution_plan(**kwargs):
-        seen["exec"] = kwargs["data_paths"]
-        return exec_plan
+    assert seen == {
+        "standard": _DATA_PATHS,
+        "facts_total": _DATA_PATHS,
+        "esl": _DATA_PATHS,
+    }
 
-    monkeypatch.setattr(prepare_plan, "_make_experiment_plan", lambda m, s: plan)
-    monkeypatch.setattr(prepare_plan, "_build_module_specs", fake_build_module_specs)
-    monkeypatch.setattr(
-        prepare_plan, "build_experiment_execution_plan", fake_build_execution_plan
+
+def test_plan_carries_specs_climate_name_and_workflow_names(monkeypatch):
+    fair = MagicMock()
+    _stub_planning(monkeypatch, {"fair": fair})
+
+    exec_plan = prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)
+
+    assert exec_plan.standard_specs == {"fair": fair}
+    assert list(exec_plan.facts_total_specs) == ["ft"]
+    assert list(exec_plan.esl_specs) == ["esl"]
+    assert exec_plan.climate_service_name == "fair"
+    assert exec_plan.workflow_names == ["wf1", "wf2"]
+    assert exec_plan.suppress_output_types == {"local"}
+
+
+def test_without_workflows_no_facts_total_or_esl_specs_are_built(monkeypatch):
+    seen = _stub_planning(monkeypatch, {"fair": MagicMock()}, workflows={})
+
+    exec_plan = prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)
+
+    assert set(seen) == {"standard"}
+    assert exec_plan.facts_total_specs == {}
+    assert exec_plan.esl_specs == {}
+
+
+def test_no_modules_with_supplied_step_data_returns_empty_plan(monkeypatch):
+    seen = _stub_planning(monkeypatch, {})
+
+    exec_plan = prepare_plan.prepare_execution_plan(
+        _config(**{"experiment-specific-input-data": "/in/exp"}), _DATA_PATHS
     )
 
-    result = prepare_plan.prepare_execution_plan(_CONFIG, _DATA_PATHS)
-
-    assert result == (plan, exec_plan)
-    assert seen == {"specs": _DATA_PATHS, "exec": _DATA_PATHS}
-
-
-def test_no_module_specs_returns_empty_execution_plan(monkeypatch):
-    plan = MagicMock(suppress_output_types={"local"})
-
-    def fail(**kwargs):
-        raise AssertionError("execution plan should not be built without specs")
-
-    monkeypatch.setattr(prepare_plan, "_make_experiment_plan", lambda m, s: plan)
-    monkeypatch.setattr(prepare_plan, "_build_module_specs", lambda **kw: _specs())
-    monkeypatch.setattr(prepare_plan, "build_experiment_execution_plan", fail)
-
-    _plan, exec_plan = prepare_plan.prepare_execution_plan(_CONFIG, _DATA_PATHS)
-
+    assert set(seen) == {"standard"}
     assert exec_plan.standard_specs == {}
     assert exec_plan.facts_total_specs == {}
     assert exec_plan.esl_specs == {}
     assert exec_plan.climate_service_name is None
     assert exec_plan.suppress_output_types == {"local"}
+    assert exec_plan.workflow_names == ["wf1", "wf2"]
+
+
+def test_no_modules_and_no_step_data_raises(monkeypatch):
+    _stub_planning(monkeypatch, {})
+
+    with pytest.raises(ValueError, match="No modules could be created"):
+        prepare_plan.prepare_execution_plan(_config(), _DATA_PATHS)

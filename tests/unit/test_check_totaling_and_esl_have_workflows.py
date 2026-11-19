@@ -1,8 +1,8 @@
-"""Tests for the experiment_plan module."""
+"""Tests for check_totaling_and_esl_have_workflows()."""
 
 import pytest
 
-from facts_experiment_builder.core.experiment.experiment_plan import (
+from facts_experiment_builder.core.experiment.experiment import (
     check_totaling_and_esl_have_workflows,
 )
 from facts_experiment_builder.core.workflow import Workflow

@@ -314,3 +314,31 @@ class FactsExperiment:
             workflows=config.workflows,
             projection_scale=parse_projection_scale(config.projection_scale),
         )
+
+
+def check_totaling_and_esl_have_workflows(
+    sealevel_module_names: list[str],
+    framework_module_names: list[str],
+    esl_module_names: list[str],
+    workflows: dict[str, Workflow],
+) -> None:
+    """Raise if facts-total or ESL modules cannot receive their inputs.
+
+    facts-total and ESL services are built per workflow, and ESL reads the facts-total
+    output. Without sea-level modules there is nothing to total; without workflows no
+    facts-total service is built.
+    """
+    if esl_module_names and not sealevel_module_names:
+        raise ValueError(
+            f"Extreme sea-level module(s) {esl_module_names} require sea-level modules "
+            "in the sea-level step; they cannot be used without them or with supplied "
+            "totaled sea-level data. Remove the extreme sea-level step or add sea-level "
+            "modules and re-run setup-experiment."
+        )
+    if framework_module_names and not workflows:
+        raise ValueError(
+            "This experiment includes a totaling step but no workflows, so facts-total "
+            "(and any extreme sea-level module) would never run. Add a 'workflows' entry "
+            "to experiment-config.yml (e.g. 'all-modules: <sea-level modules>') or re-run "
+            "setup-experiment."
+        )

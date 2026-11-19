@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Shared pipeline from loaded experiment config to a format-agnostic _ExecutionPlan.
+"""Plan an experiment's services from its loaded config, independent of the backend.
 
-Both generate-compose and generate-apptainer call prepare_execution_plan() and then
-render the result in their own format.
+prepare_execution_plan() is the single planning entry point. generate_run_file() passes
+its result to execution_graph.build_execution_graph().
 """
 
 import logging
@@ -11,20 +11,24 @@ from typing import Any
 
 from facts_experiment_builder.application.execution_plan import (
     _ExecutionPlan,
-    _ModuleSpecs,
-    build_experiment_execution_plan,
+    _build_esl_specs_for_workflows,
+    _build_facts_total_specs_for_workflows,
 )
 from facts_experiment_builder.application.module_service_spec_factory import (
     build_module_service_spec,
 )
-from facts_experiment_builder.core.experiment.experiment_plan import (
-    _ExperimentPlan,
-    _make_experiment_plan,
+from facts_experiment_builder.core.experiment import FactsExperiment
+from facts_experiment_builder.core.experiment.experiment import (
+    check_totaling_and_esl_have_workflows,
 )
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
 )
-from facts_experiment_builder.core.module.module_schema import ModuleSchema
+from facts_experiment_builder.core.module.module_schema import (
+    ModuleSchema,
+    collect_metadata_param_keys,
+)
+from facts_experiment_builder.core.workflow import workflows_from_mapping
 from facts_experiment_builder.core.module.module_service_path_resolution import (
     ExperimentDataPaths,
 )
@@ -108,87 +112,131 @@ def check_module_schemas_present(
         )
 
 
-def _build_module_specs(
-    plan: _ExperimentPlan,
-    config: LoadedExperimentConfig,
-    schemas: dict,
-    known_module_names: list,
-    data_paths: ExperimentDataPaths,
-) -> _ModuleSpecs:
-    """Create a ModuleServiceSpec for each module in the experiment."""
-    climate_module: ModuleServiceSpec | None = None
-    sealevel_modules: dict[str, ModuleServiceSpec] = {}
-    framework_modules: dict[str, ModuleServiceSpec] = {}
-    esl_modules: dict[str, ModuleServiceSpec] = {}
+def _load_module_schemas(config: LoadedExperimentConfig) -> dict[str, ModuleSchema]:
+    """Parse the module schemas stored in experiment-config.yaml, one per module.
 
-    climate_module_definition = schemas[plan.climate_module_name]
-    if plan.climate_module_name.upper() != "NONE":
-        climate_module_name = plan.climate_module_name
-        climate_module = build_module_service_spec(
-            config.module_sections.get(climate_module_name, {}),
+    Raises ValueError if the config has no module_schemas section or is missing one.
+    """
+    # Check first, so a config from an older setup-experiment gets an explanation
+    # instead of a KeyError from the lookup below.
+    check_module_schemas_present(config.module_schemas, config.module_names)
+    # set(): a module listed in more than one step only needs parsing once.
+    return {
+        m: ModuleSchema.from_dict(config.module_schemas[m])
+        for m in set(config.module_names)
+    }
+
+
+def _build_standard_specs(
+    climate_module: str | None,
+    sealevel_modules: list[str],
+    config: LoadedExperimentConfig,
+    schemas: dict[str, ModuleSchema],
+    data_paths: ExperimentDataPaths,
+) -> dict[str, ModuleServiceSpec]:
+    """Build the climate module's spec, if there is one, and one spec per sea-level
+    module, keyed by service name with the climate module first.
+
+    Without a climate module, every climate-dependent sea-level module must have its
+    climate file input set; _validate_climate_file_inputs() raises otherwise.
+    """
+    known_module_names = list(schemas)
+
+    # Every climate and sea-level spec is built the same way, from the module's own
+    # section of experiment-config.yaml.
+    def build(module_name: str) -> ModuleServiceSpec:
+        spec = build_module_service_spec(
+            config.module_sections.get(module_name, {}),
             config=config,
-            module_name=climate_module_name,
+            module_name=module_name,
             known_module_names=known_module_names,
-            module_definition=climate_module_definition,
+            module_definition=schemas[module_name],
             data_paths=data_paths,
         )
-        _log_success("Created %s module", plan.climate_module_name)
+        _log_success("Created %s module", module_name)
+        return spec
+
+    # Insertion order is run order: the climate module goes in first, so it is the
+    # first service in the generated run file.
+    specs: dict[str, ModuleServiceSpec] = {}
+    if climate_module is not None:
+        specs[climate_module] = build(climate_module)
     else:
         logger.info("No climate module specified (NONE)")
-
+        # With no climate module to produce it, each climate-dependent sea-level module
+        # must name its climate file in experiment-config.yaml.
         _validate_climate_file_inputs(
-            config=config, sealevel_modules=sealevel_modules, schemas=schemas
-        )
-
-    for module_name in plan.sealevel_module_names:
-        module_schema = schemas[module_name]
-
-        sealevel_modules[module_name] = build_module_service_spec(
-            config.module_sections.get(module_name, {}),
             config=config,
-            module_name=module_name,
-            known_module_names=known_module_names,
-            module_definition=module_schema,
-            data_paths=data_paths,
-        )
-        _log_success("Created %s module", module_name)
-
-    for module_name in plan.framework_module_names:
-        if schemas[module_name].per_workflow and plan.workflows:
-            continue
-        schema = schemas[module_name]
-        framework_modules[module_name] = build_module_service_spec(
-            config.module_sections.get(module_name, {}),
-            config=config,
-            module_name=module_name,
-            known_module_names=known_module_names,
-            module_definition=schema,
-            data_paths=data_paths,
+            sealevel_modules=sealevel_modules,
+            schemas=schemas,
         )
 
-        _log_success("Created %s module", module_name)
+    for module_name in sealevel_modules:
+        specs[module_name] = build(module_name)
+    return specs
 
-    for module_name in plan.esl_module_names:
-        schema = schemas[module_name]
-        esl_modules[module_name] = build_module_service_spec(
-            config.module_sections.get(module_name, {}),
-            config=config,
-            module_name=module_name,
-            known_module_names=known_module_names,
-            module_definition=schema,
-            data_paths=data_paths,
-        )
 
-        _log_success("Created %s module", module_name)
+def prepare_execution_plan(
+    config: LoadedExperimentConfig,
+    data_paths: ExperimentDataPaths,
+) -> _ExecutionPlan:
+    """Plan every service the experiment runs, independent of the backend.
 
-    specs = _ModuleSpecs(
-        climate_module=climate_module,
-        sealevel_modules=sealevel_modules,
-        framework_modules=framework_modules,
-        esl_modules=esl_modules,
+    data_paths is passed in rather than resolved here so that a caller can relocate the
+    output root (Apptainer writes to its own output directory).
+
+    Facts-total and ESL services are built per workflow, from the sea-level modules'
+    outputs. If there are no climate or sea-level modules, nothing is built: that is
+    allowed only when the experiment supplies step data, and returns an empty plan.
+    """
+    schemas = _load_module_schemas(config)
+    module_schemas = list(schemas.values())
+    # Pass the param keys the module schemas declare, so the experiment's params are
+    # grouped exactly as the modules define them. Planning itself reads only the steps
+    # and projection scale below.
+    experiment = FactsExperiment.from_loaded_config(
+        config,
+        top_level_keys=set(collect_metadata_param_keys(module_schemas, "top_level")),
+        fingerprint_keys=set(
+            collect_metadata_param_keys(module_schemas, "fingerprint_params")
+        ),
     )
 
-    if specs.is_empty:
+    # Which modules run in which step. The step objects have already normalised the
+    # manifest: a missing or "NONE" climate module gives module_name None.
+    climate_module = experiment.climate_step.module_name
+    sealevel_modules = experiment.sealevel_step.module_names
+    framework_modules = (
+        [experiment.totaling_step.module_name]
+        if experiment.totaling_step.is_present
+        else []
+    )
+    esl_modules = (
+        [experiment.extreme_sealevel_step.module_name]
+        if experiment.extreme_sealevel_step.is_present
+        else []
+    )
+    workflows = workflows_from_mapping(config.workflows)
+    workflow_names = list(workflows)
+    # Fail before building any spec if facts-total or ESL could never get their inputs.
+    check_totaling_and_esl_have_workflows(
+        sealevel_module_names=sealevel_modules,
+        framework_module_names=framework_modules,
+        esl_module_names=esl_modules,
+        workflows=workflows,
+    )
+    # A global-only experiment produces no local outputs, so no service writes them.
+    suppress_output_types: set[str] = (
+        {"local"} if experiment.projection_scale == "global" else set()
+    )
+
+    # Climate and sea-level specs come first: facts-total and ESL are built from the
+    # sea-level modules' outputs.
+    standard_specs = _build_standard_specs(
+        climate_module, sealevel_modules, config, schemas, data_paths
+    )
+    if not standard_specs:
+        # Nothing to run is only valid when every step's data was supplied up front.
         has_step_data = bool(
             config.supplied_totaled_sealevel_step_data
             or config.experiment_specific_input_data
@@ -201,53 +249,48 @@ def _build_module_specs(
         logger.info(
             "All experiment steps use pre-existing data. No Docker services to generate."
         )
-
-    return specs
-
-
-def prepare_execution_plan(
-    config: LoadedExperimentConfig,
-    data_paths: ExperimentDataPaths,
-) -> tuple[_ExperimentPlan, _ExecutionPlan]:
-    """Turn a loaded experiment config into a format-agnostic _ExecutionPlan.
-
-    data_paths is passed in rather than resolved here so that a caller can relocate the
-    output root (Apptainer writes to its own output directory). Returns the
-    _ExperimentPlan as well, since renderers may need its workflows.
-
-    If no module services can be created (every step uses pre-existing data), returns an
-    empty _ExecutionPlan.
-    """
-    module_names = config.module_names
-    check_module_schemas_present(config.module_schemas, module_names)
-
-    schemas = {
-        m: ModuleSchema.from_dict(config.module_schemas[m]) for m in set(module_names)
-    }
-    known_module_names = list(schemas.keys())
-
-    plan = _make_experiment_plan(config, schemas)
-    specs = _build_module_specs(
-        plan=plan,
-        config=config,
-        schemas=schemas,
-        known_module_names=known_module_names,
-        data_paths=data_paths,
-    )
-    if specs.is_empty:
-        return plan, _ExecutionPlan(
+        return _ExecutionPlan(
             standard_specs={},
             facts_total_specs={},
             esl_specs={},
             climate_service_name=None,
-            suppress_output_types=plan.suppress_output_types,
+            suppress_output_types=suppress_output_types,
+            workflow_names=workflow_names,
         )
 
-    execution_plan = build_experiment_execution_plan(
-        specs=specs,
-        plan=plan,
-        config=config,
-        schemas=schemas,
-        data_paths=data_paths,
+    # Facts-total and ESL run once per workflow, so without workflows there are none.
+    # check_totaling_and_esl_have_workflows() above already rejected a totaling step
+    # with no workflows.
+    facts_total_specs = (
+        _build_facts_total_specs_for_workflows(
+            framework_module_names=framework_modules,
+            workflows=workflows,
+            projection_scale=experiment.projection_scale,
+            config=config,
+            schemas=schemas,
+            data_paths=data_paths,
+        )
+        if workflows
+        else {}
     )
-    return plan, execution_plan
+    esl_specs = (
+        _build_esl_specs_for_workflows(
+            esl_module_names=esl_modules,
+            workflows=workflows,
+            config=config,
+            projection_scale=experiment.projection_scale,
+            schemas=schemas,
+            data_paths=data_paths,
+        )
+        if workflows
+        else {}
+    )
+    return _ExecutionPlan(
+        standard_specs=standard_specs,
+        facts_total_specs=facts_total_specs,
+        esl_specs=esl_specs,
+        # A named climate module always gets a spec above, so its name is the service.
+        climate_service_name=climate_module,
+        suppress_output_types=suppress_output_types,
+        workflow_names=workflow_names,
+    )

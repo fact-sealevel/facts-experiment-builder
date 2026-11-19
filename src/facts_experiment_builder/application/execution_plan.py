@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
-"""Format-agnostic execution plan for FACTS experiments.
+"""_ExecutionPlan, the backend-neutral module specs for every service in an experiment,
+and the helpers that fan facts-total and ESL out per workflow.
 
-Defines _ExecutionPlan and build_experiment_execution_plan(), which provide a format-
-agnostic intermediate representation between resolved ModuleServiceSpec objects
-(_ModuleSpecs) and format-specific rendering (Docker Compose, Apptainer bash script,
-etc.).
+prepare_plan.prepare_execution_plan() builds the plan;
+execution_graph.build_execution_graph() turns it into an ExecutionGraph.
 """
 
 import logging
 from dataclasses import dataclass
 from typing import Any
 
-from facts_experiment_builder.core.experiment.experiment_plan import _ExperimentPlan
 from facts_experiment_builder.core.experiment.loaded_config import (
     LoadedExperimentConfig,
 )
@@ -31,50 +29,22 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
-class _ModuleSpecs:
-    """Resolved ModuleServiceSpec objects grouped by experiment step category."""
-
-    climate_module: ModuleServiceSpec | None
-    sealevel_modules: dict[str, ModuleServiceSpec]
-    framework_modules: dict[str, ModuleServiceSpec]
-    esl_modules: dict[str, ModuleServiceSpec]
-    # TODO do not want these categories to be so rigid in the future
-
-    @property
-    def is_empty(self) -> bool:
-        """True when no module specs were created (every step uses pre-existing
-        data)."""
-        return not any(
-            [
-                self.climate_module,
-                self.sealevel_modules,
-                self.framework_modules,
-                self.esl_modules,
-            ]
-        )
-
-
-@dataclass(frozen=True)
 class _ExecutionPlan:
-    """Format-agnostic execution plan: ModuleServiceSpec objects organized for
-    rendering.
+    """Backend-neutral module specs for every service in an experiment.
 
-    Sits between _ModuleSpecs (specs per category) and format-specific rendering.
-    Both Docker Compose and Apptainer renderers consume this as their input.
+    Built by prepare_plan.prepare_execution_plan();
+    execution_graph.build_execution_graph() turns it into an ExecutionGraph.
 
-    standard_specs: climate module + all sealevel modules. Compose passes
-        climate_service_name to spec.dependencies(); the Compose adapter turns
-        those into depends_on entries. Apptainer checks
-        spec.module_definition.uses_climate_file to split into Stage 1 (independent)
-        and Stage 2 (climate-dependent).
+    standard_specs: climate module + all sealevel modules, climate first.
 
     facts_total_specs: one spec per workflow × output_type. Value is (spec, workflow)
         so renderers can construct depends_on / wait_for from wf.module_names.
 
     esl_specs: one spec per ESL module × workflow. Value is (spec,
         depends_on_service_name). ESL always runs per workflow because it reads the
-        workflow's facts-total output; _make_experiment_plan rejects ESL without
-        workflows.
+        workflow's facts-total output, so with no workflows there are no ESL specs.
+
+    workflow_names: in experiment-config.yaml order.
     """
 
     standard_specs: dict[str, ModuleServiceSpec]
@@ -82,6 +52,7 @@ class _ExecutionPlan:
     esl_specs: dict[str, tuple[ModuleServiceSpec, str]]
     climate_service_name: str | None
     suppress_output_types: set[str]
+    workflow_names: list[str]
 
 
 def _collect_workflow_output_paths_by_type(
@@ -183,7 +154,9 @@ def _populate_section_with_local_outputs(
 
 
 def _build_facts_total_specs_for_workflows(
-    plan: _ExperimentPlan,
+    framework_module_names: list[str],
+    workflows: dict[str, Workflow],
+    projection_scale: str | None,
     config: LoadedExperimentConfig,
     schemas: dict[str, ModuleSchema],
     data_paths: ExperimentDataPaths,
@@ -198,15 +171,15 @@ def _build_facts_total_specs_for_workflows(
     known_module_names = list(schemas.keys())
 
     facts_total_name = next(
-        (m for m in plan.framework_module_names if schemas[m].per_workflow),
+        (m for m in framework_module_names if schemas[m].per_workflow),
         "facts-total",
     )
     facts_total_schema = schemas[facts_total_name]
     facts_total_container_image = facts_total_schema.container_image
 
-    for wf_name, wf in plan.workflows.items():
+    for wf_name, wf in workflows.items():
         for output_type in facts_total_schema.output_types:
-            if output_type == "local" and plan.experiment.projection_scale == "global":
+            if output_type == "local" and projection_scale == "global":
                 logger.info(
                     "Skipping local facts-total for %s (projection_scale=global)",
                     wf_name,
@@ -297,52 +270,3 @@ def _build_esl_specs_for_workflows(
             depends_on_service = wf.facts_total_service_name_for_type("local")
             specs[service_name] = (esl_spec, depends_on_service)
     return specs
-
-
-def build_experiment_execution_plan(
-    specs: _ModuleSpecs,
-    plan: _ExperimentPlan,
-    config: LoadedExperimentConfig,
-    schemas: dict[str, ModuleSchema],
-    data_paths: ExperimentDataPaths,
-) -> _ExecutionPlan:
-    """Build a format-agnostic execution plan from module specs and experiment plan.
-
-    Assembles _ExecutionPlan from the already-resolved _ModuleSpecs, adding per-workflow
-    facts-total and ESL specs. Called by prepare_plan.prepare_execution_plan(), whose
-    result both compose and apptainer render in their own format.
-    """
-    climate_service_name = (
-        specs.climate_module.module_name if specs.climate_module else None
-    )
-
-    standard_specs: dict[str, ModuleServiceSpec] = {}
-    if specs.climate_module:
-        standard_specs[climate_service_name] = specs.climate_module
-    for module_name, spec in specs.sealevel_modules.items():
-        standard_specs[module_name] = spec
-
-    facts_total_specs: dict[str, tuple[ModuleServiceSpec, Workflow]] = {}
-    if plan.workflows:
-        facts_total_specs = _build_facts_total_specs_for_workflows(
-            plan=plan, config=config, schemas=schemas, data_paths=data_paths
-        )
-
-    esl_specs: dict[str, tuple[ModuleServiceSpec, str]] = {}
-    if plan.workflows:
-        esl_specs = _build_esl_specs_for_workflows(
-            esl_module_names=plan.esl_module_names,
-            workflows=plan.workflows,
-            config=config,
-            projection_scale=plan.experiment.projection_scale,
-            schemas=schemas,
-            data_paths=data_paths,
-        )
-
-    return _ExecutionPlan(
-        standard_specs=standard_specs,
-        facts_total_specs=facts_total_specs,
-        esl_specs=esl_specs,
-        climate_service_name=climate_service_name,
-        suppress_output_types=plan.suppress_output_types,
-    )

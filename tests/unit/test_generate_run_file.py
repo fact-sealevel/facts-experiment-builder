@@ -58,12 +58,9 @@ def planned(monkeypatch):
     """Replace planning with a stub that records the data_paths it was given."""
     seen = {}
 
-    class _Plan:
-        workflows = {"wf1": None, "wf2": None}
-
     def fake_prepare(config, data_paths):
         seen["data_paths"] = data_paths
-        return _Plan(), make_execution_plan()
+        return make_execution_plan(workflow_names=["wf1", "wf2"])
 
     monkeypatch.setattr(module, "prepare_execution_plan", fake_prepare)
     return seen

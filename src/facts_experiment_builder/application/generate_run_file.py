@@ -76,7 +76,9 @@ def generate_run_file(
 
     config = experiment_repo.get(config_path=config_path)
     data_paths = resolve_experiment_data_paths(config, output_key=backend.output_key)
-    plan, execution_plan = prepare_execution_plan(config, data_paths)
+    # Plan the services (backend-neutral specs), then order them into a graph that
+    # every backend reads.
+    execution_plan = prepare_execution_plan(config, data_paths)
     graph = build_execution_graph(execution_plan)
 
     content = backend.render(
@@ -85,7 +87,7 @@ def generate_run_file(
             config=config,
             data_paths=data_paths,
             workspace_dir=workspace_dir,
-            workflow_names=list(plan.workflows),
+            workflow_names=execution_plan.workflow_names,
         ),
     )
     backend.write(content, output_path)
